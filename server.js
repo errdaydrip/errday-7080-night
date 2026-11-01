@@ -90,7 +90,7 @@ const dirty=new Set();const r2=v=>Math.round(v*100)/100;
 setInterval(()=>{if(!dirty.size)return;const a=[];for(const id of dirty){const p=players[id];if(p&&!p.gone)a.push(id,r2(p.pos[0]),r2(p.pos[1]),r2(p.pos[2]),r2(p.rot),p.dance|0);}dirty.clear();if(a.length)io.volatile.emit('m',a);},100).unref();
 io.on('connection',s=>{
  s.emit('init',{id:s.id,players:pub(),music:state()});s.emit('chatHistory',chatHist);
- s.onAny(()=>{const pl=players[s.id];if(pl)pl.seen=Date.now();});
+ const touch=()=>{const pl=players[s.id];if(pl)pl.seen=Date.now();};s.onAny(touch);s.conn.on('packet',touch);s.conn.on('heartbeat',touch);
  s.on('adminCleanup',(tok,ack)=>{if(typeof ack!=='function')ack=()=>{};if(!isAdmin(tok))return ack({ok:false,error:'관리자만 가능'});
   const now=Date.now(),seenCid=new Map(),rm=[];
   for(const id in players){const pl=players[id],so=io.sockets.sockets.get(id);
