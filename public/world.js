@@ -19,6 +19,16 @@ AFRAME.registerComponent('ktext',{schema:{value:{default:''},color:{default:'#ff
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const old=this.el.getObject3D('mesh');if(old){old.material.map.dispose();old.geometry.dispose();}
   this.el.setObject3D('mesh',new THREE.Mesh(new THREE.PlaneGeometry(d.width,d.width*h/w),new THREE.MeshBasicMaterial({map:t,transparent:true,side:THREE.DoubleSide,depthWrite:false,depthTest:!d.top})));
   if(d.top)this.el.getObject3D('mesh').renderOrder=999;}});
+AFRAME.registerComponent('cbubble',{schema:{value:{default:''}},
+ update(){const S=3,FS=30*S,PAD=18*S,LH=FS*1.3,MAXW=420*S,F=`bold ${FS}px "Malgun Gothic","Apple SD Gothic Neo",sans-serif`;const c=document.createElement('canvas'),x=c.getContext('2d');x.font=F;
+  const txt=this.data.value,lines=[];let cur='';for(const ch of Array.from(txt)){if(x.measureText(cur+ch).width>MAXW&&cur){lines.push(cur);cur=ch;}else cur+=ch;}if(cur)lines.push(cur);
+  const tw=Math.max(...lines.map(l=>x.measureText(l).width),40*S),w=Math.ceil(tw+PAD*2),h=Math.ceil(lines.length*LH+PAD*1.4),tail=12*S;c.width=w;c.height=h+tail;x.font=F;
+  x.fillStyle='#fff';x.beginPath();x.roundRect(0,0,w,h,Math.min(h/2,28*S));x.fill();x.beginPath();x.moveTo(w/2-tail,h-1);x.lineTo(w/2,h+tail);x.lineTo(w/2+tail,h-1);x.fill();
+  x.fillStyle='#111';x.textAlign='center';x.textBaseline='middle';lines.forEach((l,i)=>x.fillText(l,w/2,PAD*.7+LH*(i+.5)));
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;t.generateMipmaps=true;t.minFilter=THREE.LinearMipmapLinearFilter;
+  const old=this.el.getObject3D('mesh');if(old){old.material.map.dispose();old.geometry.dispose();}
+  const U=0.0032/S,pw=c.width*U,ph=c.height*U,g=new THREE.PlaneGeometry(pw,ph);g.translate(0,ph/2,0);
+  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:t,transparent:true,side:THREE.DoubleSide,depthWrite:false,depthTest:false}));m.renderOrder=999;this.el.setObject3D('mesh',m);}});
 AFRAME.registerComponent('billboard',{tick(){const cam=this.el.sceneEl.camera;if(!cam)return;const p=new THREE.Vector3();cam.getWorldPosition(p);this.el.object3D.lookAt(p);}});
 // ---------- 캔버스 텍스처 ----------
 function canvasTex(w,h,draw,rx,ry){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);t.anisotropy=4;return t;}

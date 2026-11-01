@@ -2,7 +2,7 @@
 const {io}=require('socket.io-client');const assert=require('assert');const W=ms=>new Promise(r=>setTimeout(r,ms));
 const U='http://localhost:'+(process.env.PORT||8080);const c=()=>io(U,{forceNew:true});
 const join=(s,p)=>new Promise(r=>s.emit('join',p,r));
-(async()=>{const a=c(),b=c(),w=c();const left=[];w.on('leave',id=>left.push(id));await W(500);
+(async()=>{const a=c(),b=c(),w=c();const left=[];w.on('leave',id=>left.push(id));w.on('rekey',r=>left.push(r.old));await W(500);
  assert.deepStrictEqual(await join(a,{nick:'Tester',clientId:'A'}),{ok:true});const aid=a.id;
  assert.strictEqual((await join(b,{nick:' tester ',clientId:'B'})).ok,false,'dup nick rejected');
  assert.strictEqual((await join(b,{nick:'Other',clientId:'B'})).ok,true);

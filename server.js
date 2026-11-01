@@ -68,11 +68,11 @@ function schedule(){clearTimeout(timer);const t=music.playlist[music.index],d=du
  if(music.playing&&d)timer=setTimeout(tick,Math.max(500,music.startedAt+d*1000-Date.now()+300));}
 const state=()=>{advance(music,durOf,Date.now(),nextIndex);return {...music,durations,serverNow:Date.now()};};
 function broadcastMusic(){if(!music.playlist.length)setTimeout(ensureDefault,0);io.emit('music',state());save();schedule();}
-function pub(){const o={};for(const id in players){const {cid,lastDrink,lastServe,lastAct,...r}=players[id];o[id]=r;}return o;}
+function pub(){const o={};for(const id in players){const {cid,lastDrink,lastServe,lastAct,lastEat,gone,timer,...r}=players[id];o[id]=r;}return o;}
 function nickTaken(n,cid,sid){n=n.trim().toLowerCase();for(const id in players){const q=players[id];if(id!==sid&&q.cid!==cid&&q.nick.trim().toLowerCase()===n)return true;}return false;}
-function sweep(){for(const id in players){const so=io.sockets.sockets.get(id);if(!so||!so.connected){const pl=players[id];delete players[id];io.emit('leave',id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});}}}
+function sweep(){for(const id in players){const so=io.sockets.sockets.get(id);if((!so||!so.connected)&&!players[id].gone){const pl=players[id];delete players[id];io.emit('leave',id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});}}}
 setInterval(sweep,15000).unref();
-const chatHist=[];
+const chatHist=[];const GRACE_MS=+process.env.GRACE_MS||30000;
 const BZ={x0:10.55,x1:11.4,z0:-1.6,z1:6.75},BAR_Z={};for(let k=0;k<5;k++)BAR_Z['BAR-'+k]=3-3.5+k*1.4;
 const glasses={};const glassPub=()=>{const o={};for(const k in glasses)o[k]=glasses[k].type||'whiskey';return o;};
 const DRINKS=['soju','beer','whiskey','cocktail'];
@@ -90,15 +90,22 @@ io.on('connection',s=>{
  s.on('join',(p,ack)=>{p=p||{};const cid=String(p.clientId||s.id).slice(0,64);const nick=String(p.nick||'손님').trim().slice(0,16)||'손님';
   if(isBad(nick)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}
   if(nickTaken(nick,cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nick);return;}
-  for(const id in players){if(id!==s.id&&players[id].cid===cid){delete players[id];io.emit('leave',id);const os=io.sockets.sockets.get(id);if(os)os.disconnect(true);}}
-  const re=!!players[s.id];players[s.id]={cid,nick,gender:p.gender,outfit:p.outfit,skin:p.skin,style:p.style,pos:[0,0,4],rot:0,seat:null};io.emit('player',{id:s.id,...players[s.id]});
-  if(typeof ack==='function')ack({ok:true});if(!re)io.emit('chat',{sys:true,text:nick+' 님 입장!'});});
+  let prev=null,prevId=null;for(const id in players){if(id!==s.id&&players[id].cid===cid){if(!prev){prev=players[id];prevId=id;}delete players[id];const os=io.sockets.sockets.get(id);if(os)os.disconnect(true);}}
+  if(prev){clearTimeout(prev.timer);prev.timer=null;prev.gone=null;}
+  const L=p.last&&typeof p.last==='object'?p.last:null,cur=players[s.id]||prev;
+  const base=cur?{pos:cur.pos,rot:cur.rot,seat:cur.seat,carry:cur.carry||null,drinks:cur.drinks||[]}
+   :L?{pos:Array.isArray(L.pos)&&L.pos.length===3&&L.pos.every(Number.isFinite)?L.pos:[0,0,4],rot:+L.rot||0,seat:typeof L.seat==='string'?L.seat.slice(0,16):null,carry:PICK[L.carry]?L.carry:null,drinks:Array.isArray(L.drinks)?L.drinks.filter(Number.isFinite).slice(-20):[]}
+   :{pos:[0,0,4],rot:0,seat:null,carry:null,drinks:[]};
+  const re=!!cur;players[s.id]={...(cur||{}),cid,nick,gender:p.gender,outfit:p.outfit,skin:p.skin,style:p.style,...base};
+  if(prevId)io.emit('rekey',{old:prevId,id:s.id});io.emit('player',{id:s.id,...pub()[s.id]});
+  if(typeof ack==='function')ack(re?{ok:true,resume:base}:{ok:true});if(!re)io.emit('chat',{sys:true,text:nick+' 님 입장!'});});
  s.on('profile',(p,ack)=>{const pl=players[s.id];if(!pl)return;const nn=String(p.nick||pl.nick).trim().slice(0,16)||pl.nick;if(isBad(nn)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}if(nickTaken(nn,pl.cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nn);return;}if(typeof ack==='function')ack({ok:true});Object.assign(pl,{nick:nn,gender:p.gender,outfit:p.outfit,skin:p.skin,style:p.style});io.emit('player',{id:s.id,...pl});});
  s.on('move',m=>{const pl=players[s.id];if(!pl)return;pl.pos=m.pos;pl.rot=m.rot;pl.dance=(+m.dance|0)%4;s.broadcast.volatile.emit('move',{id:s.id,pos:m.pos,rot:m.rot,dance:pl.dance});});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.emit('glasses',glassPub());
  s.emit('tableUses',usesPub());s.emit('table',tablePub());
  s.on('drink',type=>{const pl=players[s.id];if(!pl||!pl.seat||!DRINKS.includes(type))return;if(!canDrink(pl.seat,type))return;const n=Date.now();if(n-(pl.lastDrink||0)<2000)return;pl.lastDrink=n;
+  pl.drinks=(pl.drinks||[]).filter(x=>n-x<1800000).concat(n).slice(-20);
   if(BAR_Z[pl.seat]!==undefined){delete glasses[pl.seat];io.emit('glasses',glassPub());}const tb=pochaTable(pl.seat);if(tb)useItem(tb,type);io.emit('drink',{id:s.id,type});});
  s.on('eat',kind=>{const pl=players[s.id];if(!pl||!FOODS.includes(kind))return;const tb=pochaTable(pl.seat);if(!tb||!tables[tb].items.some(i=>i&&i.k===kind))return;const n=Date.now();if(n-(pl.lastEat||0)<2000)return;pl.lastEat=n;useItem(tb,kind);io.emit('eat',{id:s.id,kind});});
  s.on('serve',q=>{const pl=players[s.id];if(!pl||pl.seat)return;const kind=q&&q.kind==='cocktail'?'cocktail':'whiskey';const x=+(q&&q.x),z=+(q&&q.z);if(!(x>=BZ.x0-.2&&x<=BZ.x1+.2&&z>=BZ.z0-.2&&z<=BZ.z1+.2))return;
@@ -128,7 +135,8 @@ io.on('connection',s=>{
   else if(cmd.type==='delete'&&music.playlist[cmd.index]){const [t]=music.playlist.splice(cmd.index,1);if(t.type==='mp3')fs.unlink(path.join(UP,t.id),()=>{});
    if(cmd.index<music.index)music.index--;else if(cmd.index===music.index){if(!music.playlist.length){music.index=-1;music.playing=false;}else{music.index%=music.playlist.length;music.startedAt=now;music.pausedAt=0;}}}
   broadcastMusic();});
- s.on('disconnect',()=>{const pl=players[s.id];delete players[s.id];io.emit('leave',s.id);if(pl)io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});});
+ s.on('disconnect',()=>{const pl=players[s.id];if(!pl)return;pl.gone=Date.now();clearTimeout(pl.timer);
+  pl.timer=setTimeout(()=>{if(players[s.id]!==pl||!pl.gone)return;delete players[s.id];io.emit('leave',s.id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});},GRACE_MS);});
 });
 server.listen(PORT,'0.0.0.0',()=>{tick();ensureDefault();
  const ext=process.env.RENDER_EXTERNAL_URL;if(ext)setInterval(()=>fetch(ext.replace(/\/$/,'')+'/health').catch(()=>{}),10*60*1000);console.log('ERRDAY 7080 나이트 서버: http://localhost:'+PORT);console.log('관리자 로그인: 사용 가능 (고정 비밀번호)');

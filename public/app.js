@@ -28,7 +28,12 @@ $('entry').addEventListener('click',e=>{const b=e.target;if(b.classList.contains
  if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('swatch'))me.outfit=b.dataset.v;me.nick=$('nick').value;syncOpts();});
 $('enter').onclick=()=>{me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
  $('entry').classList.add('hidden');$('hud').classList.remove('hidden');chatBottom();
- const ev=joined?'profile':'join';socket.emit(ev,{...me,clientId:CID},r=>{if(r&&!r.ok){nickErr(r.error);return;}joined=true;enterOk();});};
+ const ev=joined?'profile':'join';socket.emit(ev,{...me,clientId:CID,last:lastState()},r=>{if(r&&!r.ok){nickErr(r.error);return;}joined=true;enterOk();if(r&&r.resume)setTimeout(()=>resumeState(r.resume),50);});};
+function lastState(){try{const v=JSON.parse(sessionStorage.getItem('lastState')||'null');return v&&Date.now()-v.t<30000?v:null;}catch(e){return null;}}
+function saveState(){if(!joined)return;try{const p=rig.object3D.position,m=$('myAvatar');sessionStorage.setItem('lastState',JSON.stringify({t:Date.now(),pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
+setInterval(saveState,1000);addEventListener('pagehide',saveState);
+function resumeState(r){const m=$('myAvatar');if(m._h&&r.drinks)m._h.drinks=r.drinks.slice();if(r.carry!==undefined){myCarry=r.carry;if(m._h)m._h.carry(r.carry);if(typeof refreshAct==='function')refreshAct(true);}
+ const s=r.seat&&SEATS.find(x=>x.id===r.seat);if(s){mySeat=null;sit(s);}else if(r.pos){rig.object3D.position.set(...r.pos);if(Number.isFinite(r.rot))myYaw=r.rot;}}
 function nickErr(why){$('entry').classList.remove('hidden');$('hud').classList.add('hidden');alert(why==='bad'?'사용할 수 없는 닉네임이에요':'이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.');$('nick').focus();}
 function enterOk(){
  buildAvatar($('myAvatar'),{...me,id:myId},true);$('enter').textContent='입장하기 (소리 켜짐)';userGesture=true;applyMusic(true);}
@@ -62,14 +67,14 @@ async function buildAvatar(root,p,mine){if(root._h){HUMANS.delete(root._h);root.
  const h=await makeHuman(root,humanOpts(p));if(!h||root._tok!==token){if(h)h.dispose();return;}root._h=h;HUMANS.add(h);}
 function upsertOther(p){if(p.id===myId)return;let o=others[p.id];
  if(!o){const el=document.createElement('a-entity');$('others').appendChild(el);o=others[p.id]={el,target:new THREE.Vector3(...(p.pos||[0,0,4])),rot:p.rot||0};el.object3D.position.copy(o.target);}
- const key=[p.nick,p.gender,p.style,p.outfit,p.skin].join('|');if(o.key!==key){o.key=key;buildAvatar(o.el,p);}o.data=p;o.dance=p.dance||0;applySeatPose(o,p.seat);}
+ const key=[p.nick,p.gender,p.style,p.outfit,p.skin].join('|');if(o.key!==key){o.key=key;buildAvatar(o.el,p);}if(p.drinks&&o.el._h&&!(o.el._h.drinks||[]).length)o.el._h.drinks=p.drinks.slice();o.data=p;o.dance=p.dance||0;applySeatPose(o,p.seat);}
 function applySeatPose(o,seat){o.seat=seat;const s=SEATS.find(x=>x.id===seat);if(s){o.target.set(s.x,s.y||0,s.z);o.rot=s.yaw;}}
 AFRAME.registerComponent('others-lerp',{tick(){for(const id in others){const o=others[id],p=o.el.object3D.position,d=p.distanceTo(o.target);p.lerp(o.target,.15);
  let r=o.rot-o.el.object3D.rotation.y;r=Math.atan2(Math.sin(r),Math.cos(r));o.el.object3D.rotation.y+=r*.2;
  const h=o.el._h;if(h)h.play(o.seat?'Sitting_Idle_Loop':(d>.03?'Walk_Loop':(o.dance?'Dance_'+o.dance:'Idle_Loop')));}}});
 scene.setAttribute('others-lerp','');
 function bubble(id,text){const el=id===myId?$('myAvatar'):others[id]&&others[id].el;if(!el)return;const b=el.querySelector('.bubble');if(!b)return;
- b.setAttribute('ktext',`value:${text.slice(0,30).replace(/;/g,' ')};color:#000;glow:;bg:#fff;size:36;width:1.4;top:true`);b.setAttribute('visible',true);
+ b.setAttribute('cbubble',{value:text.slice(0,200)});b.setAttribute('visible',true);
  clearTimeout(b._t);b._t=setTimeout(()=>b.setAttribute('visible',false),Math.min(15000,10000+text.length*150));}
 // ---------- 3인칭 카메라 · 이동 · 클릭 이동 · 자동 앉기 ----------
 const rig=$('rig'),cam=$('cam'),myAv=$('myAvatar'),marker=$('marker');
@@ -167,8 +172,13 @@ let joyX=0,joyY=0,joyId=null;{const J=$('mob'),K=$('joyKnob'),R=60;
  J.addEventListener('pointermove',e=>{if(e.pointerId===joyId){e.preventDefault();mv(e);}});
  J.addEventListener('pointerup',end);J.addEventListener('pointercancel',end);J.addEventListener('lostpointercapture',end);}
 // ---------- 채팅 (전체) ----------
-function chatBottom(){const m=$('msgs');if(!m)return;const f=()=>{m.scrollTop=m.scrollHeight;};f();requestAnimationFrame(()=>{f();requestAnimationFrame(f);});setTimeout(f,60);setTimeout(f,300);}
-function addMsg(html,force){const m=$('msgs');const near=force||m.scrollHeight-m.scrollTop-m.clientHeight<80;const d=document.createElement('div');d.innerHTML=html;m.appendChild(d);while(m.children.length>100)m.firstChild.remove();if(near)chatBottom();}
+let chatHold=0,chatHoldT=null;
+function chatAtBottom(m){return m.scrollHeight-m.scrollTop-m.clientHeight<24;}
+function chatPoke(){const m=$('msgs');if(!m)return;clearTimeout(chatHoldT);if(chatAtBottom(m)){chatHold=0;return;}chatHold=1;chatHoldT=setTimeout(()=>{chatHold=0;chatBottom(true);},5000);}
+(()=>{const m=$('msgs');if(!m)return;for(const ev of ['wheel','touchstart','touchmove','mousedown'])m.addEventListener(ev,()=>setTimeout(chatPoke,50),{passive:true});
+ m.addEventListener('scroll',()=>{if(chatHold)chatPoke();},{passive:true});})();
+function chatBottom(force){const m=$('msgs');if(!m)return;if(chatHold&&force!==true)return;const f=()=>{m.scrollTop=m.scrollHeight;};f();requestAnimationFrame(()=>{f();requestAnimationFrame(f);});setTimeout(f,60);setTimeout(f,300);}
+function addMsg(html,force){const m=$('msgs');const near=force||!chatHold;const d=document.createElement('div');d.innerHTML=html;m.appendChild(d);while(m.children.length>100)m.firstChild.remove();if(near)chatBottom();}
 window.addEventListener('resize',()=>chatBottom());
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function sys(t){addMsg(`<i style="color:#aaa">${esc(t)}</i>`);}
@@ -179,7 +189,8 @@ $('chatForm').onsubmit=e=>{e.preventDefault();const t=$('chatIn').value.trim();i
 socket.on('chatHistory',h=>{$('msgs').innerHTML='';if(!h||!h.length)return;const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};for(const m of h)addMsg(`<span style="opacity:.55"><small style="color:#888">${hm(m.t)}</small> <b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}</span>`);addMsg('<div style="text-align:center;color:#888;font-size:11px;opacity:.8">— 이전 채팅 —</div>');;chatBottom();});
 socket.on('chat',m=>{if(m.sys){sys(m.text);return;}bubble(m.id,m.text);addMsg(`<b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}`);});
 // ---------- 네트워크 ----------
-socket.on('init',d=>{myId=d.id;clearOthers();for(const id in d.players)upsertOther({id,...d.players[id]});setMusic(d.music);if(joined)socket.emit('join',{...me,clientId:CID},r=>{if(r&&!r.ok){joined=false;nickErr(r.error);}});});
+socket.on('init',d=>{myId=d.id;clearOthers();for(const id in d.players)upsertOther({id,...d.players[id]});setMusic(d.music);if(joined){saveState();socket.emit('join',{...me,clientId:CID,last:lastState()},r=>{if(r&&!r.ok){joined=false;nickErr(r.error);}});}});
+socket.on('rekey',({old,id})=>{if(id===myId||!others[old])return;others[id]=others[old];delete others[old];});
 socket.on('disconnect',clearOthers);
 socket.on('player',upsertOther);
 socket.on('move',m=>{const o=others[m.id];if(o){o.dance=m.dance||0;if(!o.seat){o.target.set(...m.pos);o.rot=m.rot;}}});

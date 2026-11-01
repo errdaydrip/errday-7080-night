@@ -1,0 +1,10 @@
+const p=require('puppeteer-core');const {io}=require('socket.io-client');const W=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{const s=io('http://localhost:8080',{forceNew:true});s.emit('join',{nick:'말많은손님',clientId:'bub1',gender:'m',style:'disco'});
+ const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
+ const pg=await b.newPage();await pg.setViewport({width:1000,height:640});pg.on('pageerror',e=>console.log('ERR',e.message));
+ await pg.goto('http://localhost:8080');await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
+ await pg.evaluate(()=>document.getElementById('nick').value='나');await pg.click('#enter');await W(3000);
+ const me=await pg.evaluate(()=>{const p=document.getElementById('rig').object3D.position;return [p.x,p.y,p.z];});
+ s.emit('move',{pos:[me[0],0,me[2]-1.6],rot:0,dance:0});await W(800);
+ s.emit('chat','오늘 7080 나이트 분위기 정말 최고네요! 다들 한 잔씩 하시고 다음 곡은 신청곡으로 부탁드립니다~ 포차에서 통닭이랑 모듬회도 꼭 드셔보세요');await W(1500);
+ await pg.screenshot({path:'bubble_2line.png'});await b.close();process.exit();})();
