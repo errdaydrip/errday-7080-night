@@ -85,7 +85,7 @@ scene.addEventListener('loaded',()=>{const c=scene.canvas;
   if(ptrs.size===1)down={x:e.clientX,y:e.clientY,t:performance.now(),moved:0};else{down=null;const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);dist0=camDist;}});
  c.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
   if(ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0)camDist=Math.max(2,Math.min(10,dist0*pinch0/d));return;}
-  if(down){down.moved+=Math.abs(dx)+Math.abs(dy);if(down.moved>8){camGoal=null;camYaw-=dx*.006;camPitch=Math.max(.05,Math.min(1.2,camPitch+dy*.005));}}});
+  if(down){down.moved+=Math.abs(dx)+Math.abs(dy);if(down.moved>8){camGoal=null;const T=e.pointerType==='touch',sg=T?-1.3:1;camYaw-=dx*.006*sg;camPitch=Math.max(.05,Math.min(1.2,camPitch+dy*.005*sg));}}});
  const up=e=>{ptrs.delete(e.pointerId);if(down&&e.type==='pointerup'&&down.moved<=8&&performance.now()-down.t<600)tapAt(e.clientX,e.clientY);if(ptrs.size===0)down=null;pinch0=0;};
  c.addEventListener('pointerup',up);c.addEventListener('pointercancel',up);
  c.addEventListener('wheel',e=>{e.preventDefault();camDist=Math.max(2,Math.min(10,camDist+e.deltaY*.004));},{passive:false});});
