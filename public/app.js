@@ -26,7 +26,7 @@ function syncOpts(){$('nick').value=me.nick;document.querySelectorAll('.opt.g').
 syncOpts();
 $('entry').addEventListener('click',e=>{const b=e.target;if(b.classList.contains('g')){me.gender=b.dataset.v;me.outfit=OUTFIT_DEFAULTS[me.gender][me.style];}if(b.classList.contains('s')){me.style=b.dataset.v;me.outfit=OUTFIT_DEFAULTS[me.gender==='f'?'f':'m'][me.style];}
  if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('swatch'))me.outfit=b.dataset.v;me.nick=$('nick').value;syncOpts();});
-$('enter').onclick=()=>{me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
+$('enter').onclick=()=>{if(window.enterFullscreenMobile)enterFullscreenMobile();me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
  $('entry').classList.add('hidden');$('hud').classList.remove('hidden');chatBottom();
  const ev=joined?'profile':'join';socket.emit(ev,{...me,clientId:CID,last:lastState()},r=>{if(r&&!r.ok){nickErr(r.error);return;}joined=true;enterOk();if(r&&r.resume)setTimeout(()=>resumeState(r.resume),50);});};
 function lastState(){try{const v=JSON.parse(sessionStorage.getItem('lastState')||'null');return v&&Date.now()-v.t<30000?v:null;}catch(e){return null;}}
@@ -193,6 +193,7 @@ socket.on('init',d=>{myId=d.id;clearOthers();for(const id in d.players)upsertOth
 socket.on('rekey',({old,id})=>{if(id===myId||!others[old])return;others[id]=others[old];delete others[old];});
 socket.on('disconnect',clearOthers);
 socket.on('player',upsertOther);
+socket.on('snapshot',ps=>{for(const id in others)if(!ps[id])removeOther(id);for(const id in ps)if(id!==myId)upsertOther({id,...ps[id]});});
 socket.on('m',a=>{for(let i=0;i<a.length;i+=6){const o=others[a[i]];if(o){o.dance=a[i+5]||0;if(!o.seat){o.target.set(a[i+1],a[i+2],a[i+3]);o.rot=a[i+4];}}}});
 socket.on('move',m=>{const o=others[m.id];if(o){o.dance=m.dance||0;if(!o.seat){o.target.set(...m.pos);o.rot=m.rot;}}});
 socket.on('seat',({id,seat})=>{const o=others[id];if(o)applySeatPose(o,seat);});
@@ -297,3 +298,33 @@ $('ytForm').onsubmit=async e=>{e.preventDefault();const url=$('ytUrl').value.tri
  const j=await r.json();$('upMsg').textContent=r.ok?`${j.added}곡 추가!`:(j.error||'실패');adminFail(r);if(r.ok)$('ytUrl').value='';};
 // 점프 버튼: 오른쪽 끝, 액션바 바로 위
 setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElementById('actBar');if(!j)return;let top=innerHeight-70;if(a&&!a.classList.contains('hidden')&&a.offsetHeight){top=Math.min(top,a.getBoundingClientRect().top);}j.style.bottom=(innerHeight-top+10)+'px';},200);
+
+// ---------- 화면 비율별 시야각 / 전체화면 ----------
+(function(){
+ const sc=document.querySelector('a-scene');
+ function fitFov(){const w=innerWidth,h=innerHeight,a=w/h;const v=70,maxH=95;let f=v;
+  if(a>1){f=2*Math.atan(Math.tan(maxH*Math.PI/360)/a)*180/Math.PI;f=Math.max(48,Math.min(v,f));}
+  const c=document.getElementById('cam');c.setAttribute('camera','fov',f);
+  const o=sc.camera;if(o&&o.isPerspectiveCamera){o.fov=f;o.aspect=a;o.updateProjectionMatrix();}
+  if(sc.renderer){sc.resize&&sc.resize();}}
+ let t;const later=()=>{clearTimeout(t);fitFov();t=setTimeout(fitFov,350);};
+ addEventListener('resize',later);addEventListener('orientationchange',later);
+ if(screen.orientation)screen.orientation.addEventListener('change',later);
+ if(window.visualViewport)visualViewport.addEventListener('resize',later);
+ if(sc.hasLoaded)fitFov();else sc.addEventListener('loaded',fitFov);
+ const de=document.documentElement,touch=matchMedia('(pointer:coarse)').matches;
+ const canFs=!!(de.requestFullscreen||de.webkitRequestFullscreen),standalone=matchMedia('(display-mode: fullscreen),(display-mode: standalone)').matches||navigator.standalone;
+ const isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+ function goFs(){if(standalone||isFs()||!canFs)return;try{const p=(de.requestFullscreen?de.requestFullscreen({navigationUI:'hide'}):de.webkitRequestFullscreen());if(p&&p.catch)p.catch(()=>{});}catch(e){}}
+ function exitFs(){try{(document.exitFullscreen||document.webkitExitFullscreen).call(document);}catch(e){}}
+ const btn=document.getElementById('fsBtn'),hint=document.getElementById('fsHint');
+ let entered=false,optOut=false;
+ document.addEventListener('touchend',()=>{if(entered&&!optOut&&!isFs())goFs();},{passive:true});
+ window.enterFullscreenMobile=()=>{if(!touch)return;entered=true;if(canFs)goFs();else if(!standalone&&!localStorage.getItem('fsHintSeen')){hint.classList.remove('hidden');localStorage.setItem('fsHintSeen','1');}};
+ btn.onclick=()=>{if(!canFs){if(!standalone)hint.classList.toggle('hidden');return;}if(isFs()){optOut=true;exitFs();}else{optOut=false;goFs();}};
+ document.getElementById('fsHintX').onclick=()=>hint.classList.add('hidden');
+ if(standalone)btn.style.display='none';
+ document.addEventListener('fullscreenchange',later);
+})();
+
+$('cleanBtn').onclick=()=>{if(!adminToken)return;socket.emit('adminCleanup',adminToken,r=>{if(r&&r.ok)sys(`🔄 유령 정리 완료: ${r.removed}명 제거`);else{sys('정리 실패: '+((r&&r.error)||'오류'));}});};
