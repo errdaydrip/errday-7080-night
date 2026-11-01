@@ -34,7 +34,7 @@ function saveState(){if(!joined)return;try{const p=rig.object3D.position,m=$('my
 setInterval(saveState,1000);addEventListener('pagehide',saveState);
 function resumeState(r){const m=$('myAvatar');if(m._h&&r.drinks)m._h.drinks=r.drinks.slice();if(r.carry!==undefined){myCarry=r.carry;if(m._h)m._h.carry(r.carry);if(typeof refreshAct==='function')refreshAct(true);}
  const s=r.seat&&SEATS.find(x=>x.id===r.seat);if(s){mySeat=null;sit(s);}else if(r.pos){rig.object3D.position.set(...r.pos);if(Number.isFinite(r.rot))myYaw=r.rot;}}
-function nickErr(why){$('entry').classList.remove('hidden');$('hud').classList.add('hidden');alert(why==='bad'?'사용할 수 없는 닉네임이에요':'이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.');$('nick').focus();}
+function nickErr(why){if(why==='kicked')return;$('entry').classList.remove('hidden');$('hud').classList.add('hidden');alert(why==='bad'?'사용할 수 없는 닉네임이에요':'이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.');$('nick').focus();}
 function enterOk(){
  buildAvatar($('myAvatar'),{...me,id:myId},true);$('enter').textContent='입장하기 (소리 켜짐)';userGesture=true;applyMusic(true);}
 $('setBtn').onclick=()=>{$('enter').textContent='저장';$('entry').classList.remove('hidden');};
@@ -187,7 +187,7 @@ $('chatIn').addEventListener('keydown',e=>e.stopPropagation());
 {const jb=$('jumpBtn');if(jb)jb.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();jump();});}
 $('chatForm').onsubmit=e=>{e.preventDefault();const t=$('chatIn').value.trim();if(t)socket.emit('chat',t);$('chatIn').value='';};
 socket.on('chatHistory',h=>{$('msgs').innerHTML='';if(!h||!h.length)return;const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};for(const m of h)addMsg(`<span style="opacity:.55"><small style="color:#888">${hm(m.t)}</small> <b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}</span>`);addMsg('<div style="text-align:center;color:#888;font-size:11px;opacity:.8">— 이전 채팅 —</div>');;chatBottom();});
-socket.on('chat',m=>{if(m.sys){sys(m.text);return;}bubble(m.id,m.text);addMsg(`<b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}`);});
+socket.on('chat',m=>{if(m.sys){sys(m.text);return;}bubble(m.id,m.text);addMsg(`<b style="color:#ffd84a" data-kid="${esc(m.id||'')}" data-knick="${esc(m.nick)}">${esc(m.nick)}</b>: ${esc(m.text)}`);});
 socket.on('online',n=>{const e=document.getElementById('onlineCnt');if(e)e.textContent=' · 👥 '+n+'명';});
 // ---------- 네트워크 ----------
 socket.on('init',d=>{myId=d.id;clearOthers();for(const id in d.players)upsertOther({id,...d.players[id]});setMusic(d.music);if(joined){saveState();socket.emit('join',{...me,clientId:CID,last:lastState()},r=>{if(r&&!r.ok){joined=false;nickErr(r.error);}});}});
@@ -363,3 +363,13 @@ setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElemen
 })();
 
 $('cleanBtn').onclick=()=>{if(!adminToken)return;socket.emit('adminCleanup',adminToken,r=>{if(r&&r.ok)sys(`🔄 유령 정리 완료: ${r.removed}명 제거`);else{sys('정리 실패: '+((r&&r.error)||'오류'));}});};
+
+// 관리자 강퇴
+let kickedOut=false;socket.on('kicked',k=>{kickedOut=true;socket.io.opts.reconnection=false;socket.io.reconnection(false);const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:20px;padding:20px';d.innerHTML='🚫 관리자에 의해 강퇴되었습니다<br><small style="color:#aaa">'+((k&&k.min)||10)+'분 후에 다시 들어올 수 있어요</small>';document.body.appendChild(d);});
+function doKick(id,nick){if(!adminToken||!id)return;if(id===myId){alert('자기 자신은 강퇴할 수 없어요');return;}if(!confirm(nick+' 님을 강퇴할까요? (10분간 재입장 차단)'))return;socket.emit('adminKick',{token:adminToken,id},r=>{if(!(r&&r.ok))sys('강퇴 실패: '+((r&&r.error)||'오류'));loadKickList();});}
+function loadKickList(){const box=$('kickList');if(!box)return;if(!adminToken){box.innerHTML='';return;}socket.emit('adminList',adminToken,r=>{if(!r||!r.ok){box.innerHTML='';return;}box.innerHTML='<b>👥 접속자 ('+r.list.length+')</b>'+r.list.map(p=>`<div class="krow">${esc(p.nick)}${p.id===r.me?' <small>(나)</small>':` <button data-kick="${esc(p.id)}" data-kn="${esc(p.nick)}">강퇴</button>`}</div>`).join('');});}
+(function(){const ac=$('adminCtl');const box=document.createElement('div');box.id='kickList';box.style.cssText='max-height:150px;overflow:auto;font-size:12px;margin-top:4px;width:100%';ac.appendChild(box);
+ box.addEventListener('click',e=>{const b=e.target.closest('[data-kick]');if(b)doKick(b.dataset.kick,b.dataset.kn);});
+ $('msgs').addEventListener('click',e=>{const b=e.target.closest('[data-kid]');if(b&&adminToken&&b.dataset.kid)doKick(b.dataset.kid,b.dataset.knick);});
+ for(const ev of ['online','player','leave','snapshot'])socket.on(ev,()=>{clearTimeout(loadKickList._t);loadKickList._t=setTimeout(loadKickList,300);});
+ setInterval(()=>{if(adminToken&&!$('adminCtl').classList.contains('hidden'))loadKickList();},10000);setTimeout(loadKickList,1500);})();

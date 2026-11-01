@@ -98,7 +98,16 @@ setInterval(()=>{const n=Date.now();let ch=false;for(const k in glasses)if(n-gla
 // 위치는 이동마다 바로 보내지 않고 0.1초마다 바뀐 사람만 묶어서 한 번에 방송 (N² 메시지 → 틱당 1개)
 const dirty=new Set();const r2=v=>Math.round(v*100)/100;
 setInterval(()=>{if(!dirty.size)return;const a=[];for(const id of dirty){const p=players[id];if(p&&!p.gone)a.push(id,r2(p.pos[0]),r2(p.pos[1]),r2(p.pos[2]),r2(p.rot),p.dance|0);}dirty.clear();if(a.length)io.volatile.emit('m',a);},100).unref();
+const bans=[];const BAN_MS=+process.env.BAN_MS||600000;const ipOf=so=>String(so.handshake.headers['x-forwarded-for']||so.handshake.address||'').split(',')[0].trim();
+const banned=(cid,ip,nick)=>{const n=Date.now();for(let i=bans.length-1;i>=0;i--)if(bans[i].until<n)bans.splice(i,1);return bans.find(b=>b.cid===cid||b.nick===nick||(process.env.BAN_IP==='1'&&ip&&b.ip===ip));};
 io.on('connection',s=>{
+ s.on('adminKick',(q,ack)=>{if(typeof ack!=='function')ack=()=>{};q=q||{};if(!isAdmin(q.token))return ack({ok:false,error:'관리자만 가능'});const id=String(q.id||'');if(id===s.id)return ack({ok:false,error:'자기 자신은 강퇴할 수 없어요'});
+  const pl=players[id];if(!pl)return ack({ok:false,error:'이미 나간 사람이에요'});const so=io.sockets.sockets.get(id);
+  bans.push({cid:pl.cid,ip:so?ipOf(so):pl.ip,nick:pl.nick,until:Date.now()+BAN_MS});clearTimeout(pl.timer);delete players[id];dirty.delete(id);
+  for(const oid in players)if(players[oid].cid===pl.cid){delete players[oid];io.emit('leave',oid);const o=io.sockets.sockets.get(oid);if(o){o.emit('kicked',{min:Math.round(BAN_MS/60000)});o.disconnect(true);}}
+  if(so){so.emit('kicked',{min:Math.round(BAN_MS/60000)});setTimeout(()=>so.disconnect(true),200);}
+  io.emit('leave',id);io.emit('chat',{sys:true,text:pl.nick+' 님이 강퇴되었습니다'});bcOnline();ack({ok:true});});
+ s.on('adminList',(tok,ack)=>{if(typeof ack!=='function')return;if(!isAdmin(tok))return ack({ok:false});ack({ok:true,me:s.id,list:Object.entries(players).filter(([,p])=>!p.gone).map(([id,p])=>({id,nick:p.nick}))});});
  s.emit('init',{id:s.id,players:pub(),music:state()});s.emit('chatHistory',chatHist);
  const touch=()=>{const pl=players[s.id];if(pl)pl.seen=Date.now();};s.onAny(touch);s.conn.on('packet',touch);s.conn.on('heartbeat',touch);
  s.on('adminCleanup',(tok,ack)=>{if(typeof ack!=='function')ack=()=>{};if(!isAdmin(tok))return ack({ok:false,error:'관리자만 가능'});
@@ -110,6 +119,7 @@ io.on('connection',s=>{
   io.emit('snapshot',pub());bcOnline();ack({ok:true,removed:new Set(rm).size});});
  s.on('join',(p,ack)=>{p=p||{};const cid=String(p.clientId||s.id).slice(0,64);const nick=String(p.nick||'손님').trim().slice(0,16)||'손님';
   if(isBad(nick)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}
+  const bn=banned(cid,ipOf(s),nick);if(bn){if(typeof ack==='function')ack({ok:false,error:'kicked',min:Math.ceil((bn.until-Date.now())/60000)});s.emit('kicked',{min:Math.ceil((bn.until-Date.now())/60000)});setTimeout(()=>s.disconnect(true),200);return;}
   if(nickTaken(nick,cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nick);return;}
   let prev=null,prevId=null;for(const id in players){if(id!==s.id&&players[id].cid===cid){if(!prev){prev=players[id];prevId=id;}delete players[id];const os=io.sockets.sockets.get(id);if(os)os.disconnect(true);}}
   if(prev){clearTimeout(prev.timer);prev.timer=null;prev.gone=null;}
@@ -156,7 +166,7 @@ io.on('connection',s=>{
   else if(cmd.type==='delete'&&music.playlist[cmd.index]){const [t]=music.playlist.splice(cmd.index,1);if(t.type==='mp3')fs.unlink(path.join(UP,t.id),()=>{});
    if(cmd.index<music.index)music.index--;else if(cmd.index===music.index){if(!music.playlist.length){music.index=-1;music.playing=false;}else{music.index%=music.playlist.length;music.startedAt=now;music.pausedAt=0;}}}
   broadcastMusic();});
- s.on('disconnect',()=>{const pl=players[s.id];if(!pl)return;pl.gone=Date.now();clearTimeout(pl.timer);
+ s.on('disconnect',()=>{const pl=players[s.id];if(!pl||s.data.kicked)return;pl.gone=Date.now();clearTimeout(pl.timer);
   pl.timer=setTimeout(()=>{if(players[s.id]!==pl||!pl.gone)return;delete players[s.id];io.emit('leave',s.id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});bcOnline();},GRACE_MS);bcOnline();});
 });
 server.listen(PORT,'0.0.0.0',()=>{tick();ensureDefault();

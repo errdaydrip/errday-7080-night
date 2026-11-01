@@ -1,0 +1,10 @@
+const p=require('puppeteer-core');const {io}=require('socket.io-client');const W=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{const v=io('http://localhost:8080',{reconnection:false});await W(300);await new Promise(r=>v.emit('join',{nick:'피해자',clientId:'shotv'},r));v.on('kicked',()=>console.log('victim got kicked'));
+const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});const pg=await b.newPage();await pg.setViewport({width:1280,height:720});
+pg.on('dialog',d=>d.accept());pg.on('pageerror',e=>console.log('ERR',e.message));
+await pg.goto('http://localhost:8080');await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
+await pg.evaluate(()=>document.getElementById('nick').value='관리자샷');await pg.click('#enter');await W(1000);
+const tok=await pg.evaluate(async()=>(await (await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:'6651'})})).json()).token);
+await pg.evaluate(t=>{adminToken=t;sessionStorage.setItem('adminToken',t);renderMusic();loadKickList();},tok);await W(1200);
+console.log(await pg.evaluate(()=>document.getElementById('kickList').innerText));await pg.screenshot({path:'kick_list.png'});
+await pg.click('[data-kick]');await W(1500);console.log(await pg.evaluate(()=>document.getElementById('msgs').innerText.slice(-80)));await pg.screenshot({path:'kick_after.png'});await b.close();process.exit(0);})();
