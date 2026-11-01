@@ -27,7 +27,7 @@ AFRAME.registerComponent('cbubble',{schema:{value:{default:''}},
   x.fillStyle='#111';x.textAlign='center';x.textBaseline='middle';lines.forEach((l,i)=>x.fillText(l,w/2,PAD*.7+LH*(i+.5)));
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;t.generateMipmaps=true;t.minFilter=THREE.LinearMipmapLinearFilter;
   const old=this.el.getObject3D('mesh');if(old){old.material.map.dispose();old.geometry.dispose();}
-  const U=0.0032/S,pw=c.width*U,ph=c.height*U,g=new THREE.PlaneGeometry(pw,ph);g.translate(0,ph/2,0);
+  const U=0.0040/S,pw=c.width*U,ph=c.height*U,g=new THREE.PlaneGeometry(pw,ph);g.translate(0,ph/2,0);
   const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:t,transparent:true,side:THREE.DoubleSide,depthWrite:false,depthTest:false}));m.renderOrder=999;this.el.setObject3D('mesh',m);}});
 AFRAME.registerComponent('billboard',{tick(){const cam=this.el.sceneEl.camera;if(!cam)return;const p=new THREE.Vector3();cam.getWorldPosition(p);this.el.object3D.lookAt(p);}});
 // ---------- 캔버스 텍스처 ----------

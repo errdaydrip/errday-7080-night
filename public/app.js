@@ -39,7 +39,7 @@ function enterOk(){
  buildAvatar($('myAvatar'),{...me,id:myId},true);$('enter').textContent='입장하기 (소리 켜짐)';userGesture=true;applyMusic(true);}
 $('setBtn').onclick=()=>{$('enter').textContent='저장';$('entry').classList.remove('hidden');};
 // 모바일: 채팅/음악 패널은 같은 자리라 하나만 열림 (음악 패널이 채팅을 가리던 문제 수정)
-$('chatToggle').onclick=()=>{const h=$('hud');h.classList.toggle('showChat');if(h.classList.contains('showChat'))h.classList.remove('showMusic');};
+$('chatToggle').onclick=()=>{const h=$('hud');h.classList.toggle('showChat');if(h.classList.contains('showChat')){h.classList.remove('showMusic');clearTimeout(chatHoldT);chatHold=0;chatBottom(true);}};
 $('musicToggle').onclick=()=>{const h=$('hud');h.classList.toggle('showMusic');if(h.classList.contains('showMusic'))h.classList.remove('showChat');};
 $('chatIn').addEventListener('focus',()=>{$('hud').classList.add('showChat');$('hud').classList.remove('showMusic');});
 // 이름표: 머리/머리카락(아프로·갓 등) 실제 높이에 맞춰 위치 (앉기/춤 포즈도 추적)

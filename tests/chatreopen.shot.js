@@ -1,0 +1,17 @@
+const p=require('puppeteer-core');const {io}=require('socket.io-client');const W=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{const s=io('http://localhost:8080',{forceNew:true});s.emit('join',{nick:'수다손님',clientId:'cr1',gender:'m',style:'disco'});
+ const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
+ const pg=await b.newPage();await pg.setViewport({width:1000,height:640});pg.on('pageerror',e=>console.log('ERR',e.message));
+ await pg.goto('http://localhost:8080');await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
+ await pg.evaluate(()=>document.getElementById('nick').value='나');await pg.click('#enter');await W(3000);
+ const me=await pg.evaluate(()=>{const p=document.getElementById('rig').object3D.position;return [p.x,p.y,p.z];});
+ s.emit('move',{pos:[me[0],0,me[2]-1.6],rot:0,dance:0});await W(500);
+ await pg.evaluate(()=>document.getElementById('chatToggle').click());for(let i=0;i<30;i++){s.emit('chat','메시지 '+i);await W(80);}await W(800);
+ const st=()=>pg.evaluate(()=>{const m=document.getElementById('msgs');return {top:Math.round(m.scrollTop),max:m.scrollHeight-m.clientHeight};});
+ console.log('after msgs',await st());
+ await pg.evaluate(()=>{const m=document.getElementById('msgs');m.dispatchEvent(new WheelEvent('wheel'));m.scrollTop=0;});await W(300);
+ console.log('scrolled up',await st());
+ await pg.evaluate(()=>document.getElementById('chatToggle').click());for(let i=30;i<40;i++){s.emit('chat','닫힌동안 '+i);await W(80);}await W(300);
+ await pg.evaluate(()=>document.getElementById('chatToggle').click());await W(500);console.log('reopened',await st());
+ s.emit('chat','오늘 7080 나이트 분위기 정말 최고네요! 다음 곡은 신청곡으로 부탁드립니다~');await W(1500);
+ await pg.screenshot({path:'chat_font.png'});await b.close();process.exit();})();
