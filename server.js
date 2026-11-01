@@ -77,7 +77,10 @@ const state=()=>{advance(music,durOf,Date.now(),nextIndex);return {...music,dura
 function broadcastMusic(){if(!music.playlist.length)setTimeout(ensureDefault,0);io.emit('music',state());save();schedule();}
 function pub(){const o={};for(const id in players){const {cid,seen,joinedAt,lastDrink,lastServe,lastAct,lastEat,gone,timer,...r}=players[id];o[id]=r;}return o;}
 function nickTaken(n,cid,sid){n=n.trim().toLowerCase();for(const id in players){const q=players[id];if(id!==sid&&q.cid!==cid&&q.nick.trim().toLowerCase()===n)return true;}return false;}
-function sweep(){for(const id in players){const so=io.sockets.sockets.get(id);if((!so||!so.connected)&&!players[id].gone){const pl=players[id];delete players[id];io.emit('leave',id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});}}}
+let lastOnline=-1;function online(){let n=0;for(const id in players)if(!players[id].gone)n++;return n;}
+function bcOnline(force){const n=online();if(force||n!==lastOnline){lastOnline=n;io.emit('online',n);}}
+setInterval(()=>bcOnline(false),1000).unref();
+function sweep(){for(const id in players){const so=io.sockets.sockets.get(id);if((!so||!so.connected)&&!players[id].gone){const pl=players[id];delete players[id];io.emit('leave',id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});}}bcOnline();}
 setInterval(sweep,15000).unref();
 const chatHist=[];const GRACE_MS=+process.env.GRACE_MS||30000;
 const BZ={x0:10.55,x1:11.4,z0:-1.6,z1:6.75},BAR_Z={};for(let k=0;k<5;k++)BAR_Z['BAR-'+k]=3-3.5+k*1.4;
@@ -104,7 +107,7 @@ io.on('connection',s=>{
    if(!so||!so.connected||pl.gone||(id!==s.id&&now-(pl.seen||pl.joinedAt||now)>60000)){rm.push(id);continue;}
    const o=seenCid.get(pl.cid);if(o){const keep=(players[o].seen||0)>=(pl.seen||0)?o:id,drop=keep===o?id:o;rm.push(drop);seenCid.set(pl.cid,keep);}else seenCid.set(pl.cid,id);}
   for(const id of new Set(rm)){const pl=players[id];if(!pl)continue;clearTimeout(pl.timer);delete players[id];dirty.delete(id);io.emit('leave',id);const so=io.sockets.sockets.get(id);if(so&&id!==s.id)so.disconnect(true);}
-  io.emit('snapshot',pub());ack({ok:true,removed:new Set(rm).size});});
+  io.emit('snapshot',pub());bcOnline();ack({ok:true,removed:new Set(rm).size});});
  s.on('join',(p,ack)=>{p=p||{};const cid=String(p.clientId||s.id).slice(0,64);const nick=String(p.nick||'손님').trim().slice(0,16)||'손님';
   if(isBad(nick)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}
   if(nickTaken(nick,cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nick);return;}
@@ -116,7 +119,7 @@ io.on('connection',s=>{
    :{pos:[0,0,4],rot:0,seat:null,carry:null,drinks:[]};
   const re=!!cur;players[s.id]={...(cur||{}),seen:Date.now(),joinedAt:Date.now(),cid,nick,...look(p),...base};
   if(prevId)io.emit('rekey',{old:prevId,id:s.id});io.emit('player',{id:s.id,...pub()[s.id]});
-  if(typeof ack==='function')ack(re?{ok:true,resume:base}:{ok:true});if(!re)io.emit('chat',{sys:true,text:nick+' 님 입장!'});});
+  if(typeof ack==='function')ack(re?{ok:true,resume:base}:{ok:true});if(!re)io.emit('chat',{sys:true,text:nick+' 님 입장!'});bcOnline(true);});
  s.on('profile',(p,ack)=>{const pl=players[s.id];if(!pl)return;const nn=String(p.nick||pl.nick).trim().slice(0,16)||pl.nick;if(isBad(nn)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}if(nickTaken(nn,pl.cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nn);return;}if(typeof ack==='function')ack({ok:true});Object.assign(pl,{nick:nn,...look(p)});io.emit('player',{id:s.id,...pl});});
  s.on('move',m=>{const pl=players[s.id];if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
@@ -154,7 +157,7 @@ io.on('connection',s=>{
    if(cmd.index<music.index)music.index--;else if(cmd.index===music.index){if(!music.playlist.length){music.index=-1;music.playing=false;}else{music.index%=music.playlist.length;music.startedAt=now;music.pausedAt=0;}}}
   broadcastMusic();});
  s.on('disconnect',()=>{const pl=players[s.id];if(!pl)return;pl.gone=Date.now();clearTimeout(pl.timer);
-  pl.timer=setTimeout(()=>{if(players[s.id]!==pl||!pl.gone)return;delete players[s.id];io.emit('leave',s.id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});},GRACE_MS);});
+  pl.timer=setTimeout(()=>{if(players[s.id]!==pl||!pl.gone)return;delete players[s.id];io.emit('leave',s.id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});bcOnline();},GRACE_MS);bcOnline();});
 });
 server.listen(PORT,'0.0.0.0',()=>{tick();ensureDefault();
  const ext=process.env.RENDER_EXTERNAL_URL;if(ext)setInterval(()=>fetch(ext.replace(/\/$/,'')+'/health').catch(()=>{}),10*60*1000);console.log('ERRDAY 7080 나이트 서버: http://localhost:'+PORT);console.log('관리자 로그인: 사용 가능 (고정 비밀번호)');

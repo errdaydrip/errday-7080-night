@@ -188,6 +188,7 @@ $('chatIn').addEventListener('keydown',e=>e.stopPropagation());
 $('chatForm').onsubmit=e=>{e.preventDefault();const t=$('chatIn').value.trim();if(t)socket.emit('chat',t);$('chatIn').value='';};
 socket.on('chatHistory',h=>{$('msgs').innerHTML='';if(!h||!h.length)return;const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};for(const m of h)addMsg(`<span style="opacity:.55"><small style="color:#888">${hm(m.t)}</small> <b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}</span>`);addMsg('<div style="text-align:center;color:#888;font-size:11px;opacity:.8">— 이전 채팅 —</div>');;chatBottom();});
 socket.on('chat',m=>{if(m.sys){sys(m.text);return;}bubble(m.id,m.text);addMsg(`<b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}`);});
+socket.on('online',n=>{const e=document.getElementById('onlineCnt');if(e)e.textContent=' · 👥 '+n+'명';});
 // ---------- 네트워크 ----------
 socket.on('init',d=>{myId=d.id;clearOthers();for(const id in d.players)upsertOther({id,...d.players[id]});setMusic(d.music);if(joined){saveState();socket.emit('join',{...me,clientId:CID,last:lastState()},r=>{if(r&&!r.ok){joined=false;nickErr(r.error);}});}});
 socket.on('rekey',({old,id})=>{if(id===myId||!others[old])return;others[id]=others[old];delete others[old];});

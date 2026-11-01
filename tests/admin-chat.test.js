@@ -6,7 +6,7 @@ for(const [name,vp] of [['PC',{width:1280,height:720}],['MOB',{width:390,height:
  pg.on('dialog',d=>d.accept(d.type()==='prompt'?'6651':undefined));pg.on('pageerror',e=>console.log(name,'ERR',e.message));
  await pg.goto('http://localhost:8080',{waitUntil:'load'});await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
  await pg.evaluate(n=>document.getElementById('nick').value=n,'관리자'+name);await pg.click('#enter');await W(800);
- await pg.click('#adminBtn');await W(800);
+ await pg.click('#adminBtn');await pg.waitForSelector('#pwBox input');await pg.type('#pwBox input','6651');await pg.click('#pwBox button');await W(800);
  if(name==='MOB'){await pg.click('#musicToggle');await W(300);await pg.click('#chatToggle');await W(300);}
  console.log(name,'admin?',await pg.evaluate(()=>!!adminToken&&!document.getElementById('adminCtl').classList.contains('hidden')));
  const vis=await pg.evaluate(()=>{const r=document.getElementById('chatIn').getBoundingClientRect();const el=document.elementFromPoint(r.x+10,r.y+r.height/2);return el&&el.id;});console.log(name,'top element at chat input:',vis);
