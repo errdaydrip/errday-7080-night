@@ -73,7 +73,7 @@ function bubble(id,text){const el=id===myId?$('myAvatar'):others[id]&&others[id]
  clearTimeout(b._t);b._t=setTimeout(()=>b.setAttribute('visible',false),5000);}
 // ---------- 3인칭 카메라 · 이동 · 클릭 이동 · 자동 앉기 ----------
 const rig=$('rig'),cam=$('cam'),myAv=$('myAvatar'),marker=$('marker');
-const keys={};let myDance=0,idleT=0,camYaw=0,camPitch=.4,camDist=IS_MOBILE?5.5:4.5,myYaw=Math.PI,goal=null,goalSeat=null,stillT=0,moving=false;
+const keys={};let camGoal=null,myDance=0,idleT=0,camYaw=0,camPitch=.4,camDist=IS_MOBILE?5.5:4.5,myYaw=Math.PI,goal=null,goalSeat=null,stillT=0,moving=false;
 const typing=()=>document.activeElement&&document.activeElement.tagName==='INPUT';
 window.addEventListener('keydown',e=>{if(typing())return;keys[e.code]=true;if(/Key[WASD]|Arrow/.test(e.code)){route=[];goal=null;goalSeat=null;marker.setAttribute('visible',false);}
  if(e.code==='KeyE'){mySeat?stand():(()=>{const s=nearestSeat(1.6);if(s)sit(s);})();}if(e.code==='Escape')stand();});
@@ -85,7 +85,7 @@ scene.addEventListener('loaded',()=>{const c=scene.canvas;
   if(ptrs.size===1)down={x:e.clientX,y:e.clientY,t:performance.now(),moved:0};else{down=null;const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);dist0=camDist;}});
  c.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
   if(ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0)camDist=Math.max(2,Math.min(10,dist0*pinch0/d));return;}
-  if(down){down.moved+=Math.abs(dx)+Math.abs(dy);if(down.moved>8){camYaw-=dx*.006;camPitch=Math.max(.05,Math.min(1.2,camPitch+dy*.005));}}});
+  if(down){down.moved+=Math.abs(dx)+Math.abs(dy);if(down.moved>8){camGoal=null;camYaw-=dx*.006;camPitch=Math.max(.05,Math.min(1.2,camPitch+dy*.005));}}});
  const up=e=>{ptrs.delete(e.pointerId);if(down&&e.type==='pointerup'&&down.moved<=8&&performance.now()-down.t<600)tapAt(e.clientX,e.clientY);if(ptrs.size===0)down=null;pinch0=0;};
  c.addEventListener('pointerup',up);c.addEventListener('pointercancel',up);
  c.addEventListener('wheel',e=>{e.preventDefault();camDist=Math.max(2,Math.min(10,camDist+e.deltaY*.004));},{passive:false});});
@@ -113,9 +113,9 @@ function blocked(x,z,ignoreSeatTable){const p0=rig.object3D.position;if(Math.abs
 function seatTaken(s){return Object.values(others).some(o=>o.seat===s.id);}
 function nearestSeat(maxD){const p=rig.object3D.position;let best=null,bd=maxD;for(const s of SEATS){const d=Math.hypot(s.x-p.x,s.z-p.z);if(d<bd&&!seatTaken(s)){bd=d;best=s;}}return best;}
 function tableCenter(t){const ss=SEATS.filter(s=>s.table===t);return{x:ss.reduce((a,s)=>a+s.x,0)/ss.length,z:ss.reduce((a,s)=>a+s.z,0)/ss.length};}
-function sit(s){if(!s||seatTaken(s))return;mySeat=s.id;goal=null;goalSeat=null;marker.setAttribute('visible',false);rig.object3D.position.set(s.x,s.y||0,s.z);myYaw=s.yaw;camYaw=myYaw+Math.PI;
+function sit(s){if(!s||seatTaken(s))return;mySeat=s.id;goal=null;goalSeat=null;marker.setAttribute('visible',false);rig.object3D.position.set(s.x,s.y||0,s.z);myYaw=s.yaw;{const bar=s.table==='BAR';camGoal={yaw:myYaw,pitch:bar?.5:.3,dist:bar?1.9:(IS_MOBILE?3:2.6)};}
  socket.emit('seat',s.id);socket.emit('move',{pos:[s.x,s.y||0,s.z],rot:myYaw});updateWhere();}
-function stand(){if(!mySeat)return;const s=SEATS.find(x=>x.id===mySeat);mySeat=null;if(s.stand)rig.object3D.position.set(s.stand[0],0,s.stand[1]);else{const c=tableCenter(s.table);
+function stand(){if(!mySeat)return;camGoal={yaw:myYaw+Math.PI,pitch:.4,dist:IS_MOBILE?5.5:4.5};const s=SEATS.find(x=>x.id===mySeat);mySeat=null;if(s.stand)rig.object3D.position.set(s.stand[0],0,s.stand[1]);else{const c=tableCenter(s.table);
  rig.object3D.position.set(clampX(s.x+(s.x-c.x)*.45),0,clampZ(s.z+(s.z-c.z)*.45));}route=[];socket.emit('seat',null);updateWhere();}
 function updateWhere(){const t=mySeat&&mySeat.split('-')[0];$('where').textContent=t==='BAR'?'🍸 바 스툴':t?'🛋 '+t.slice(1)+'번 테이블':'🌐 로비';}
 AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const p=rig.object3D.position;moving=false;
@@ -136,6 +136,7 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
  if(!mySeat&&!moving&&!goal&&joined){idleT+=dt;if(idleT>3&&!myDance)myDance=1+Math.floor(Math.random()*3);}else{idleT=0;myDance=0;}
  myAv.object3D.rotation.y=myYaw;if(myAv._h)myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
  const tx=p.x,ty=p.y+(mySeat?.95:1.1),tz=p.z;let d=camDist;
+ if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));camYaw+=d*.08;camPitch+=(camGoal.pitch-camPitch)*.08;camDist+=(camGoal.dist-camDist)*.08;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
  const dir=new THREE.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
  for(;d>1.2;d-=.1){const cx=tx+dir.x*d,cy=ty+dir.y*d,cz=tz+dir.z*d;if(cx>ROOM.x0&&cx<ROOM.x1&&cz>ROOM.z0&&cz<ROOM.z1&&cy<ROOM.y1)break;}
  const cx=tx+dir.x*d,cy=ty+dir.y*d,cz=tz+dir.z*d;cam.object3D.position.set(cx,cy,cz);cam.object3D.lookAt(2*cx-tx,2*cy-ty,2*cz-tz);
