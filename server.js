@@ -68,13 +68,20 @@ function schedule(){clearTimeout(timer);const t=music.playlist[music.index],d=du
  if(music.playing&&d)timer=setTimeout(tick,Math.max(500,music.startedAt+d*1000-Date.now()+300));}
 const state=()=>{advance(music,durOf,Date.now(),nextIndex);return {...music,durations,serverNow:Date.now()};};
 function broadcastMusic(){if(!music.playlist.length)setTimeout(ensureDefault,0);io.emit('music',state());save();schedule();}
-function pub(){const o={};for(const id in players){const {cid,lastDrink,lastServe,...r}=players[id];o[id]=r;}return o;}
+function pub(){const o={};for(const id in players){const {cid,lastDrink,lastServe,lastAct,...r}=players[id];o[id]=r;}return o;}
 function nickTaken(n,cid,sid){n=n.trim().toLowerCase();for(const id in players){const q=players[id];if(id!==sid&&q.cid!==cid&&q.nick.trim().toLowerCase()===n)return true;}return false;}
 function sweep(){for(const id in players){const so=io.sockets.sockets.get(id);if(!so||!so.connected){const pl=players[id];delete players[id];io.emit('leave',id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});}}}
 setInterval(sweep,15000).unref();
 const chatHist=[];
 const BZ={x0:10.55,x1:11.4,z0:-1.6,z1:6.75},BAR_Z={};for(let k=0;k<5;k++)BAR_Z['BAR-'+k]=3-3.5+k*1.4;
-const glasses={};const glassPub=()=>{const o={};for(const k in glasses)o[k]=1;return o;};
+const glasses={};const glassPub=()=>{const o={};for(const k in glasses)o[k]=glasses[k].type||'whiskey';return o;};
+const DRINKS=['soju','beer','whiskey','cocktail'];
+const TABLES={Y1:[-7.6,16.4],Y2:[-3,16.4],Y3:[-7.6,20.2],Y4:[-3,20.2],Y5:[2.6,21.5]};const tables={};for(const k in TABLES)tables[k]={items:[],t:0};
+const PICK={soju:{x:-0.7,z:21.5,r:1.8},beer:{x:-0.7,z:21.5,r:1.8}};for(const f of ['dakbal','kkom','fish','squid'])PICK[f]={x:5.5,z:16.5,r:2.4};
+const tablePub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.slice();return o;};
+const pochaTable=seat=>{const m=/^(Y\d)-/.exec(seat||'');return m&&tables[m[1]]?m[1]:null;};
+function canDrink(seat,type){if(BAR_Z[seat]!==undefined)return !!glasses[seat]&&(glasses[seat].type||'whiskey')===type;if(type==='whiskey'||type==='cocktail')return false;const tb=pochaTable(seat);if(tb)return tables[tb].items.includes(type);return true;}
+setInterval(()=>{const n=Date.now();let ch=false;for(const k in tables)if(tables[k].items.length&&n-tables[k].t>1200000){tables[k].items=[];ch=true;}if(ch)io.emit('table',tablePub());},10000).unref();
 setInterval(()=>{const n=Date.now();let ch=false;for(const k in glasses)if(n-glasses[k].t>60000){delete glasses[k];ch=true;}if(ch)io.emit('glasses',glassPub());},2000).unref();
 io.on('connection',s=>{
  s.emit('init',{id:s.id,players:pub(),music:state()});s.emit('chatHistory',chatHist);
@@ -88,14 +95,21 @@ io.on('connection',s=>{
  s.on('move',m=>{const pl=players[s.id];if(!pl)return;pl.pos=m.pos;pl.rot=m.rot;pl.dance=(+m.dance|0)%4;s.broadcast.volatile.emit('move',{id:s.id,pos:m.pos,rot:m.rot,dance:pl.dance});});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.emit('glasses',glassPub());
- s.on('drink',type=>{const pl=players[s.id];if(!pl||!pl.seat||!['soju','beer','whiskey'].includes(type))return;if(type==='whiskey'&&!glasses[pl.seat])return;const n=Date.now();if(n-(pl.lastDrink||0)<2000)return;pl.lastDrink=n;
-  if(type==='whiskey'){delete glasses[pl.seat];io.emit('glasses',glassPub());}io.emit('drink',{id:s.id,type});});
- s.on('serve',q=>{const pl=players[s.id];if(!pl||pl.seat)return;const x=+(q&&q.x),z=+(q&&q.z);if(!(x>=BZ.x0-.2&&x<=BZ.x1+.2&&z>=BZ.z0-.2&&z<=BZ.z1+.2))return;
-  const n=Date.now();if(n-(pl.lastServe||0)<3000)return;pl.lastServe=n;s.broadcast.emit('pour',{id:s.id});
+ s.emit('table',tablePub());
+ s.on('drink',type=>{const pl=players[s.id];if(!pl||!pl.seat||!DRINKS.includes(type))return;if(!canDrink(pl.seat,type))return;const n=Date.now();if(n-(pl.lastDrink||0)<2000)return;pl.lastDrink=n;
+  if(BAR_Z[pl.seat]!==undefined){delete glasses[pl.seat];io.emit('glasses',glassPub());}const tb=pochaTable(pl.seat);if(tb)tables[tb].t=n;io.emit('drink',{id:s.id,type});});
+ s.on('serve',q=>{const pl=players[s.id];if(!pl||pl.seat)return;const kind=q&&q.kind==='cocktail'?'cocktail':'whiskey';const x=+(q&&q.x),z=+(q&&q.z);if(!(x>=BZ.x0-.2&&x<=BZ.x1+.2&&z>=BZ.z0-.2&&z<=BZ.z1+.2))return;
+  const n=Date.now();if(n-(pl.lastServe||0)<3000)return;pl.lastServe=n;s.broadcast.emit('pour',{id:s.id,kind});
   const seated=Object.values(players).filter(o=>o.seat&&BAR_Z[o.seat]!==undefined&&!glasses[o.seat]).map(o=>o.seat);
   const cand=seated.length?seated:Object.keys(BAR_Z).filter(k=>!glasses[k]);if(!cand.length)return;
   cand.sort((a,b)=>Math.abs(BAR_Z[a]-z)-Math.abs(BAR_Z[b]-z));const seat=cand[0];
-  setTimeout(()=>{glasses[seat]={t:Date.now()};io.emit('glasses',glassPub());},1400);});
+  setTimeout(()=>{glasses[seat]={t:Date.now(),type:kind};io.emit('glasses',glassPub());},1400);});
+ s.on('pickup',kind=>{const pl=players[s.id];if(!pl||pl.seat)return;const src=PICK[kind];if(!src)return;const p=pl.pos||[0,0,0];if(Math.hypot(p[0]-src.x,p[2]-src.z)>src.r)return;
+  const n=Date.now();if(n-(pl.lastAct||0)<500)return;pl.lastAct=n;pl.carry=kind;io.emit('carry',{id:s.id,kind});});
+ s.on('place',()=>{const pl=players[s.id];if(!pl||!pl.carry)return;const p=pl.pos||[0,0,0];let best=pochaTable(pl.seat),bd=1.9;if(!best)for(const k in TABLES){const t=TABLES[k],d=Math.hypot(p[0]-t[0],p[2]-t[1]);if(d<bd){bd=d;best=k;}}
+  if(!best)return;const n=Date.now();if(n-(pl.lastAct||0)<500)return;pl.lastAct=n;const tb=tables[best];if(tb.items.length>=8)return;tb.items.push(pl.carry);tb.t=n;pl.carry=null;io.emit('carry',{id:s.id,kind:null});io.emit('table',tablePub());});
+ s.on('clearTable',()=>{const pl=players[s.id];if(!pl)return;const p=pl.pos||[0,0,0];let best=pochaTable(pl.seat);if(!best)for(const k in TABLES){const t=TABLES[k];if(Math.hypot(p[0]-t[0],p[2]-t[1])<1.9)best=k;}
+  if(!best||!tables[best].items.length)return;const n=Date.now();if(n-(pl.lastAct||0)<1000)return;pl.lastAct=n;tables[best].items=[];io.emit('table',tablePub());});
  s.on('chat',text=>{const pl=players[s.id];if(!pl)return;text=String(text).slice(0,200);if(!text.trim())return;text=cleanText(text);
   const t=Date.now();chatHist.push({nick:pl.nick,text,t});if(chatHist.length>50)chatHist.shift();io.emit('chat',{id:s.id,nick:pl.nick,text,t});});
  s.on('duration',d=>{const t=music.playlist[d&&d.index];const sec=+(d&&d.sec);if(!t||!(sec>1&&sec<36000))return;const k=t.type==='yt'?t.videoId:t.id;if(durations[k])return;durations[k]=sec;broadcastMusic();});

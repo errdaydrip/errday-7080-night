@@ -92,20 +92,25 @@ function buildBar(){
  E('a-box',{position:`${X-.51} .15 ${Z-.7}`,width:.02,height:.05,depth:7.6,material:'color:#ff3cac;emissive:#ff3cac;emissiveIntensity:1'});
  E('a-box',{position:`${X-.51} 1.1 ${Z-.7}`,width:.02,height:.04,depth:7.6,material:'color:#00e5ff;emissive:#00e5ff;emissiveIntensity:1'});
  // 뒷선반 + 술병
- const back=E('a-box',{position:'11.7 2.2 '+Z,width:.5,height:3.2,depth:9,material:'roughness:.6'});texMesh(back,TEX.wood());
- E('a-box',{position:'11.6 2.2 '+Z,width:.05,height:3,depth:8.8,material:'color:#331100;emissive:#ff9933;emissiveIntensity:.25;metalness:1;roughness:.1'}); // 거울 느낌
+ window.SHELF_EL=[];
+ const back=E('a-box',{position:'11.7 2.2 '+Z,width:.5,height:3.2,depth:9,material:'roughness:.6'});texMesh(back,TEX.wood());SHELF_EL.push(back);
+ SHELF_EL.push(E('a-box',{position:'11.6 2.2 '+Z,width:.05,height:3,depth:8.8,material:'color:#331100;emissive:#ff9933;emissiveIntensity:.25;metalness:1;roughness:.1'})); // 거울 느낌
  const bt=['wine-red','wine-white','soda-bottle','wine-red','cocktail','glass-wine'];
- for(let s=0;s<3;s++){E('a-box',{position:`11.35 ${1.2+s*.85} ${Z}`,width:.4,height:.04,depth:8.6,material:'color:#c9a24a;metalness:.8'});
-  for(let k=0;k<12;k++)prop(bt[(k+s)%bt.length],{pos:[11.35,1.22+s*.85,Z-4+k*.72],scale:.5});}
+ for(let s=0;s<3;s++){SHELF_EL.push(E('a-box',{position:`11.35 ${1.2+s*.85} ${Z}`,width:.4,height:.04,depth:8.6,material:'color:#c9a24a;metalness:.8'}));
+  for(let k=0;k<12;k++)SHELF_EL.push(prop(bt[(k+s)%bt.length],{pos:[11.35,1.22+s*.85,Z-4+k*.72],scale:.5}));}
  for(let k=0;k<5;k++){const sx=X-1.1,sz=Z-3.5+k*1.4,el=prop('stoolBar',{pos:[sx,0,sz],scale:2.2,tint:'#8b0018'});el.dataset.seat='BAR-'+k;el.classList.add('seat');
   SEATS.push({id:'BAR-'+k,table:'BAR',x:sx,z:sz,y:.52,yaw:Math.PI/2,el,stand:[sx-.8,sz]});} // 바 스툴도 좌석 (바 쪽을 봄)
- for(let k=0;k<4;k++)prop(['cocktail','glass-wine'][k%2],{pos:[X,1.25,Z-3+k*2],scale:.35});
  E('a-entity',{position:'11.4 4.3 '+Z,rotation:'0 -90 0',ktext:'value:BAR;color:#fff;glow:#00e5ff;size:90;width:2;font:Georgia,serif'});
  // 여닫이 상판(위로 젖힌 상태) → 바텐더 출입구
  E('a-box',{position:`${X} 1.75 ${Z+3.07}`,width:1.2,height:1.05,depth:.05,material:'color:#c9a24a;metalness:.8;roughness:.25'});
  E('a-box',{position:`${X} .6 ${Z+4.6}`,width:1,height:1.2,depth:.2,material:'color:#3a2416;roughness:.6'}); // 끝 기둥
  E('a-entity',{position:`${X-.62} 1.5 ${Z+3.8}`,rotation:'0 -90 0',ktext:'value:STAFF;color:#fff;glow:#ffd84a;size:40;width:.7'});
  window.BAR_ZONE={x0:10.55,x1:11.4,z0:-1.6,z1:6.75};
+ // 바텐더 단상 (0.35m) + STAFF 입구 경사로
+ const PH=.35;window.BAR_PLAT={x0:10.5,x1:11.5,z0:-1.7,z1:6.2,rz:7.4,h:PH};
+ E('a-box',{position:`11 ${PH/2} 2.25`,width:1,height:PH,depth:7.9,material:'color:#2a1a10;roughness:.8'});
+ E('a-box',{position:`10.51 ${PH-.01} 2.25`,width:.02,height:.02,depth:7.9,material:'color:#ffd84a;emissive:#ffd84a;emissiveIntensity:.8'});
+ {const L=7.4-6.2,ang=Math.atan2(PH,L)*57.3;E('a-plane',{position:`11 ${PH/2} 6.8`,rotation:`${-90+ang} 0 0`,width:1,height:Math.hypot(L,PH),material:'color:#3a2416;roughness:.9;side:double'});}
  OBSTACLES.push({x0:X-.7,x1:X+.55,z0:Z-4.7,z1:Z+3.1},{x0:X-.55,x1:X+.55,z0:Z+4.5,z1:Z+4.7},{x0:11.5,x1:12,z0:Z-4.7,z1:Z+4.7});
 }
 function buildStage(){
@@ -245,6 +250,9 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit',
   else l.add(mesh(G.sph(.075),shoe,[0,-.37,.035],[1,.6,1.45]));
   return l;});
  outfit(torso,hips,M,{...opts,style:st,col});
+ if(opts.waiter){torso.add(mesh(G.box(.16,.26,.02),M.white,[0,.3,.142]));torso.add(mesh(G.box(.05,.035,.03),M.T('#c8102e'),[0,.47,.15]));[-1,1].forEach(s=>torso.add(mesh(G.cone?G.cone:new THREE.ConeGeometry(.03,.06,8),M.T('#c8102e'),[s*.04,.47,.15],null,[0,0,s*Math.PI/2])));
+  torso.add(mesh(G.box(.09,.03,.01),new THREE.MeshBasicMaterial({color:'#ffd84a'}),[.1,.38,.15]));
+  const tr=new THREE.Group();tr.position.set(0,-.26,.12);tr.add(mesh(G.cyl(.17,.17,.015,24),M.silver,[0,0,0]));tr.add(mesh(G.cyl(.03,.025,.1,12),new THREE.MeshStandardMaterial({color:'#f2b632',transparent:true,opacity:.85}),[.05,.06,0]));tr.add(mesh(G.cyl(.02,.02,.06,10),new THREE.MeshStandardMaterial({color:'#2e9a4a'}),[-.06,.04,.03]));arms[1].children[0].add(tr);}
  if(opts.dj){const g=new THREE.Group();g.position.set(0,.28,.3);head.add(g);
   [-1,1].forEach(s=>g.add(mesh(G.cyl(.07,.07,.02,20),new THREE.MeshStandardMaterial({color:'#111',metalness:1,roughness:.1}),[s*.11,0,0],null,[Math.PI/2,0,0])));g.add(mesh(G.box(.08,.015,.01),M.black));
   head.add(mesh(new THREE.TorusGeometry(.4,.025,8,24,Math.PI),M.black,[0,.3,0],null,[0,Math.PI/2,0]));
@@ -314,6 +322,7 @@ function animateChibi(c,state,t,o){const k=t*Math.PI*2;let bob=0,armA=0,legA=0,l
 window.makeHuman=async function(holder,opts){const c=makeChibi(opts);holder.object3D.add(c.root);let state='idle',t=Math.random()*10;
  const map={Idle_Loop:'idle',Walk_Loop:'walk',Sitting_Idle_Loop:'sit',Dance_Loop:'dance1',Dance_1:'dance1',Dance_2:'dance2',Dance_3:'dance3'};
  const h={root:c.root,cur:null,play(name){this.cur=name;state=map[name]||'idle';},drinks:[],cup:null,dT:-1,
+  carry(kind){if(this.held){this.held.parent.remove(this.held);this.held=null;}this.carryKind=kind||null;if(kind){this.held=makeItem(kind,true);c.arms[0].children[0].add(this.held);}},
   drink(type){if(this.cup){this.cup.parent.remove(this.cup);}this.cup=makeCup(type);c.arms[1].children[0].add(this.cup);this.dT=0;this.d0=performance.now();this.pouring=type==='pour';if(this.pouring)return;const n=Date.now();this.drinks=this.drinks.filter(x=>n-x<300000);this.drinks.push(n);},
   mixer:{timeScale:1,update(dt){t+=dt*h.mixer.timeScale;animateChibi(c,state,t,opts);
    if(h.dT>=0){h.dT=(performance.now()-h.d0)/1000;const q=h.dT/2,r=q<.3?q/.3:q<.75?1:Math.max(0,1-(q-.75)/.25),e=r*r*(3-2*r);
@@ -323,6 +332,7 @@ window.makeHuman=async function(holder,opts){const c=makeChibi(opts);holder.obje
   dispose(){holder.object3D.remove(c.root);c.root.traverse(n=>{if(n.isMesh){n.geometry.dispose();}});}};h.play('Idle_Loop');animateChibi(c,'idle',0,opts);return h;};
 function makeCup(type){const g=new THREE.Group();g.position.set(0,-.3,.06);
  if(type==='whiskey'||type==='rock'){return rockGlass(g);}
+ if(type==='cocktail'){return cocktailGlass(g);}
  if(type==='pour'){g.add(mesh(G.cyl(.045,.05,.22,14),new THREE.MeshStandardMaterial({color:'#7a3d0a',transparent:true,opacity:.85,roughness:.15}),[0,.02,0]));g.add(mesh(G.cyl(.015,.02,.09,10),new THREE.MeshStandardMaterial({color:'#7a3d0a'}),[0,.17,0]));g.add(mesh(G.box(.06,.06,.005),new THREE.MeshBasicMaterial({color:'#f3e2b0'}),[0,.02,.05]));return g;}
  if(type==='beer'){const glass=new THREE.MeshStandardMaterial({color:'#f2b632',transparent:true,opacity:.85,roughness:.2});g.add(mesh(G.cyl(.06,.055,.15,16),glass,[0,0,0]));g.add(mesh(G.cyl(.062,.062,.04,16),new THREE.MeshToonMaterial({color:'#fffdf2'}),[0,.09,0]));g.add(mesh(new THREE.TorusGeometry(.04,.012,6,12),glass,[.07,0,0],null,[0,0,Math.PI/2]));}
  else{g.add(mesh(G.cyl(.035,.028,.06,14),new THREE.MeshStandardMaterial({color:'#e8f4ff',transparent:true,opacity:.7,roughness:.1}),[0,0,0]));g.add(mesh(G.cyl(.03,.026,.03,14),new THREE.MeshBasicMaterial({color:'#ffffff'}),[0,-.005,0]));}
@@ -330,6 +340,19 @@ function makeCup(type){const g=new THREE.Group();g.position.set(0,-.3,.06);
 function rockGlass(g){g.add(mesh(G.cyl(.05,.045,.09,16),new THREE.MeshStandardMaterial({color:'#eef6ff',transparent:true,opacity:.45,roughness:.05}),[0,0,0]));
  g.add(mesh(G.cyl(.043,.04,.045,16),new THREE.MeshStandardMaterial({color:'#c46a12',transparent:true,opacity:.9,emissive:'#5a2a00'}),[0,-.018,0]));
  g.add(mesh(G.box(.035,.035,.035),new THREE.MeshStandardMaterial({color:'#ffffff',transparent:true,opacity:.7}),[.008,.01,0],null,[.4,.5,.2]));return g;}
+function cocktailGlass(g){const gl=new THREE.MeshStandardMaterial({color:'#eef6ff',transparent:true,opacity:.45,roughness:.05});
+ g.add(mesh(G.cyl(.006,.006,.07,8),gl,[0,-.02,0]));g.add(mesh(G.cyl(.03,.03,.005,12),gl,[0,-.055,0]));
+ const cone=new THREE.Mesh(new THREE.ConeGeometry(.055,.06,16,1,true),new THREE.MeshStandardMaterial({color:'#ff4fa0',transparent:true,opacity:.8,emissive:'#80104a',side:THREE.DoubleSide}));cone.rotation.x=Math.PI;cone.position.y=.045;g.add(cone);
+ g.add(mesh(G.cyl(.008,.008,.008,8),new THREE.MeshStandardMaterial({color:'#ffd84a',emissive:'#806000'}),[.03,.08,0]));return g;}
+// 포차 아이템 (병/접시) — 손에 들거나 테이블에 놓음
+const FOOD_COL={dakbal:'#b0281a',kkom:'#7a3a20',fish:'#c08a40',squid:'#d23a10'};
+function makeItem(kind,inHand){const g=new THREE.Group();if(inHand)g.position.set(0,-.32,.08);
+ if(kind==='soju'||kind==='beer'){const m=new THREE.MeshStandardMaterial({color:kind==='soju'?'#2e9a4a':'#5a2c0c',transparent:true,opacity:.88,roughness:.15});
+  g.add(mesh(G.cyl(.04,.04,.18,12),m,[0,.09,0]));g.add(mesh(G.cyl(.015,.03,.07,10),m,[0,.21,0]));g.add(mesh(G.box(.06,.05,.005),new THREE.MeshBasicMaterial({color:kind==='soju'?'#e8f4ff':'#f3c040'}),[0,.09,.041]));if(inHand)g.position.y=-.42;}
+ else{g.add(mesh(G.cyl(.13,.11,.025,16),new THREE.MeshStandardMaterial({color:'#f4f4f0',roughness:.4}),[0,.012,0]));const col=FOOD_COL[kind]||'#a0502a';
+  for(let k=0;k<7;k++)g.add(mesh(G.box(kind==='fish'?.12:.04,.03,kind==='fish'?.05:.04),new THREE.MeshToonMaterial({color:col}),[kind==='fish'?0:(k%3-1)*.05,.035+(k>4?.02:0),kind==='fish'?(k-3)*.012:((k/3|0)-1)*.04],null,[0,k,0]));if(inHand)g.position.y=-.36;}
+ return g;}
+window.makeItem=makeItem;window.cocktailGlass=cocktailGlass;
 window.rockGlass=rockGlass;window.makeCup=makeCup;window.makeChibi=makeChibi;window.animateChibi=animateChibi;
 AFRAME.registerComponent('mixers',{tick(t,dt){for(const h of window.HUMANS||[])h.mixer.update(Math.min(dt,50)/1000);}});
 window.HUMANS=new Set();
@@ -367,7 +390,7 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  bld(13.5,15,2,8,6,-90,'#463a33',['연탄',4,'#ff9040',1.4]);bld(13.5,22.5,2,10,8,-90,'#3c3633',null);
  bld(-13.5,16,2,7,8,90,'#40342c',['이발소',4,'#ff4060',1.6]);bld(-13.5,23,2,11,6,90,'#3a3a3a',null);
  // 천막 (낡은 주황 방수포)
- const T={x0:-10,x1:0,z0:14,z1:22.3,e:3.2,r:4.0};window.TENT=T;const cx=(T.x0+T.x1)/2,cz=(T.z0+T.z1)/2,hw=(T.z1-T.z0)/2,sl=Math.hypot(hw,T.r-T.e);const ang=Math.atan2(T.r-T.e,hw)*57.3;
+ const T={x0:-10,x1:0,z0:14,z1:22.3,e:4.5,r:5.6};window.TENT=T;const cx=(T.x0+T.x1)/2,cz=(T.z0+T.z1)/2,hw=(T.z1-T.z0)/2,sl=Math.hypot(hw,T.r-T.e);const ang=Math.atan2(T.r-T.e,hw)*57.3;
  const tarp=()=>TEX.tarp();
  [-1,1].forEach(s=>texMesh(E('a-plane',{position:`${cx} ${(T.e+T.r)/2} ${cz+s*hw/2}`,rotation:`${-90+s*-ang*0+ (s<0?ang:-ang)} 0 0`,width:T.x1-T.x0+.4,height:sl+.2,material:'side:double;roughness:1'}),tarp()));
  texMesh(E('a-plane',{position:`${cx} ${T.e/2+.4} ${T.z1}`,rotation:'0 180 0',width:T.x1-T.x0,height:T.e-.8,material:'side:double;roughness:1;opacity:.92;transparent:true'}),tarp());
@@ -378,7 +401,7 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  // 백열전구 줄 (비닐 전선)
  let bi=0;[[T.x0+.3,T.z0+2],[T.x0+.3,T.z1-2.2]].forEach(([x0,z])=>{for(let x=x0;x<T.x1;x+=1.2){const y=T.e+.15-Math.sin((x-x0)/(T.x1-x0)*Math.PI)*.25;
   E('a-sphere',{position:`${x} ${y} ${z}`,radius:.09,'segments-width':8,'segments-height':6,material:'color:#ffe4a0;emissive:#ffb040;emissiveIntensity:1'});E('a-cylinder',{position:`${x} ${y+.12} ${z}`,radius:.005,height:.2,color:'#222'});bi++;}});
- E('a-entity',{position:`${cx} ${T.e-.2} ${cz}`,light:`type:point;color:#ffa040;intensity:${IS_MOBILE?1.2:1.6};distance:11;decay:1.2`});
+ E('a-entity',{position:`${cx} ${T.e-.2} ${cz}`,light:`type:point;color:#ffa040;intensity:${IS_MOBILE?1.5:2};distance:14;decay:1.2`});
  // 메뉴판 (손글씨)
  const menu=E('a-entity',{position:`${T.x0+.05} 1.75 ${cz}`,rotation:'0 90 0'});
  E('a-plane',{width:2.6,height:1.5,material:'color:#efe2bf;roughness:1'},menu);
@@ -410,24 +433,42 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  E('a-box',{position:'-.5 4.95 0',width:1.1,height:.07,depth:.07,color:'#3a4048'},L);E('a-cone',{position:'-1 4.85 0','radius-bottom':.3,'radius-top':.08,height:.2,color:'#2a2a2a'},L);
  E('a-sphere',{position:'-1 4.75 0',radius:.12,material:'color:#fff;emissive:#ffe6b0;emissiveIntensity:1'},L);
  E('a-entity',{position:'-1 4.6 0',light:'type:spot;color:#ffd9a0;intensity:2.2;angle:45;penumbra:.6;distance:12',rotation:'-90 0 0'},L);OBSTACLES.push({x:9,z:22,r:.15});
+ // 업소용 술냉장고 (유리문)
+ {const F=E('a-entity',{position:'-.7 0 22.0'});E('a-box',{position:'0 1 0',width:1.3,height:2,depth:.7,material:'color:#d8dde2;metalness:.5;roughness:.4'},F);
+  E('a-box',{position:'0 1 -.36',width:1.15,height:1.75,depth:.02,material:'color:#bfe8ff;opacity:.35;transparent:true;emissive:#9fd8ff;emissiveIntensity:.35'},F);
+  for(let r=0;r<4;r++){E('a-box',{position:`0 ${.35+r*.42} -.1`,width:1.15,height:.02,depth:.5,color:'#999'},F);for(let k=0;k<7;k++)E('a-cylinder',{position:`${-.48+k*.16} ${.46+r*.42} -.15`,radius:.035,height:.2,'segments-radial':8,material:`color:${r<2?'#2e9a4a':'#5a2c0c'};opacity:.9;transparent:true;roughness:.15`},F);}
+  E('a-entity',{position:'0 2.2 -.37',rotation:'0 180 0',ktext:hand('시원한 소주 · 맥주',{c:'#fff',bg:'#1040a0',s:56,w:1.4})},F);
+  E('a-entity',{position:'0 1.2 -.9',light:`type:point;color:#bfe8ff;intensity:${IS_MOBILE?0:.6};distance:3`},F);
+  OBSTACLES.push({x0:-1.4,x1:0,z0:21.6,z1:22.4});window.FRIDGE={x:-.7,z:21.5};window.COOK={x:5.5,z:16.5};}
  // 플라스틱 빨간 테이블 + 목욕탕 의자
  const tables=[[-7.6,16.4],[-3,16.4],[-7.6,20.2],[-3,20.2],[2.6,21.5]];
  tables.forEach(([tx,tz],ti)=>{const id='Y'+(ti+1);
   E('a-box',{position:`${tx} .68 ${tz}`,width:.9,height:.04,depth:.9,material:'color:#c41a1a;roughness:.5'});
   [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>E('a-cylinder',{position:`${tx+a*.38} .34 ${tz+b*.38}`,radius:.03,height:.66,'segments-radial':6,color:'#a81414'}));
-  // 술병·안주
-  E('a-cylinder',{position:`${tx-.2} .82 ${tz-.15}`,radius:.04,height:.24,material:'color:#2e9a4a;opacity:.85;transparent:true;metalness:.2;roughness:.15'});
-  E('a-cylinder',{position:`${tx-.28} .82 ${tz+.05}`,radius:.04,height:.24,material:'color:#2e9a4a;opacity:.85;transparent:true;roughness:.15'});
-  E('a-cylinder',{position:`${tx+.25} .84 ${tz-.25}`,radius:.042,height:.28,material:'color:#5a2c0c;opacity:.9;transparent:true;roughness:.2'});
-  E('a-cylinder',{position:`${tx+.28} .73 ${tz+.22}`,radius:.11,height:.05,material:'color:#d8c890;metalness:.8;roughness:.3'}); // 막걸리 양재기
-  E('a-cylinder',{position:`${tx+.22} .78 ${tz+.02}`,radius:.07,height:.14,material:'color:#c8b878;metalness:.8;roughness:.3'}); // 주전자
-  E('a-cylinder',{position:`${tx} .71 ${tz+.1}`,radius:.17,height:.02,color:'#f4f4f0'});
-  const food=['#b0281a','#7a3a20','#c08a40','#d23a10','#b0281a'][ti];for(let k=0;k<6;k++)E('a-sphere',{position:`${tx+(k%3-1)*.07} .74 ${tz+.1+(k>2?.05:-.04)}`,radius:.035,'segments-width':6,'segments-height':4,color:food});
   E('a-entity',{position:`${tx} 1.55 ${tz}`,ktext:`value:야장 ${ti+1}번;color:#ffe08a;size:40;width:.8`,billboard:''});
-  OBSTACLES.push({x:tx,z:tz,r:.55});
+  OBSTACLES.push({x:tx,z:tz,r:.55});window.POCHA_TABLES=window.POCHA_TABLES||{};POCHA_TABLES[id]=[tx,tz];
   for(let s=0;s<4;s++){const a=s*Math.PI/2,sx=tx+Math.cos(a)*.78,sz=tz+Math.sin(a)*.78,yaw=Math.atan2(tx-sx,tz-sz),seatId=id+'-'+s;
    const el=E('a-entity',{position:`${sx} 0 ${sz}`});E('a-cylinder',{position:'0 .2 0',radius:.17,'radius-bottom':.2,height:.4,'segments-radial':10,material:'color:#d01e1e;roughness:.5'},el);
    el.dataset.seat=seatId;el.classList.add('seat');SEATS.push({id:seatId,table:id,x:sx,z:sz,yaw,el});}});
 })();
 AFRAME.registerComponent('steam',{schema:{i:{default:0}},tick(t){const o=this.el.object3D,k=((t/1800+this.data.i/6)%1);o.position.y=1.35+k*1.1;o.scale.setScalar(.5+k*1.4);const m=this.el.getObject3D('mesh');if(m)m.material.opacity=.22*(1-k);}});
 if(document.fonts)document.fonts.load('64px "Nanum Pen Script"').then(()=>document.querySelectorAll('[ktext]').forEach(e=>{const k=e.components.ktext;if(k&&/Nanum/.test(k.data.font))k.update();})).catch(()=>{});
+
+// 바텐더 단상 높이
+{const h0=window.heightAt;window.heightAt=(x,z)=>{const P=window.BAR_PLAT;if(P&&x>=P.x0&&x<=P.x1){if(z>=P.z0&&z<=P.z1)return P.h;if(z>P.z1&&z<=P.rz)return P.h*(1-(z-P.z1)/(P.rz-P.z1));}return h0(x,z);};}
+
+// ---------- NPC 웨이터 (서버 시간 기준 순찰 → 모든 사용자에게 비슷한 위치) ----------
+window.WAITERS=[];
+(async function waiters(){const defs=[{name:'웨이터 김 · 부킹왕',skin:'#f2c29a',route:[[-4.5,-2],[-4.5,5.8],[2,5.9],[2,-2.5]],sp:.55,ph:0},
+ {name:'웨이터 박 · 제비',skin:'#e0a77a',route:[[7.5,-3],[7.5,10.5],[-3,10.8],[-4.6,0],[2.5,-3]],sp:.6,ph:9},
+ {name:'웨이터 최 · 나이트 황제',skin:'#f5cfa8',route:[[-10,-6.5],[-10,10.5],[-4.8,10.5],[-4.8,-6.5]],sp:.5,ph:4}];
+ for(const d of defs){const holder=E('a-entity',{});const h=await makeHuman(holder,{outfit:'#151515',skin:d.skin,gender:'m',style:'suit',waiter:true});HUMANS.add(h);
+  E('a-entity',{position:'0 1.85 0',billboard:'',ktext:`value:${d.name};color:#fff;glow:#ff3cac;size:36;width:1.4`},holder);
+  const segs=[];let L=0;for(let i=0;i<d.route.length;i++){const a=d.route[i],b=d.route[(i+1)%d.route.length],l=Math.hypot(b[0]-a[0],b[1]-a[1]);segs.push({a,b,l,s:L});L+=l;}
+  WAITERS.push({...d,holder,h,segs,L,hold:0,x:d.route[0][0],z:d.route[0][1]});}
+ AFRAME.registerComponent('waiter-walk',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const now=(Date.now()+(window.SERVER_OFFSET||0))/1000,rig=document.getElementById('rig');const pp=rig&&rig.object3D.position;
+  for(const w of WAITERS){const near=pp&&Math.hypot(pp.x-w.x,pp.z-w.z)<2;if(near)w.hold+=dt;else w.hold=Math.max(0,w.hold-dt*.5);w.near=near;
+   const d=(((now-w.hold)*w.sp+w.ph)%w.L+w.L)%w.L;const sg=w.segs.find(q=>d>=q.s&&d<q.s+q.l)||w.segs[0];const k=(d-sg.s)/sg.l;w.x=sg.a[0]+(sg.b[0]-sg.a[0])*k;w.z=sg.a[1]+(sg.b[1]-sg.a[1])*k;
+   const o=w.holder.object3D;o.position.set(w.x,0,w.z);const yaw=near?Math.atan2(pp.x-w.x,pp.z-w.z):Math.atan2(sg.b[0]-sg.a[0],sg.b[1]-sg.a[1]);let dy=yaw-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*6);
+   w.h.play(near?'Idle_Loop':'Walk_Loop');w.h.root.rotation.x=near&&w.hold<1.2?Math.sin(w.hold/1.2*Math.PI)*.35:0;}}});
+ document.querySelector('a-scene').setAttribute('waiter-walk','');})();
