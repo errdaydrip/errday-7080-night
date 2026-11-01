@@ -639,7 +639,9 @@ window.WAITERS=[];
  const h=await makeHuman(holder,{outfit:'#d0607a',skin:'#e8b48e',gender:'f',style:'hanbok'});HUMANS.add(h);
  const c=h.chibi,T=c.torso;T.add(new THREE.Mesh(new THREE.BoxGeometry(.3,.42,.02),new THREE.MeshStandardMaterial({color:'#f4f0e6'})));T.children[T.children.length-1].position.set(0,.16,.15);
  const sc=new THREE.Mesh(new THREE.SphereGeometry(.34,16,10,0,Math.PI*2,0,Math.PI*.3),new THREE.MeshStandardMaterial({color:'#e23b4c'}));c.head.add(sc);sc.position.set(0,.2,0);sc.scale.set(1.05,1,1.05);
- const kn=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),sc.material);c.head.add(kn);kn.position.set(0,.22,.3);
+ {const nz=c.head.children.find(m=>m.isMesh&&Math.abs(m.position.y-.215)<.002&&Math.abs(m.position.z-.315)<.002);if(nz){const nm=new THREE.MeshToonMaterial({color:'#e4a582'});nz.material=nm;nz.scale.set(.8,.7,.8);nz.position.set(0,.235,.312); // 이모 코: 작고 피부톤, 눈 아래 제자리
+  const br=new THREE.Mesh(new THREE.CapsuleGeometry(.008,.035,4,8),nm);br.position.set(0,.265,.305);br.rotation.x=-.3;c.head.add(br);}}
+ const kn=new THREE.Mesh(new THREE.SphereGeometry(.06,8,6),sc.material);c.head.add(kn);kn.position.set(0,.16,-.33); // 두건 매듭은 뒤통수 (얼굴 앞에 있으면 빨간 코처럼 보임)
  const pan=new THREE.Group();pan.add(new THREE.Mesh(new THREE.CylinderGeometry(.22,.14,.08,16),new THREE.MeshStandardMaterial({color:'#333',metalness:.8,roughness:.3})));
  const fd=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.03,12),new THREE.MeshStandardMaterial({color:'#b8321c'}));fd.position.y=.03;pan.add(fd);
  const hdl=new THREE.Mesh(new THREE.BoxGeometry(.04,.03,.3),pan.children[0].material);hdl.position.set(0,0,-.3);pan.add(hdl);

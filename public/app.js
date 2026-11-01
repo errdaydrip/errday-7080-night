@@ -359,7 +359,7 @@ setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElemen
  btn.onclick=()=>{if(!canFs){if(!standalone)hint.classList.toggle('hidden');return;}if(isFs()){optOut=true;exitFs();}else{optOut=false;goFs();}};
  document.getElementById('fsHintX').onclick=()=>hint.classList.add('hidden');
  if(standalone)btn.style.display='none';
- document.addEventListener('fullscreenchange',later);
+ document.addEventListener('fullscreenchange',later);const fsCls=()=>document.body.classList.toggle('fs',isFs()&&touch);document.addEventListener('fullscreenchange',fsCls);document.addEventListener('webkitfullscreenchange',fsCls);
 })();
 
 $('cleanBtn').onclick=()=>{if(!adminToken)return;socket.emit('adminCleanup',adminToken,r=>{if(r&&r.ok)sys(`🔄 유령 정리 완료: ${r.removed}명 제거`);else{sys('정리 실패: '+((r&&r.error)||'오류'));}});};

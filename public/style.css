@@ -75,3 +75,5 @@ html,body{height:100%;height:100dvh}a-scene{height:100dvh!important}
 #ytWrap #yt,#ytWrap iframe{width:640px!important;height:360px!important;border:0}
 #ytWrap.theater{left:0;top:0;bottom:auto;width:640px;height:360px;opacity:1;transform-origin:0 0;z-index:1;background:#000}
 #subsBtn{position:fixed;left:50%;top:58px;transform:translateX(-50%);z-index:9;font-size:16px;padding:8px 16px;border-radius:22px;border:2px solid #ffd84a;background:rgba(30,10,40,.85);color:#fff;pointer-events:auto;touch-action:manipulation}#subsBtn.sel{background:#ff3cac}#subsBtn:disabled{opacity:.6;font-size:13px}#subsBtn.hidden{display:none}
+/* 모바일 전체화면: 아래쪽 안내 띠/라벨 끔 */
+body.fs #fsHint,body.fs #actBar .lbl,body.fs #prompt{display:none!important}
