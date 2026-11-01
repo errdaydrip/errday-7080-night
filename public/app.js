@@ -39,7 +39,17 @@ $('musicToggle').onclick=()=>{const h=$('hud');h.classList.toggle('showMusic');i
 $('chatIn').addEventListener('focus',()=>{$('hud').classList.add('showChat');$('hud').classList.remove('showMusic');});
 // 이름표: 머리/머리카락(아프로·갓 등) 실제 높이에 맞춰 위치 (앉기/춤 포즈도 추적)
 const _bx=new THREE.Box3(),_v=new THREE.Vector3();
-AFRAME.registerComponent('tag-follow',{init(){this.n=0;this.y=1.78;},tick(){const root=this.el.parentNode,h=root&&root._h;if(!h||!h.root)return;
+function labelLayer(){let L=document.getElementById('labelLayer');if(!L){L=document.createElement('div');L.id='labelLayer';L.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:5;overflow:hidden';document.body.appendChild(L);}return L;}
+const _lp=new THREE.Vector3();
+AFRAME.registerComponent('tag-follow',{init(){this.n=0;this.y=1.78;const d=this.div=document.createElement('div');d.className='nameLabel';
+  d.style.cssText='position:absolute;left:0;top:0;transform:translate(-50%,-100%);color:#fff;font:bold 14px "Malgun Gothic",sans-serif;white-space:nowrap;text-shadow:0 0 6px #ff3cac,0 0 3px #ff3cac,0 1px 2px #000;will-change:transform';
+  d.textContent=this.el.dataset.nick||'';labelLayer().appendChild(d);},
+ remove(){this.div.remove();},
+ tick(){const m=this.el.getObject3D('mesh');if(m)m.visible=false;const sc=this.el.sceneEl,cam=sc.camera,cv=sc.canvas;
+  if(cam&&cv&&this.el.isConnected){this.el.object3D.getWorldPosition(_lp);_lp.project(cam);const r=cv.getBoundingClientRect();
+   if(_lp.z<1&&_lp.z>-1){this.div.style.display='';this.div.style.transform=`translate(${r.left+(_lp.x+1)/2*r.width}px,${r.top+(1-_lp.y)/2*r.height}px) translate(-50%,-100%)`;}else this.div.style.display='none';}
+  else this.div.style.display='none';
+  const root=this.el.parentNode,h=root&&root._h;if(!h||!h.root)return;
  if(this.n++%6===0){_bx.setFromObject(h.root,true);if(!_bx.isEmpty()){_v.set(0,_bx.max.y,0);const ry=root.object3D.getWorldPosition(new THREE.Vector3()).y;
   const s=root.object3D.getWorldScale(new THREE.Vector3()).y||1;this.y=(_bx.max.y-ry)/s+.22;}}
  const p=this.el.object3D.position;p.y+=(this.y-p.y)*.3;const b=root.querySelector('.bubble');if(b)b.object3D.position.y=p.y+.36;}});
@@ -47,7 +57,7 @@ AFRAME.registerComponent('tag-follow',{init(){this.n=0;this.y=1.78;},tick(){cons
 async function buildAvatar(root,p,mine){if(root._h){HUMANS.delete(root._h);root._h.dispose();root._h=null;}
  root.querySelectorAll('.tag,.bubble').forEach(e=>e.remove());const token=root._tok=Math.random();
  const tag=document.createElement('a-entity');tag.classList.add('tag');tag.setAttribute('position','0 1.78 0');tag.setAttribute('billboard','');
- tag.setAttribute('ktext',`value:${(p.nick||'').replace(/;/g,' ')};color:#fff;glow:#ff3cac;size:40;width:.9;top:true`);tag.setAttribute('tag-follow','');root.appendChild(tag);
+ tag.setAttribute('ktext',`value:${(p.nick||'').replace(/;/g,' ')};color:#fff;glow:#ff3cac;size:40;width:.9;top:true`);tag.dataset.nick=p.nick||'';tag.setAttribute('tag-follow','');root.appendChild(tag);
  const bub=document.createElement('a-entity');bub.classList.add('bubble');bub.setAttribute('position','0 2.12 0');bub.setAttribute('billboard','');bub.setAttribute('visible',false);root.appendChild(bub);
  const h=await makeHuman(root,humanOpts(p));if(!h||root._tok!==token){if(h)h.dispose();return;}root._h=h;HUMANS.add(h);}
 function upsertOther(p){if(p.id===myId)return;let o=others[p.id];

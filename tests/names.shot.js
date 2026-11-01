@@ -1,0 +1,10 @@
+const p=require('puppeteer-core');const {io}=require('socket.io-client');const W=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{const bots=[];const looks=[['m','disco'],['f','disco'],['m','hanbok'],['f','hanbok']];
+ looks.forEach(([g,st],i)=>{const s=io('http://localhost:8080',{forceNew:true});s.emit('join',{nick:'큰머리'+(i+1),clientId:'bot'+i,gender:g,style:st,outfit:'',skin:''});
+  setTimeout(()=>s.emit('move',{pos:[-1.2+i*.8,0,2.4],rot:Math.PI,dance:0}),800);bots.push(s);});
+ const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
+ const pg=await b.newPage();await pg.setViewport({width:1000,height:640});pg.on('pageerror',e=>console.log('ERR',e.message));
+ await pg.goto('http://localhost:8080');await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
+ await pg.evaluate(()=>document.getElementById('nick').value='나');await pg.click('#enter');await W(6000);
+ console.log(await pg.evaluate(()=>[...document.querySelectorAll('.nameLabel')].map(d=>d.textContent+':'+d.style.display+':'+d.style.transform.slice(0,40))));
+ await pg.screenshot({path:'screenshot_names2.png'});await b.close();process.exit();})();
