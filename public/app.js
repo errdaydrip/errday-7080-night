@@ -34,11 +34,17 @@ $('setBtn').onclick=()=>{$('enter').textContent='저장';$('entry').classList.re
 $('chatToggle').onclick=()=>{const h=$('hud');h.classList.toggle('showChat');if(h.classList.contains('showChat'))h.classList.remove('showMusic');};
 $('musicToggle').onclick=()=>{const h=$('hud');h.classList.toggle('showMusic');if(h.classList.contains('showMusic'))h.classList.remove('showChat');};
 $('chatIn').addEventListener('focus',()=>{$('hud').classList.add('showChat');$('hud').classList.remove('showMusic');});
+// 이름표: 머리/머리카락(아프로·갓 등) 실제 높이에 맞춰 위치 (앉기/춤 포즈도 추적)
+const _bx=new THREE.Box3(),_v=new THREE.Vector3();
+AFRAME.registerComponent('tag-follow',{init(){this.n=0;this.y=1.78;},tick(){const root=this.el.parentNode,h=root&&root._h;if(!h||!h.root)return;
+ if(this.n++%6===0){_bx.setFromObject(h.root,true);if(!_bx.isEmpty()){_v.set(0,_bx.max.y,0);const ry=root.object3D.getWorldPosition(new THREE.Vector3()).y;
+  const s=root.object3D.getWorldScale(new THREE.Vector3()).y||1;this.y=(_bx.max.y-ry)/s+.22;}}
+ const p=this.el.object3D.position;p.y+=(this.y-p.y)*.3;const b=root.querySelector('.bubble');if(b)b.object3D.position.y=p.y+.36;}});
 // ---------- 아바타 (CC0 3D 모델) ----------
 async function buildAvatar(root,p,mine){if(root._h){HUMANS.delete(root._h);root._h.dispose();root._h=null;}
  root.querySelectorAll('.tag,.bubble').forEach(e=>e.remove());const token=root._tok=Math.random();
  const tag=document.createElement('a-entity');tag.classList.add('tag');tag.setAttribute('position','0 1.78 0');tag.setAttribute('billboard','');
- tag.setAttribute('ktext',`value:${(p.nick||'').replace(/;/g,' ')};color:#fff;glow:#ff3cac;size:40;width:.9`);root.appendChild(tag);
+ tag.setAttribute('ktext',`value:${(p.nick||'').replace(/;/g,' ')};color:#fff;glow:#ff3cac;size:40;width:.9;top:true`);tag.setAttribute('tag-follow','');root.appendChild(tag);
  const bub=document.createElement('a-entity');bub.classList.add('bubble');bub.setAttribute('position','0 2.12 0');bub.setAttribute('billboard','');bub.setAttribute('visible',false);root.appendChild(bub);
  const h=await makeHuman(root,humanOpts(p));if(!h||root._tok!==token){if(h)h.dispose();return;}root._h=h;HUMANS.add(h);}
 function upsertOther(p){if(p.id===myId)return;let o=others[p.id];
@@ -50,7 +56,7 @@ AFRAME.registerComponent('others-lerp',{tick(){for(const id in others){const o=o
  const h=o.el._h;if(h)h.play(o.seat?'Sitting_Idle_Loop':(d>.03?'Walk_Loop':(o.dance?'Dance_'+o.dance:'Idle_Loop')));}}});
 scene.setAttribute('others-lerp','');
 function bubble(id,text){const el=id===myId?$('myAvatar'):others[id]&&others[id].el;if(!el)return;const b=el.querySelector('.bubble');if(!b)return;
- b.setAttribute('ktext',`value:${text.slice(0,30).replace(/;/g,' ')};color:#000;glow:;bg:#fff;size:36;width:1.4`);b.setAttribute('visible',true);
+ b.setAttribute('ktext',`value:${text.slice(0,30).replace(/;/g,' ')};color:#000;glow:;bg:#fff;size:36;width:1.4;top:true`);b.setAttribute('visible',true);
  clearTimeout(b._t);b._t=setTimeout(()=>b.setAttribute('visible',false),5000);}
 // ---------- 3인칭 카메라 · 이동 · 클릭 이동 · 자동 앉기 ----------
 const rig=$('rig'),cam=$('cam'),myAv=$('myAvatar'),marker=$('marker');
