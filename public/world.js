@@ -204,7 +204,9 @@ const SEQUIN_BLUE=patTex((x,s)=>{const cs=['#9fc4ff','#ffffff','#6f8fd8','#c9dcf
 const SAEKDONG=patTex((x,s)=>{const cs=['#e8443a','#f7a531','#f5e04a','#5cc45a','#3b8fe0','#8a4fd0','#f07ab8','#ffffff'];const h=s/cs.length;cs.forEach((c,i)=>{x.fillStyle=c;x.fillRect(0,i*h,s,h);});},1,1);
 const SKIN_DEF='#f2c29a';
 // 의상별 기본 색 (레퍼런스 그림 기준)
-window.OUTFIT_DEFAULTS={m:{suit:'#2b3352',disco:'#2fb8b0',hanbok:'#2f8f45'},f:{suit:'#9a9cc0',disco:'#2a3f9e',hanbok:'#e2525c'}};
+window.OUTFIT_DEFAULTS={m:{suit:'#2b3352',disco:'#2fb8b0',hanbok:'#2f8f45',aerobic:'#ff2fa6'},f:{suit:'#9a9cc0',disco:'#2a3f9e',hanbok:'#e2525c',aerobic:'#ff2fa6'}};
+const RAINBOW=patTex((x,s)=>{const cs=['#ff3fa4','#ffe23a','#7ee83a','#2fa8ff','#ff8a1e'];const w=s/10;for(let i=0;i<10;i++){x.fillStyle=cs[i%5];x.fillRect(i*w,0,w,s);}},3,1);
+function aeroAccent(col){const c=new THREE.Color(col),h={};c.getHSL(h);return '#'+new THREE.Color().setHSL((h.h+.33)%1,.9,.58).getHexString();}
 function chibiMats(o){const T=(c,ex={})=>new THREE.MeshToonMaterial({color:c,gradientMap:TOON_GRAD,...ex});
  const shinyOf=(map,col)=>new THREE.MeshStandardMaterial({color:col||'#fff',map,metalness:.25,roughness:.35,emissive:new THREE.Color(col||'#fff').multiplyScalar(.35),emissiveMap:map});
  return {T,shinyOf,skin:T(o.skin||SKIN_DEF),eye:new THREE.MeshBasicMaterial({color:'#3b2516'}),hl:new THREE.MeshBasicMaterial({color:'#fff'}),
@@ -214,7 +216,7 @@ function chibiMats(o){const T=(c,ex={})=>new THREE.MeshToonMaterial({color:c,gra
   hair:T(o.dj?'#2a1a10':'#3b2417')};}
 const G={sph:(r,ws=28,hs=20)=>new THREE.SphereGeometry(r,ws,hs),cap:(r,l)=>new THREE.CapsuleGeometry(r,l,8,18),cyl:(a,b,h,s=28)=>new THREE.CylinderGeometry(a,b,h,s,1),box:(x,y,z)=>new THREE.BoxGeometry(x,y,z)};
 function mesh(g,m,p=[0,0,0],s=null,r=null){const o=new THREE.Mesh(g,m);o.position.set(...p);if(s)o.scale.set(...s);if(r)o.rotation.set(...r);return o;}
-function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit','disco','hanbok'].includes(opts.style)?opts.style:'suit';
+function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit','disco','hanbok','aerobic'].includes(opts.style)?opts.style:'suit';
  const col=opts.outfit||OUTFIT_DEFAULTS[f?'f':'m'][st];
  const root=new THREE.Group(),hips=new THREE.Group();hips.position.y=.42;root.add(hips);
  const torso=new THREE.Group();hips.add(torso);
@@ -226,6 +228,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit',
  if(f&&st==='suit'){top=M.T(col);sleeve=top;pants=M.skin;shoe=M.T('#1f2a4d');}
  if(f&&st==='disco'){top=M.T(col);sleeve=top;pants=M.T(col);shoe=M.silver;cuff=M.T('#8a5bd6');}
  if(f&&st==='hanbok'){top=M.T('#b9e08a');sleeve=M.T('#fff',{map:SAEKDONG});pants=M.skin;shoe=M.T('#fff');}
+ if(st==='aerobic'){top=M.T('#fff',{map:RAINBOW});sleeve=M.skin;pants=new THREE.MeshStandardMaterial({color:col,metalness:.2,roughness:.28,emissive:new THREE.Color(col).multiplyScalar(.25)});shoe=f?M.T('#fbfbf7'):M.skin;cuff=M.T(aeroAccent(col));}
  // 몸통 (짧고 둥근 원통)
  torso.add(mesh(G.cap(.17,.22),top,[0,.27,0],[1.12,1,.8]));
  torso.add(mesh(G.cyl(.07,.08,.08),M.skin,[0,.53,0]));
@@ -255,6 +258,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit',
   if(!f&&st==='disco'||f&&st==='disco'){l.add(mesh(G.cyl(.07,.115,.34),f?M.shinyOf(SEQUIN_BLUE,'#c9d6ff'):pants,[0,-.17,0]));if(f)l.add(mesh(G.cyl(.07,.08,.14),pants,[0,-.06,0]));}
   else if(!f&&st==='hanbok'){l.add(mesh(G.sph(.12),pants,[0,-.15,0],[1,1.45,1]));l.add(mesh(G.cyl(.055,.055,.08),M.white,[0,-.33,0]));}
   else l.add(mesh(G.cap(.065,.18),pants,[0,-.17,0]));
+  if(st==='aerobic')l.add(mesh(G.cyl(.075,.075,.09),cuff,[0,-.2,0]));
   if(shoe===M.silver){l.add(mesh(G.box(.13,.07,.2),M.silver,[0,-.4,.03]));l.add(mesh(G.sph(.075),M.silver,[0,-.35,.04],[1,.6,1.3]));}
   else l.add(mesh(G.sph(.075),shoe,[0,-.37,.035],[1,.6,1.45]));
   return l;});
@@ -286,11 +290,17 @@ function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';
  if(f&&st==='disco'){ // 곱슬곱슬 큰 머리
   const pts=[];for(let i=0;i<34;i++){const th=Math.random()*Math.PI*2,ph=Math.acos(1-Math.random()*1.25),r=.36;const x=r*Math.sin(ph)*Math.cos(th),y=r*Math.cos(ph),z=r*Math.sin(ph)*Math.sin(th);if(z>.18&&y<.25)continue;pts.push([x*1.15,.28+y,z*1.05-.04]);}
   [[-.36,.05,-.05],[.36,.05,-.05],[-.3,-.12,-.1],[.3,-.12,-.1],[0,.0,-.32]].forEach(p=>pts.push(p));curls(head,H,pts,.12);return;}
+ if(st==='aerobic'){const B=T2(M,o.outfit||'#ff2fa6'),A=T2(M,aeroAccent(o.outfit||'#ff2fa6'));
+  if(f){head.add(mesh(G.sph(.14),H,[0,.55,-.22]));head.add(mesh(G.cap(.08,.22),H,[0,.4,-.4],null,[.5,0,0]));curls(head,H,[[-.3,.28,0],[.3,.28,0]],.1);}
+  else curls(head,H,[[-.22,.5,.1],[0,.56,.1],[.22,.5,.1],[-.3,.35,-.05],[.3,.35,-.05],[0,.45,-.25,1.2]],.13);
+  head.add(mesh(new THREE.TorusGeometry(.345,.035,10,40),B,[0,.43,0],[1.05,1,1.02],[Math.PI/2+.15,0,0]));head.add(mesh(new THREE.TorusGeometry(.347,.014,8,40),A,[0,.43,0],[1.06,1,1.03],[Math.PI/2+.15,0,0]));return;}
  if(f&&st==='hanbok'){ // 가르마 + 낮은 쪽머리 + 비녀
   head.add(mesh(G.sph(.12),H,[0,.1,-.33],[1.25,.85,.9]));
   const pin=T2(M,'#4f8f4a');head.add(mesh(G.cyl(.012,.012,.62,10),pin,[0,.1,-.36],null,[0,0,Math.PI/2]));head.add(mesh(G.sph(.03),pin,[-.32,.1,-.36]));return;}
 }
 function outfit(torso,hips,M,o){const f=o.gender==='f',st=o.style,col=o.col;
+ if(st==='aerobic'){torso.add(mesh(G.cyl(.19,.19,.05,28),T2(M,'#22b6f0'),[0,.12,0],[1.12,1,.82]));hips.add(mesh(G.sph(.17),M.T('#fff',{map:RAINBOW}),[0,.03,0],[1.1,.55,.8]));
+  [-1,1].forEach(s=>torso.add(mesh(G.box(.05,.1,.03),M.T('#fff',{map:RAINBOW}),[s*.1,.47,.02])));}
  if(!f&&st==='suit'){torso.add(mesh(G.box(.11,.2,.02),M.white,[0,.38,.15]));torso.add(mesh(G.box(.045,.2,.02),T2(M,'#7a1424'),[0,.34,.162]));torso.add(mesh(G.box(.06,.04,.025),T2(M,'#7a1424'),[0,.44,.163]));
   const lap=T2(M,new THREE.Color(col).multiplyScalar(.7));[-1,1].forEach(s=>torso.add(mesh(G.box(.05,.22,.02),lap,[s*.07,.37,.155],null,[0,0,s*.4])));
   torso.add(mesh(G.box(.05,.03,.02),M.white,[-.11,.36,.15]));[.2,.27].forEach(y=>[-1,1].forEach(s=>torso.add(mesh(G.sph(.012),M.black,[s*.04,y,.165]))));}

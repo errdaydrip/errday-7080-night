@@ -33,6 +33,7 @@ const STATE=process.env.STATE_FILE||path.join(__dirname,'data','state.json');
 const durations={}; // videoId 또는 mp3 id -> 초 (클라이언트가 알려줌)
 const durOf=t=>t&&(t.dur||durations[t.type==='yt'?t.videoId:t.id]);
 const {clean:cleanText,isBad}=require('./filter');
+const STYLES=['suit','disco','hanbok','aerobic'],HEX=/^#[0-9a-fA-F]{6}$/;const look=p=>({gender:p.gender==='f'?'f':'m',style:STYLES.includes(p.style)?p.style:'suit',outfit:HEX.test(p.outfit)?p.outfit:'',skin:HEX.test(p.skin)?p.skin:''});
 const players={}; // id -> {nick,gender,outfit,skin,style,pos,rot,seat}
 const music={playlist:[],index:-1,playing:false,startedAt:0,pausedAt:0,shuffle:false};
 let played=new Set(); // 랜덤 재생: 이미 튼 곡 id
@@ -107,10 +108,10 @@ io.on('connection',s=>{
   const base=cur?{pos:cur.pos,rot:cur.rot,seat:cur.seat,carry:cur.carry||null,drinks:cur.drinks||[]}
    :L?{pos:Array.isArray(L.pos)&&L.pos.length===3&&L.pos.every(Number.isFinite)?L.pos:[0,0,4],rot:+L.rot||0,seat:typeof L.seat==='string'?L.seat.slice(0,16):null,carry:PICK[L.carry]?L.carry:null,drinks:Array.isArray(L.drinks)?L.drinks.filter(Number.isFinite).slice(-20):[]}
    :{pos:[0,0,4],rot:0,seat:null,carry:null,drinks:[]};
-  const re=!!cur;players[s.id]={...(cur||{}),seen:Date.now(),joinedAt:Date.now(),cid,nick,gender:p.gender,outfit:p.outfit,skin:p.skin,style:p.style,...base};
+  const re=!!cur;players[s.id]={...(cur||{}),seen:Date.now(),joinedAt:Date.now(),cid,nick,...look(p),...base};
   if(prevId)io.emit('rekey',{old:prevId,id:s.id});io.emit('player',{id:s.id,...pub()[s.id]});
   if(typeof ack==='function')ack(re?{ok:true,resume:base}:{ok:true});if(!re)io.emit('chat',{sys:true,text:nick+' 님 입장!'});});
- s.on('profile',(p,ack)=>{const pl=players[s.id];if(!pl)return;const nn=String(p.nick||pl.nick).trim().slice(0,16)||pl.nick;if(isBad(nn)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}if(nickTaken(nn,pl.cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nn);return;}if(typeof ack==='function')ack({ok:true});Object.assign(pl,{nick:nn,gender:p.gender,outfit:p.outfit,skin:p.skin,style:p.style});io.emit('player',{id:s.id,...pl});});
+ s.on('profile',(p,ack)=>{const pl=players[s.id];if(!pl)return;const nn=String(p.nick||pl.nick).trim().slice(0,16)||pl.nick;if(isBad(nn)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}if(nickTaken(nn,pl.cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nn);return;}if(typeof ack==='function')ack({ok:true});Object.assign(pl,{nick:nn,...look(p)});io.emit('player',{id:s.id,...pl});});
  s.on('move',m=>{const pl=players[s.id];if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.emit('glasses',glassPub());
