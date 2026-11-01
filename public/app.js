@@ -27,7 +27,7 @@ syncOpts();
 $('entry').addEventListener('click',e=>{const b=e.target;if(b.classList.contains('g')){me.gender=b.dataset.v;me.outfit=OUTFIT_DEFAULTS[me.gender][me.style];}if(b.classList.contains('s')){me.style=b.dataset.v;me.outfit=OUTFIT_DEFAULTS[me.gender==='f'?'f':'m'][me.style];}
  if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('swatch'))me.outfit=b.dataset.v;me.nick=$('nick').value;syncOpts();});
 $('enter').onclick=()=>{me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
- $('entry').classList.add('hidden');$('hud').classList.remove('hidden');
+ $('entry').classList.add('hidden');$('hud').classList.remove('hidden');chatBottom();
  const ev=joined?'profile':'join';socket.emit(ev,{...me,clientId:CID},r=>{if(r&&!r.ok){nickErr();return;}joined=true;enterOk();});};
 function nickErr(){$('entry').classList.remove('hidden');$('hud').classList.add('hidden');alert('이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.');$('nick').focus();}
 function enterOk(){
@@ -145,13 +145,15 @@ scene.setAttribute('my-sync','');
 document.querySelectorAll('#mob button[data-k]').forEach(b=>{const k=b.dataset.k;const on=v=>e=>{e.preventDefault();keys[k]=v;if(v){goal=null;goalSeat=null;marker.setAttribute('visible',false);}};
  b.addEventListener('pointerdown',on(true));b.addEventListener('pointerup',on(false));b.addEventListener('pointerleave',on(false));b.addEventListener('pointercancel',on(false));});
 // ---------- 채팅 (전체) ----------
-function addMsg(html){const d=document.createElement('div');d.innerHTML=html;$('msgs').appendChild(d);while($('msgs').children.length>100)$('msgs').firstChild.remove();$('msgs').scrollTop=1e9;}
+function chatBottom(){const m=$('msgs');if(!m)return;const f=()=>{m.scrollTop=m.scrollHeight;};f();requestAnimationFrame(()=>{f();requestAnimationFrame(f);});setTimeout(f,60);setTimeout(f,300);}
+function addMsg(html,force){const m=$('msgs');const near=force||m.scrollHeight-m.scrollTop-m.clientHeight<80;const d=document.createElement('div');d.innerHTML=html;m.appendChild(d);while(m.children.length>100)m.firstChild.remove();if(near)chatBottom();}
+window.addEventListener('resize',()=>chatBottom());
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function sys(t){addMsg(`<i style="color:#aaa">${esc(t)}</i>`);}
 $('chatIn').addEventListener('focus',()=>{for(const k in keys)keys[k]=false;});
 $('chatIn').addEventListener('keydown',e=>e.stopPropagation());
 $('chatForm').onsubmit=e=>{e.preventDefault();const t=$('chatIn').value.trim();if(t)socket.emit('chat',t);$('chatIn').value='';};
-socket.on('chatHistory',h=>{$('msgs').innerHTML='';if(!h||!h.length)return;const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};for(const m of h)addMsg(`<span style="opacity:.55"><small style="color:#888">${hm(m.t)}</small> <b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}</span>`);addMsg('<div style="text-align:center;color:#888;font-size:11px;opacity:.8">— 이전 채팅 —</div>');});
+socket.on('chatHistory',h=>{$('msgs').innerHTML='';if(!h||!h.length)return;const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};for(const m of h)addMsg(`<span style="opacity:.55"><small style="color:#888">${hm(m.t)}</small> <b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}</span>`);addMsg('<div style="text-align:center;color:#888;font-size:11px;opacity:.8">— 이전 채팅 —</div>');;chatBottom();});
 socket.on('chat',m=>{if(m.sys){sys(m.text);return;}bubble(m.id,m.text);addMsg(`<b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}`);});
 // ---------- 네트워크 ----------
 socket.on('init',d=>{myId=d.id;clearOthers();for(const id in d.players)upsertOther({id,...d.players[id]});setMusic(d.music);if(joined)socket.emit('join',{...me,clientId:CID},r=>{if(r&&!r.ok){joined=false;nickErr();}});});
