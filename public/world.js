@@ -176,7 +176,7 @@ function buildTables(){
   prop('lampRoundTable',{pos:[tx,.81,tz],scale:1.3,emissive:'#ffb347'});
   E('a-entity',{position:`${tx} 1.25 ${tz}`,light:`type:point;color:#ffb347;intensity:${IS_MOBILE?0:.5};distance:3`});
   window.POCHA_TABLES=window.POCHA_TABLES||{};POCHA_TABLES[id]=[tx,tz,.81,2.3];
-  E('a-entity',{position:`${tx} 1.7 ${tz}`,ktext:`value:${ti+1}번 테이블;color:#ffd84a;size:40;width:.9`,billboard:''});
+
   OBSTACLES.push({x:tx,z:tz,r:.85});
   for(let s=0;s<4;s++){const a=s*Math.PI/2+Math.PI/4,sx=tx+Math.cos(a)*1.45,sz=tz+Math.sin(a)*1.45;
    const yaw=Math.atan2(tx-sx,tz-sz); // 테이블 쪽을 바라봄 (모델 정면 +z)
@@ -518,7 +518,7 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  tables.forEach(([tx,tz],ti)=>{const id='Y'+(ti+1);
   E('a-box',{position:`${tx} .68 ${tz}`,width:.9,height:.04,depth:.9,material:'color:#c41a1a;roughness:.5'});
   [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>E('a-cylinder',{position:`${tx+a*.38} .34 ${tz+b*.38}`,radius:.03,height:.66,'segments-radial':6,color:'#a81414'}));
-  E('a-entity',{position:`${tx} 1.55 ${tz}`,ktext:`value:야장 ${ti+1}번;color:#ffe08a;size:40;width:.8`,billboard:''});
+  
   OBSTACLES.push({x:tx,z:tz,r:.55});window.POCHA_TABLES=window.POCHA_TABLES||{};POCHA_TABLES[id]=[tx,tz];
   for(let s=0;s<4;s++){const a=s*Math.PI/2,sx=tx+Math.cos(a)*.78,sz=tz+Math.sin(a)*.78,yaw=Math.atan2(tx-sx,tz-sz),seatId=id+'-'+s;
    const el=E('a-entity',{position:`${sx} 0 ${sz}`});E('a-cylinder',{position:'0 .2 0',radius:.17,'radius-bottom':.2,height:.4,'segments-radial':10,material:'color:#d01e1e;roughness:.5'},el);

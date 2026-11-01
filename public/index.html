@@ -33,10 +33,10 @@
  <button id="chatToggle" class="fab">💬</button><button id="musicToggle" class="fab">🎵</button>
  <div id="chat" class="panel"><div id="chatTitle">💬 전체 채팅</div><div id="msgs"></div>
   <form id="chatForm"><input id="chatIn" maxlength="200" placeholder="메시지 입력 (Enter)" autocomplete="off"><button>전송</button></form></div>
- <div id="music" class="panel"><div>🎵 <b id="now">재생 중인 곡 없음</b></div>
+ <div id="music" class="panel"><div>🎵 <b id="now">재생 중인 곡 없음</b> <button id="admFold" class="hidden" type="button" title="관리자 메뉴 접기/펴기">⚙ 관리자 ▲</button></div>
   <div id="adminCtl" class="hidden"><button data-c="play">▶</button><button data-c="pause">⏸</button><button data-c="skip">⏭</button><button data-c="shuffleToggle" id="shufBtn" title="랜덤 재생 켜기/끄기">🔀 랜덤 끔</button><button id="cleanBtn" type="button">🔄 새로고침(유령 정리)</button><button data-c="shuffleNow" title="대기열 순서 섞기">섞기</button>
    <div class="arow">MP3: <input type="file" id="file" accept=".mp3,audio/mpeg"></div>
-   <form id="ytForm" class="arow"><input id="ytUrl" placeholder="유튜브 영상/재생목록 링크"><button>추가</button></form><span id="upMsg"></span></div>
+   <form id="ytForm" class="arow"><input id="ytUrl" placeholder="링크 추가 (유튜브·사운드클라우드·비메오·mp3/라디오 주소)"><button>링크 추가</button></form><span id="upMsg"></span></div>
   <ol id="pl" class="hidden"></ol></div>
  <div id="fsHint" class="hidden">📱 아이폰은 공유 → <b>홈 화면에 추가</b> 후 열면 주소창 없이 전체화면으로 즐길 수 있어요 <button id="fsHintX">닫기</button></div>
  <button id="unmute" class="hidden">🔊 탭해서 소리 켜기</button>

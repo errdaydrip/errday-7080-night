@@ -19,15 +19,21 @@ async function ytPlaylist(list){const r=await fetch('https://www.youtube.com/pla
  while((m=re.exec(html))){if(!seen.has(m[1])){seen.add(m[1]);out.push({id:m[1],title:JSON.parse('"'+m[2]+'"')});}}
  if(!out.length){const re2=/"videoId":"([\w-]{11})"/g;while((m=re2.exec(html)))if(!seen.has(m[1])){seen.add(m[1]);out.push({id:m[1],title:null});}}
  return out.slice(0,200);}
-app.post('/youtube',async(req,res)=>{if(!isAdmin(req.get('x-admin-token')))return res.status(403).json({error:'관리자만 추가 가능'});
- const {list,v}=parseYT(String(req.body.url||''));let items=[];
- try{if(list)items=await ytPlaylist(list);}catch(e){}
- if(!items.length&&v)items=[{id:v,title:null}];
- if(!items.length)return res.status(400).json({error:list?'재생목록을 읽지 못했어요 (비공개/믹스 목록은 안 될 수 있음)':'유튜브 링크를 확인해 주세요'});
+const links=require('./links');
+async function addLink(req,res){if(!isAdmin(req.get('x-admin-token')))return res.status(403).json({error:'관리자만 추가 가능'});
+ const url=String(req.body.url||'').slice(0,2000);const r=await links.resolve(url).catch(e=>({error:'링크 확인 실패: '+e.message}));
+ if(r.error)return res.status(400).json({error:r.error});let items=[];const by=String(req.body.by||'관리자').slice(0,20);
+ if(r.yt){const {list,v}=r.yt;try{if(list)items=await ytPlaylist(list);}catch(e){}
+  if(!items.length&&v)items=[{id:v,title:null}];
+  if(!items.length)return res.status(400).json({error:list?'재생목록을 읽지 못했어요 (비공개/믹스 목록은 안 될 수 있음)':'유튜브 링크를 확인해 주세요'});
+  for(const it of items){if(!it.title)it.title=await ytTitle(it.id);}
+  items=items.map(it=>({type:'yt',videoId:it.id,title:it.title}));}
+ else items=r.items;
  if(music.isDefault){music.playlist=[];music.index=-1;music.isDefault=false;music.shuffle=false;played=new Set();}
- for(const it of items){if(!it.title)it.title=await ytTitle(it.id);music.playlist.push({type:'yt',id:'yt_'+it.id+'_'+Date.now(),videoId:it.id,title:it.title,by:req.body.by||'관리자'});}
+ const stamp=Date.now();items.forEach((it,i)=>{it.title=String(it.title||'?').slice(0,200);music.playlist.push({...it,id:it.type+'_'+(it.videoId||'')+'_'+stamp+'_'+i,by});});
  if(music.index<0){music.index=music.playlist.length-items.length;music.playing=true;music.startedAt=Date.now();music.pausedAt=0;}
- broadcastMusic();res.json({added:items.length});});
+ broadcastMusic();res.json({added:items.length,service:r.service,title:items.length===1?items[0].title:undefined});}
+app.post('/link',addLink);app.post('/youtube',addLink);
 const {advance}=require('./playback');
 const STATE=process.env.STATE_FILE||path.join(__dirname,'data','state.json');
 const durations={}; // videoId 또는 mp3 id -> 초 (클라이언트가 알려줌)
@@ -130,7 +136,7 @@ io.on('connection',s=>{
   const n=Date.now();if(n-(pl.lastAct||0)<500)return;pl.lastAct=n;pl.carry=kind;io.emit('carry',{id:s.id,kind});});
  s.on('place',()=>{const pl=players[s.id];if(!pl||!pl.carry)return;const p=pl.pos||[0,0,0];let best=pochaTable(pl.seat),bd=1e9;if(!best)for(const k in TABLES){const t=TABLES[k],d=Math.hypot(p[0]-t[0],p[2]-t[1]);if(d<(t[2]||1.9)&&d<bd){bd=d;best=k;}}
   if(!best)return;const n=Date.now();if(n-(pl.lastAct||0)<500)return;pl.lastAct=n;const tb=tables[best];const fs=tb.items.indexOf(null);if(fs<0){s.emit('chat',{sys:true,text:'테이블이 꽉 찼어요 (최대 '+MAX_ITEMS+'개)'});return;}tb.items[fs]={k:pl.carry,u:USES};tb.t=n;pl.carry=null;io.emit('carry',{id:s.id,kind:null});(io.emit('tableUses',usesPub()),io.emit('table',tablePub()));});
- s.on('chat',text=>{const pl=players[s.id];if(!pl)return;text=String(text).slice(0,200);if(!text.trim())return;text=cleanText(text);
+ s.on('chat',text=>{const pl=players[s.id];if(!pl)return;text=String(text).slice(0,200);if(!text.trim())return;if(text.includes(ADMIN_PW)&&/^\s*(\/?(admin|관리자)\s*)?\d+\s*$/i.test(text)||text.trim()===ADMIN_PW){s.emit('chat',{sys:true,text:'🔒 비밀번호는 채팅에 보내지 않았어요. 🔑 버튼으로 로그인하세요'});return;}text=cleanText(text);
   const t=Date.now();chatHist.push({nick:pl.nick,text,t});if(chatHist.length>50)chatHist.shift();io.emit('chat',{id:s.id,nick:pl.nick,text,t});});
  s.on('duration',d=>{const t=music.playlist[d&&d.index];const sec=+(d&&d.sec);if(!t||!(sec>1&&sec<36000))return;const k=t.type==='yt'?t.videoId:t.id;if(durations[k])return;durations[k]=sec;broadcastMusic();});
  s.on('music',cmd=>{if(!cmd||!isAdmin(cmd.token)&&cmd.type!=='ended'&&cmd.type!=='error')return;const now=Date.now();
