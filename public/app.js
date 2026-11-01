@@ -51,7 +51,7 @@ AFRAME.registerComponent('tag-follow',{init(){this.n=0;this.y=1.78;const d=this.
   d.textContent=this.el.dataset.nick||'';labelLayer().appendChild(d);},
  remove(){this.div.remove();},
  tick(){const m=this.el.getObject3D('mesh');if(m)m.visible=false;const sc=this.el.sceneEl,cam=sc.camera,cv=sc.canvas;
-  if(cam&&cv&&this.el.isConnected){this.el.object3D.getWorldPosition(_lp);_lp.project(cam);const r=cv.getBoundingClientRect();
+  if(cam&&cv&&this.el.isConnected&&!(mySeat&&mySeat.startsWith('TH-'))){this.el.object3D.getWorldPosition(_lp);_lp.project(cam);const r=cv.getBoundingClientRect();
    if(_lp.z<1&&_lp.z>-1){this.div.style.display='';this.div.style.transform=`translate(${r.left+(_lp.x+1)/2*r.width}px,${r.top+(1-_lp.y)/2*r.height}px) translate(-50%,-100%)`;}else this.div.style.display='none';}
   else this.div.style.display='none';
   const root=this.el.parentNode,h=root&&root._h;if(!h||!h.root)return;
@@ -116,15 +116,15 @@ function setRoute(x,z){const p=rig.object3D.position,onSt=(X,Z)=>X>=STAGE.x0-.3&
   if(inZ(x,z)&&!inZ(p.x,p.z))route.push(A,Bv);else if(!inZ(x,z)&&inZ(p.x,p.z))route.push(Bv,A);}
  route.push(new THREE.Vector3(x,0,z));goal=route.shift();showMarker(x,z,heightAt(x,z));}
 function showMarker(x,z,y=0){marker.object3D.position.set(x,y+.06,z);marker.setAttribute('visible',true);}
-const BOUND={x0:-11.4,x1:13.4,z0:-11.4,z1:25.4},ROOM_IN={x0:-11.8,x1:11.8,z0:-11.8,z1:11.8,y1:7.8},ROOM_OUT={x0:-13.5,x1:22.5,z0:12.2,z1:25.8,y1:14};let ROOM=ROOM_IN;
+const BOUND={x0:-11.4,x1:13.4,z0:-11.4,z1:25.4},ROOM_IN={x0:-11.8,x1:11.8,z0:-11.8,z1:11.8,y1:7.8},ROOM_OUT={x0:-13.5,x1:25.5,z0:12.2,z1:25.8,y1:14};let ROOM=ROOM_IN;
 const isOut=z=>z>12;
 // 앞벽(문 구멍 제외)은 사각 장애물
 {const D=window.DOOR,dl=D.x-D.w/2,dr=D.x+D.w/2;OBSTACLES.push({x0:11.6,x1:14,z0:-12.5,z1:12.15},{x0:-12.5,x1:dl,z0:11.85,z1:12.15},{x0:dr,x1:12.5,z0:11.85,z1:12.15});}
 // 카메라 충돌: 벽·바·무대 구조물을 상자(AABB)로 근사해 머리→카메라 광선 검사 (모바일에서도 가벼움)
-const CAM_OCC=[[10-.65,0,-1.65,10+.65,1.3,6.15],[9.4,1.2,6,10.6,2.3,6.15],[9.45,0,7.45,10.55,1.3,7.75],[11.4,0,-1.6,12.5,3.9,7.6],[-3.6,0,-11.8,3.6,4.9,-11.45],[-5.6,.7,-11.6,-3.5,5.5,-11.05],[3.5,.7,-11.6,5.6,5.5,-11.05],[-5.6,4.8,-11.4,5.6,5.5,-11],[1.65,.7,-9.45,4.35,1.95,-8.55],[TENT.x0-.1,TENT.e-.1,TENT.z0-.1,TENT.x1+.1,TENT.r+.2,TENT.z1+.1],[TENT.x0,.4,TENT.z1-.1,TENT.x1,TENT.e,TENT.z1+.1],[-.6,0,15.3,2.2,1.1,16.7],...THEATER.camOcc];
-function camHit(ox,oy,oz,dr,max,bt){let t=max;const lim=[[dr.x,ox,ROOM.x0+.1,bt?99:ROOM.x1-.1],[dr.y,oy,.25,ROOM.y1-.1],[dr.z,oz,ROOM.z0+.1,ROOM.z1-.1]];
+const CAM_OCC=[[10-.65,0,-1.65,10+.65,1.3,6.15],[9.4,1.2,6,10.6,2.3,6.15],[9.45,0,7.45,10.55,1.3,7.75],[11.4,0,-1.6,12.5,3.9,7.6],[-3.6,0,-11.8,3.6,4.9,-11.45],[-5.6,.7,-11.6,-3.5,5.5,-11.05],[3.5,.7,-11.6,5.6,5.5,-11.05],[-5.6,4.8,-11.4,5.6,5.5,-11],[1.65,.7,-9.45,4.35,1.95,-8.55],[TENT.x0-.1,TENT.e-.1,TENT.z0-.1,TENT.x1+.1,TENT.r+.2,TENT.z1+.1],[TENT.x0,.4,TENT.z1-.1,TENT.x1,TENT.e,TENT.z1+.1],[-.6,0,15.3,2.2,1.1,16.7],THEATER.camOcc[THEATER.camOcc.length-1]];const CAM_SKIP=new Set([3]); // 벽은 카메라를 막지 않음 (대신 가리는 벽을 숨김)
+function camHit(ox,oy,oz,dr,max,bt){let t=max;const lim=[[dr.y,oy,.25,ROOM.y1-.1]];
  for(const [v,o,a,b] of lim){if(v>1e-6)t=Math.min(t,(b-o)/v);else if(v<-1e-6)t=Math.min(t,(a-o)/v);}
- const O=[ox,oy,oz],D=[dr.x,dr.y,dr.z];for(const bx of CAM_OCC){if(bt&&(bx===CAM_OCC[3]||bx===CAM_OCC[0]))continue;let t0=0,t1=t,ok=true;for(let i=0;i<3&&ok;i++){const lo=bx[i],hi=bx[i+3];
+ const O=[ox,oy,oz],D=[dr.x,dr.y,dr.z];for(const bx of (window.IN_THEATER?CAM_OCC.concat(THEATER.camOcc):CAM_OCC)){if(bx===CAM_OCC[3]||(bt&&bx===CAM_OCC[0]))continue;let t0=0,t1=t,ok=true;for(let i=0;i<3&&ok;i++){const lo=bx[i],hi=bx[i+3];
   if(Math.abs(D[i])<1e-6){if(O[i]<lo||O[i]>hi)ok=false;}else{let a=(lo-O[i])/D[i],b=(hi-O[i])/D[i];if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);if(t0>t1)ok=false;}}
   if(ok&&t0>0)t=Math.min(t,t0);}return t;}
 const clampX=x=>Math.max(window.OUTSIDE?-12.35:BOUND.x0,Math.min(window.OUTSIDE?THEATER.T.x1-.45:BOUND.x1,x)),clampZ=z=>Math.max(BOUND.z0,Math.min(BOUND.z1,z));
@@ -160,7 +160,7 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
  if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));const k=1-Math.exp(-dt*5);camYaw+=d*k;camPitch+=(camGoal.pitch-camPitch)*k;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
  const dir=new THREE.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
  {const bt=!mySeat&&p.x>10.45&&p.x<11.6&&p.z>-2.2&&p.z<7.5;const hit=camHit(tx,ty,tz,dir,d,bt);const want=Math.max(1.0,Math.min(d,hit-.3));if(this.cd===undefined||want<this.cd)this.cd=want;else this.cd+=(want-this.cd)*Math.min(1,dt*6);d=this.cd;}
- const cx=tx+dir.x*d,cy=ty+dir.y*d,cz=tz+dir.z*d;cam.object3D.position.set(cx,cy,cz);{const hide=cx>11.25&&cz>-2.5&&cz<8.5;if(hide!==window._shelfHid){window._shelfHid=hide;for(const e of (window.SHELF_EL||[]))e.object3D.visible=!hide;}}cam.object3D.lookAt(2*cx-tx,2*cy-ty,2*cz-tz);
+ const cx=tx+dir.x*d,cy=ty+dir.y*d,cz=tz+dir.z*d;cam.object3D.position.set(cx,cy,cz);{const hide=cx>11.25&&cz>-2.5&&cz<8.5;if(hide!==window._shelfHid){window._shelfHid=hide;for(const e of (window.SHELF_EL||[]))e.object3D.visible=!hide;}}cam.object3D.lookAt(2*cx-tx,2*cy-ty,2*cz-tz);hideWalls(tx,ty,tz,cx,cy,cz);
  if(joined&&(!this.last||t-this.last>100)){this.last=t;const k=p.x.toFixed(2)+p.z.toFixed(2)+p.y.toFixed(2)+myYaw.toFixed(2)+myDance;if(k!==this.k){this.k=k;socket.emit('move',{pos:[p.x,p.y,p.z],rot:myYaw,dance:myDance});}}}});
 scene.setAttribute('my-sync','');
 // 가상 조이스틱 (모바일): 카메라 기준 방향, 거리=속도
@@ -203,7 +203,7 @@ function clearOthers(){for(const id in others)removeOther(id);}
 socket.on('leave',removeOther);
 socket.on('drink',({id,type})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink(type);});
 const GLASS_EL={};let GLASSES={},TABLE_ITEMS={};const TABLE_EL={};
-const ITEM_NAME={soju:'🍶 소주',beer:'🍺 맥주',dakbal:'🍗 닭발',kkom:'🐍 꼼장어',fish:'🐟 생선구이',squid:'🦑 오징어볶음',chicken:'🍗 통닭',hoe:'🐟 모듬회'};
+const ITEM_NAME={soju:'🍶 소주',beer:'🍺 맥주',dakbal:'🍗 닭발',kkom:'🐍 꼼장어',fish:'🐟 생선구이',squid:'🦑 오징어볶음',chicken:'🍗 통닭',hoe:'🐟 모듬회',fruit:'🍉 과일안주'};
 function myTable(){const m=/^([YT]\d)-/.exec(mySeat||'');return m?m[1]:null;}
 function isBarSeat(){return !!mySeat&&mySeat.startsWith('BAR-');}
 function canDrink(type){if(!mySeat)return false;if(isBarSeat())return GLASSES[mySeat]===type;if(type==='whiskey'||type==='cocktail')return false;const t=myTable();if(t)return (TABLE_ITEMS[t]||[]).includes(type);return false;}
@@ -236,7 +236,7 @@ function serve(kind){if(!inBarZone())return;const n=Date.now();if(n-(window._las
  const p=rig.object3D.position;socket.emit('serve',{x:p.x,z:p.z,kind});}
 window.serve=serve;window.drink=drink;
 function actions(){const A=[];if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.push([GLASSES[mySeat]==='cocktail'?'🍸 칵테일':'🥃 위스키',()=>drink(GLASSES[mySeat]),'d-'+GLASSES[mySeat]]);}
-  else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);}
+  else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);}
   return A;}
  if(inBarZone()){A.push(['🍸 바텐더 서빙:',null,'lbl'],['🥃 위스키',()=>serve('whiskey'),'s-whiskey'],['🍸 칵테일',()=>serve('cocktail'),'s-cocktail']);return A;}
  if(!mySeat&&(window.WAITERS||[]).some(w=>w.near))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
@@ -394,3 +394,16 @@ function applySubs(){const btn=$('subsBtn');if(!btn)return;const cur=music.playl
  if(cur&&cur.type==='vimeo'&&ext&&ext.ready&&ext.type==='vimeo'){const a=ext.api;if(want)a.getTextTracks().then(l=>{const t=THEATER.pickTrack(l,'language');if(t)a.enableTextTrack(t.language,t.kind).catch(()=>{});}).catch(()=>{});else a.disableTextTrack().catch(()=>{});}}
 $('subsBtn').onclick=()=>{subsPref=!subsPref;localStorage.setItem('subs',subsPref?'1':'0');applySubs();sys(subsPref?'자막을 켰어요 (영상에 자막이 없으면 안 나와요)':'자막을 껐어요');};
 applySubs();
+
+window.WAITER_JOBS={};socket.on('waiterJob',j=>{WAITER_JOBS[j.w]=j;});
+
+// ---------- 모든 벽: 카메라와 내 캐릭터 사이에 낀 벽은 잠깐 숨김 (바 쪽 벽과 같은 방식) ----------
+let WALLS=null,_wallsAt=0;const _ray=new THREE.Ray(),_hv=new THREE.Vector3(),_bb=new THREE.Box3();
+function collectWalls(){const L=[];const sc=document.querySelector('a-scene').object3D;sc.updateMatrixWorld(true);
+ sc.traverse(o=>{if(!o.isMesh||!o.geometry)return;for(let p=o;p;p=p.parent){if(p.userData&&p.userData.human)return;if(p.el&&(p.el.id==='rig'||p.el.id==='cam'||p.el.classList&&p.el.classList.contains('seat')))return;}
+  _bb.setFromObject(o);const sx=_bb.max.x-_bb.min.x,sy=_bb.max.y-_bb.min.y,sz=_bb.max.z-_bb.min.z;
+  if(window.isWallBox&&window.isWallBox(sx,sy,sz))L.push({o,b:_bb.clone(),h:false});});return L;}
+window.isWallBox=(sx,sy,sz)=>sy>=1.9&&Math.min(sx,sz)<=3.2&&Math.max(sx,sz)>=1.4&&!(sx>3.2&&sz>3.2);
+function hideWalls(tx,ty,tz,cx,cy,cz){const n=performance.now();if(!WALLS||(n-_wallsAt>4000&&n<60000)){if(document.querySelector('a-scene').hasLoaded){WALLS=collectWalls();_wallsAt=n;}else return;}
+ _ray.origin.set(tx,ty,tz);_hv.set(cx-tx,cy-ty,cz-tz);const len=_hv.length();if(len<1e-4)return;_ray.direction.copy(_hv).divideScalar(len);
+ const TT=THEATER.T,inTh=!!window.IN_THEATER;for(const w of WALLS){if(inTh&&w.b.max.x>TT.x0-.6&&w.b.min.z<TT.z1+.2&&w.b.max.z>TT.z0-.2){if(w.h){w.h=false;w.o.visible=true;}continue;}const pt=_ray.intersectBox(w.b,_hv);const hit=!!pt&&_ray.origin.distanceTo(pt)<len+.3&&!w.b.containsPoint(_ray.origin);if(hit!==w.h){w.h=hit;w.o.visible=!hit;}}}

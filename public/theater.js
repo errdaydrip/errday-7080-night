@@ -1,7 +1,7 @@
 // ---------- 야장 극장 (옛 비디오방+만화방 자리를 합친 건물) : 순수 데이터/계산 (브라우저+node 테스트 공용) ----------
 (function(root){
- const T={x0:14,x1:22,z0:12.6,z1:23.6,h:5.4,wall:.2,door:{z0:16.9,z1:19.3},
-  screen:{x:21.75,z:18.1,y:2.75,w:6.4,h:3.6}};
+ const T={x0:14,x1:25,z0:12.6,z1:23.6,h:6.3,wall:.2,door:{z0:16.9,z1:19.3},
+  screen:{x:24.75,z:18.1,y:3.1,w:8.8,h:4.95}};
  // 좌석: 스크린(+x)을 바라보는 3줄, 가운데 통로(문 앞) 비움
  const seats=[];const rows=[16.2,17.5,18.8],cols=[13.7,14.6,15.5,16.4,19.8,20.7,21.6,22.5].map(z=>z+.0);
  rows.forEach((x,r)=>cols.forEach((z,c)=>{if(z<T.z0+.9||z>T.z1-.9)return;seats.push({id:`TH-${r}${c}`,table:'TH',x,z,y:.42+r*.12,yaw:Math.PI/2,stand:[x-.55,z],row:r});}));
