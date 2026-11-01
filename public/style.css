@@ -21,7 +21,7 @@ button:disabled{opacity:.5}.sel{background:#b0005a}.big{width:100%;padding:13px;
 .arow{display:flex;gap:4px;margin:4px 0;align-items:center}.arow input{flex:1;min-width:0;font-size:13px}
 #unmute{left:50%;top:70px;transform:translateX(-50%);font-size:18px;padding:10px 16px;background:#b0005a}
 #prompt{left:50%;top:58%;transform:translateX(-50%);background:#000a;padding:6px 12px;border-radius:6px}
-#mob{right:8px;bottom:8px;text-align:center;display:none}#mob button{width:48px;height:48px;opacity:.75}
+#mob{left:18px;bottom:84px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,216,74,.55);display:none;touch-action:none;pointer-events:auto;z-index:20}#joyKnob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,216,74,.75);box-shadow:0 0 12px #ff3cac;pointer-events:none}
 .fab{display:none;width:46px;height:46px;font-size:20px;border-radius:50%}
 #ytWrap{position:fixed;left:-10px;bottom:-10px;width:2px;height:2px;overflow:hidden;opacity:0.01;pointer-events:none}
 /* 모바일 */

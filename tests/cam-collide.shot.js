@@ -1,0 +1,14 @@
+const p=require('puppeteer-core');const W=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
+ const pg=await b.newPage();await pg.setViewport({width:900,height:600});pg.on('pageerror',e=>console.log('ERR',e.message));
+ await pg.goto(process.env.URL||'http://localhost:8080');await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
+ await pg.click('#enter');await W(2500);
+ await pg.evaluate(()=>{rig.object3D.position.set(7.6,0,7.9);camYaw=Math.PI/2+.5;camPitch=.35;});await W(450);
+ console.log('bar cam',await pg.evaluate(()=>cam.object3D.position.toArray().map(v=>v.toFixed(2))));
+ await pg.screenshot({path:'/workspace/errday-7080-night/screenshot_cam_bar.png'});
+ await pg.evaluate(()=>{rig.object3D.position.set(-1,.7,-10.3);camYaw=Math.PI-.3;camPitch=.3;});await W(2500);
+ console.log('stage cam',await pg.evaluate(()=>cam.object3D.position.toArray().map(v=>v.toFixed(2))));
+ await pg.screenshot({path:'/workspace/errday-7080-night/screenshot_cam_stage.png'});
+ await pg.evaluate(()=>{rig.object3D.position.set(0,0,2);camYaw=0;camPitch=.4;});await W(2000);
+ console.log('chk',await pg.evaluate(()=>[camDist,camHit(0,1.1,2,new THREE.Vector3(0,Math.sin(.4),Math.cos(.4)),10),rig.object3D.position.toArray()]));console.log('open cam',await pg.evaluate(()=>cam.object3D.position.toArray().map(v=>v.toFixed(2))));
+ await b.close();process.exit();})();

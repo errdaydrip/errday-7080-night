@@ -107,6 +107,13 @@ function setRoute(x,z){const p=rig.object3D.position,up=heightAt(x,z)>.35,me_up=
  route.push(new THREE.Vector3(x,0,z));goal=route.shift();showMarker(x,z,heightAt(x,z));}
 function showMarker(x,z,y=0){marker.object3D.position.set(x,y+.06,z);marker.setAttribute('visible',true);}
 const BOUND={x0:-11.4,x1:11.4,z0:-11.4,z1:11.4},ROOM={x0:-11.8,x1:11.8,z0:-11.8,z1:11.8,y1:7.8};
+// 카메라 충돌: 벽·바·무대 구조물을 상자(AABB)로 근사해 머리→카메라 광선 검사 (모바일에서도 가벼움)
+const CAM_OCC=[[10-.65,0,-1.65,10+.65,1.3,7.65],[11.4,0,-1.6,12.5,3.9,7.6],[-3.6,0,-11.8,3.6,4.9,-11.45],[-5.6,.7,-11.6,-3.5,5.5,-11.05],[3.5,.7,-11.6,5.6,5.5,-11.05],[-5.6,4.8,-11.4,5.6,5.5,-11],[1.65,.7,-9.45,4.35,1.95,-8.55]];
+function camHit(ox,oy,oz,dr,max){let t=max;const lim=[[dr.x,ox,ROOM.x0+.1,ROOM.x1-.1],[dr.y,oy,.25,ROOM.y1-.1],[dr.z,oz,ROOM.z0+.1,ROOM.z1-.1]];
+ for(const [v,o,a,b] of lim){if(v>1e-6)t=Math.min(t,(b-o)/v);else if(v<-1e-6)t=Math.min(t,(a-o)/v);}
+ const O=[ox,oy,oz],D=[dr.x,dr.y,dr.z];for(const bx of CAM_OCC){let t0=0,t1=t,ok=true;for(let i=0;i<3&&ok;i++){const lo=bx[i],hi=bx[i+3];
+  if(Math.abs(D[i])<1e-6){if(O[i]<lo||O[i]>hi)ok=false;}else{let a=(lo-O[i])/D[i],b=(hi-O[i])/D[i];if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);if(t0>t1)ok=false;}}
+  if(ok&&t0>0)t=Math.min(t,t0);}return t;}
 const clampX=x=>Math.max(BOUND.x0,Math.min(BOUND.x1,x)),clampZ=z=>Math.max(BOUND.z0,Math.min(BOUND.z1,z));
 function blocked(x,z,ignoreSeatTable){const p0=rig.object3D.position;if(Math.abs(heightAt(x,z)-heightAt(p0.x,p0.z))>.2)return true;for(const o of OBSTACLES){if(o.r!==undefined){if(ignoreSeatTable&&Math.hypot(o.x-ignoreSeatTable.x,o.z-ignoreSeatTable.z)<.01)continue;if(Math.hypot(x-o.x,z-o.z)<o.r+.25)return true;}
  else if(x>o.x0-.25&&x<o.x1+.25&&z>o.z0-.25&&z<o.z1+.25)return true;}return false;}
@@ -120,12 +127,12 @@ function stand(){if(!mySeat)return;camGoal=null;const s=SEATS.find(x=>x.id===myS
 function updateWhere(){const t=mySeat&&mySeat.split('-')[0];$('where').textContent=t==='BAR'?'🍸 바 스툴':t?'🛋 '+t.slice(1)+'번 테이블':'🌐 로비';}
 AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const p=rig.object3D.position;moving=false;
  if(joined){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),r=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
-  let mx=0,mz=0,ignore=null;
+  let mx=0,mz=0,ignore=null,spd=1;if(joyX||joyY){f=-joyY;r=joyX;spd=Math.min(1,Math.hypot(f,r));}
   if(f||r){if(mySeat)stand();const fx=-Math.sin(camYaw),fz=-Math.cos(camYaw),rx=Math.cos(camYaw),rz=-Math.sin(camYaw);mx=fx*f+rx*r;mz=fz*f+rz*r;}
   else if(goal&&!mySeat){mx=goal.x-p.x;mz=goal.z-p.z;const d=Math.hypot(mx,mz);if(goalSeat&&!goalSeat.stand)ignore=tableCenter(goalSeat.table);
    if(d<.12&&route.length){goal=route.shift();}else if(d<.12||(goalSeat&&d<.8)){if(goalSeat){sit(goalSeat);}goal=null;mx=mz=0;marker.setAttribute('visible',false);}}
   const l=Math.hypot(mx,mz);
-  if(l>1e-4&&!mySeat){mx/=l;mz/=l;const sp=4*dt;let nx=clampX(p.x+mx*sp),nz=clampZ(p.z+mz*sp);
+  if(l>1e-4&&!mySeat){mx/=l;mz/=l;const sp=4*dt*spd;let nx=clampX(p.x+mx*sp),nz=clampZ(p.z+mz*sp);
    if(!blocked(nx,nz,ignore)){p.x=nx;p.z=nz;moving=true;}
    else if(!blocked(nx,p.z,ignore)){p.x=nx;moving=true;}else if(!blocked(p.x,nz,ignore)){p.z=nz;moving=true;}
    else if(goal){goal=null;goalSeat=null;marker.setAttribute('visible',false);sys('앞이 막혀서 멈췄어요');}
@@ -138,12 +145,18 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
  const tx=p.x,ty=p.y+(mySeat?.95:1.1),tz=p.z;let d=camDist;
  if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));camYaw+=d*.08;camPitch+=(camGoal.pitch-camPitch)*.08;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
  const dir=new THREE.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
- for(;d>1.2;d-=.1){const cx=tx+dir.x*d,cy=ty+dir.y*d,cz=tz+dir.z*d;if(cx>ROOM.x0&&cx<ROOM.x1&&cz>ROOM.z0&&cz<ROOM.z1&&cy<ROOM.y1)break;}
+ {const hit=camHit(tx,ty,tz,dir,d);const want=Math.max(1.0,Math.min(d,hit-.3));if(this.cd===undefined||want<this.cd)this.cd=want;else this.cd+=(want-this.cd)*Math.min(1,dt*6);d=this.cd;}
  const cx=tx+dir.x*d,cy=ty+dir.y*d,cz=tz+dir.z*d;cam.object3D.position.set(cx,cy,cz);cam.object3D.lookAt(2*cx-tx,2*cy-ty,2*cz-tz);
  if(joined&&(!this.last||t-this.last>100)){this.last=t;const k=p.x.toFixed(2)+p.z.toFixed(2)+p.y.toFixed(2)+myYaw.toFixed(2)+myDance;if(k!==this.k){this.k=k;socket.emit('move',{pos:[p.x,p.y,p.z],rot:myYaw,dance:myDance});}}}});
 scene.setAttribute('my-sync','');
-document.querySelectorAll('#mob button[data-k]').forEach(b=>{const k=b.dataset.k;const on=v=>e=>{e.preventDefault();keys[k]=v;if(v){goal=null;goalSeat=null;marker.setAttribute('visible',false);}};
- b.addEventListener('pointerdown',on(true));b.addEventListener('pointerup',on(false));b.addEventListener('pointerleave',on(false));b.addEventListener('pointercancel',on(false));});
+// 가상 조이스틱 (모바일): 카메라 기준 방향, 거리=속도
+let joyX=0,joyY=0,joyId=null;{const J=$('mob'),K=$('joyKnob'),R=60;
+ const mv=e=>{const r=J.getBoundingClientRect();let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;const l=Math.hypot(x,y);if(l>R){x*=R/l;y*=R/l;}
+  K.style.transform=`translate(${x}px,${y}px)`;joyX=x/R;joyY=y/R;if(Math.hypot(joyX,joyY)<.15)joyX=joyY=0;};
+ const end=e=>{if(e.pointerId!==joyId)return;joyId=null;joyX=joyY=0;K.style.transform='';};
+ J.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(joyId!==null)return;joyId=e.pointerId;J.setPointerCapture(e.pointerId);goal=null;goalSeat=null;marker.setAttribute('visible',false);mv(e);});
+ J.addEventListener('pointermove',e=>{if(e.pointerId===joyId){e.preventDefault();mv(e);}});
+ J.addEventListener('pointerup',end);J.addEventListener('pointercancel',end);J.addEventListener('lostpointercapture',end);}
 // ---------- 채팅 (전체) ----------
 function chatBottom(){const m=$('msgs');if(!m)return;const f=()=>{m.scrollTop=m.scrollHeight;};f();requestAnimationFrame(()=>{f();requestAnimationFrame(f);});setTimeout(f,60);setTimeout(f,300);}
 function addMsg(html,force){const m=$('msgs');const near=force||m.scrollHeight-m.scrollTop-m.clientHeight<80;const d=document.createElement('div');d.innerHTML=html;m.appendChild(d);while(m.children.length>100)m.firstChild.remove();if(near)chatBottom();}

@@ -1,0 +1,15 @@
+const p=require('puppeteer-core');const W=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
+ const pg=await b.newPage();await pg.emulate(p.KnownDevices['iPhone 12']);pg.on('pageerror',e=>console.log('ERR',e.message));
+ await pg.goto(process.env.URL||'http://localhost:8080');await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
+ await pg.tap('#enter');await W(2500);
+ const r=await pg.evaluate(()=>{const b=document.getElementById('mob').getBoundingClientRect();return [b.x,b.y,b.width,getComputedStyle(document.getElementById('mob')).display]});console.log('joy',r);
+ const p0=await pg.evaluate(()=>rig.object3D.position.toArray());const y0=await pg.evaluate(()=>camYaw);
+ const cx=r[0]+r[2]/2,cy=r[1]+r[2]/2;
+ const c=await pg.target().createCDPSession();
+ await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:cx,y:cy,id:1}]});
+ await c.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:cx+10,y:cy-55,id:1}]});
+ await W(1200);await pg.screenshot({path:'/workspace/errday-7080-night/screenshot_joystick_mobile.png'});
+ await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await W(300);
+ console.log('moved',p0,await pg.evaluate(()=>rig.object3D.position.toArray()),'yaw same',y0===await pg.evaluate(()=>camYaw),await pg.evaluate(()=>[joyX,joyY]));
+ await b.close();process.exit();})();
