@@ -1,0 +1,14 @@
+const p=require('puppeteer-core');const W=ms=>new Promise(r=>setTimeout(r,ms));const D='/workspace/errday-7080-night/';
+(async()=>{const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
+ const pg=await b.newPage();pg.on('pageerror',e=>console.log('ERR',e.message));await pg.setViewport({width:900,height:600});await pg.goto('http://localhost:8080');await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
+ await pg.evaluate(()=>{document.querySelector('#nick,input[type=text]').value='구경꾼';});await pg.click('#enter');await W(5000);
+ const set=(a)=>pg.evaluate(a=>{rig.object3D.position.set(a[0],0,a[1]);myYaw=a[2];camGoal=null;camYaw=a[3];camPitch=a[4];camDist=a[5];},a);
+ await set([12.3,22,Math.PI/2,-Math.PI/2,.3,3.5]);await W(2500);await pg.screenshot({path:D+'chicken_shop.png'});
+ console.log(await pg.evaluate(()=>[...document.querySelectorAll('#actBar button')].map(b=>b.textContent).join(',')));
+ await set([12.3,14.6,Math.PI/2,-Math.PI/2,.3,3.8]);await W(2500);await pg.screenshot({path:D+'hoe_shop.png'});
+ console.log(await pg.evaluate(()=>[...document.querySelectorAll('#actBar button')].map(b=>b.textContent).join(',')));
+ await pg.evaluate(()=>{const s=document.querySelector('a-scene').object3D;['chicken','hoe'].forEach((k,i)=>{const m=makeItem(k,false);m.position.set(-3.3+i*.6,.8,17.5);m.scale.setScalar(1);s.add(m);});});
+ await set([-3,18.3,Math.PI,Math.PI,.9,2]);await W(2000);await pg.screenshot({path:D+'new_food.png'});
+ await set([-1.5,18,0,Math.PI,.15,4]);await W(2000);await pg.screenshot({path:D+'fridge_sign.png'});
+ await set([-3.3,15.5,Math.PI,Math.PI,.2,4]);await W(2000);await pg.screenshot({path:D+'door_pillar.png'});
+ await b.close();})();
