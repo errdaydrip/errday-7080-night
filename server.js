@@ -138,7 +138,7 @@ io.on('connection',s=>{
    :{pos:[0,0,4],rot:0,seat:null,carry:null,drinks:[]};
   const re=!!cur;players[s.id]={...(cur||{}),seen:Date.now(),joinedAt:Date.now(),cid,nick,...look(p),...base};
   if(prevId)io.emit('rekey',{old:prevId,id:s.id});io.emit('player',{id:s.id,...pub()[s.id]});
-  if(typeof ack==='function')ack(re?{ok:true,resume:base}:{ok:true});if(!re)io.emit('chat',{sys:true,text:nick+' 님 입장!'});bcOnline(true);});
+  if(typeof ack==='function')ack(re||L?{ok:true,resume:base}:{ok:true});/* 유예시간이 지나도 앱이 기억한 위치/자리로 복원 */if(!re)io.emit('chat',{sys:true,text:nick+' 님 입장!'});bcOnline(true);});
  s.on('profile',(p,ack)=>{const pl=players[s.id];if(!pl)return;const nn=String(p.nick||pl.nick).trim().slice(0,16)||pl.nick;if(isBad(nn)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}if(nickTaken(nn,pl.cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nn);return;}if(typeof ack==='function')ack({ok:true});Object.assign(pl,{nick:nn,...look(p)});io.emit('player',{id:s.id,...pl});});
  s.on('move',m=>{const pl=players[s.id];if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});

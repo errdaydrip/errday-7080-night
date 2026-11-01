@@ -80,3 +80,8 @@ body.fs #fsHint,body.fs #actBar .lbl,body.fs #prompt{display:none!important}
 body.pfs{height:100dvh;overflow:hidden;overscroll-behavior:none}
 #fsHint b{color:#ffd84a}
 @media (orientation:landscape) and (max-height:500px){#subsBtn{left:auto;right:calc(12px + env(safe-area-inset-right));top:12px;transform:none;font-size:13px;padding:6px 12px}}
+/* 모바일 극장 좌석: 점프 버튼 자리에 자막 버튼 */
+#subsMob{display:none;position:fixed;right:12px;bottom:90px;width:64px;height:64px;border-radius:50%;background:rgba(30,10,40,.85);border:2px solid rgba(255,216,74,.7);color:#fff;font-size:22px;line-height:1;text-align:center;padding:6px 0 0;box-sizing:border-box;touch-action:manipulation;pointer-events:auto;z-index:20}
+#subsMob small{font-size:10px}#subsMob.sel{background:#ff3cac}#subsMob:disabled{opacity:.5;filter:grayscale(1)}
+@media (max-width:700px),(pointer:coarse){body.thseat #jumpBtn{display:none!important}body.thseat #subsMob{display:block}body.thseat #subsBtn{display:none!important}#subsMob{right:calc(12px + env(safe-area-inset-right))}}
+@media (orientation:landscape) and (max-height:500px){#subsMob{bottom:calc(14px + env(safe-area-inset-bottom));width:56px;height:56px;font-size:19px;padding-top:4px}}

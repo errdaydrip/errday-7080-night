@@ -26,17 +26,26 @@ function syncOpts(){$('nick').value=me.nick;document.querySelectorAll('.opt.g').
 syncOpts();
 $('entry').addEventListener('click',e=>{const b=e.target;if(b.classList.contains('g')){me.gender=b.dataset.v;me.outfit=OUTFIT_DEFAULTS[me.gender][me.style];}if(b.classList.contains('s')){me.style=b.dataset.v;me.outfit=OUTFIT_DEFAULTS[me.gender==='f'?'f':'m'][me.style];}
  if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('swatch'))me.outfit=b.dataset.v;me.nick=$('nick').value;syncOpts();});
-$('enter').onclick=()=>{if(window.enterFullscreenMobile)enterFullscreenMobile();me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
+$('enter').onclick=()=>{if(window.enterFullscreenMobile&&!window.AUTO_JOIN)enterFullscreenMobile();me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
  $('entry').classList.add('hidden');$('hud').classList.remove('hidden');chatBottom();
- const ev=joined?'profile':'join';socket.emit(ev,{...me,clientId:CID,last:lastState()},r=>{if(r&&!r.ok){nickErr(r.error);return;}joined=true;enterOk();if(r&&r.resume)setTimeout(()=>resumeState(r.resume),50);});};
-function lastState(){try{const v=JSON.parse(sessionStorage.getItem('lastState')||'null');return v&&Date.now()-v.t<30000?v:null;}catch(e){return null;}}
-function saveState(){if(!joined)return;try{const p=rig.object3D.position,m=$('myAvatar');sessionStorage.setItem('lastState',JSON.stringify({t:Date.now(),pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
-setInterval(saveState,1000);addEventListener('pagehide',saveState);
+ const ev=joined?'profile':'join';socket.emit(ev,{...me,clientId:CID,last:lastState()},r=>{if(r&&!r.ok){nickErr(r.error);return;}joined=true;localStorage.setItem('joinedAt',Date.now());enterOk();if(r&&r.resume)setTimeout(()=>resumeState(r.resume),50);});};
+// 앱(설치 모드)이 백그라운드에서 종료됐다 다시 열려도 이어서: 위치·자리·들고있는 것까지 localStorage 에 (6시간)
+const RESUME_MS=6*3600*1000;
+function lastState(){try{const v=JSON.parse(localStorage.getItem('lastState')||sessionStorage.getItem('lastState')||'null');return v&&Date.now()-v.t<RESUME_MS?v:null;}catch(e){return null;}}
+function saveState(){if(!joined)return;try{const p=rig.object3D.position,m=$('myAvatar');localStorage.setItem('lastState',JSON.stringify({t:Date.now(),pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
+setInterval(saveState,1000);addEventListener('pagehide',saveState);addEventListener('freeze',saveState);
+// 돌아왔을 때: 소켓 즉시 재연결 + 음악 위치 다시 맞춤
+function wake(){if(!socket.connected)socket.connect();if(joined){setTimeout(()=>{applyMusic(true);},300);}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveState();else wake();});addEventListener('pageshow',e=>{if(e.persisted)wake();});addEventListener('resume',wake);addEventListener('focus',wake);
+// 새로 열렸는데(앱이 OS에 의해 종료된 경우) 최근에 입장했었다면 입장 화면 없이 자동 입장
+function autoJoinOk(){try{const a=+localStorage.getItem('joinedAt')||0;return !!me.nick&&Date.now()-a<RESUME_MS&&!sessionStorage.getItem('noAuto');}catch(e){return false;}}
+if(autoJoinOk()){$('entry').classList.add('hidden');const tryAuto=()=>{if($('enter').disabled)return setTimeout(tryAuto,200);window.AUTO_JOIN=true;$('enter').onclick();};tryAuto();}
 function resumeState(r){const m=$('myAvatar');if(m._h&&r.drinks)m._h.drinks=r.drinks.slice();if(r.carry!==undefined){myCarry=r.carry;if(m._h)m._h.carry(r.carry);if(typeof refreshAct==='function')refreshAct(true);}
- const s=r.seat&&SEATS.find(x=>x.id===r.seat);if(s){mySeat=null;sit(s);}else if(r.pos){rig.object3D.position.set(...r.pos);if(Number.isFinite(r.rot))myYaw=r.rot;}}
+ const s=r.seat&&SEATS.find(x=>x.id===r.seat);if(s){for(const id in others)if(others[id].data&&others[id].data.nick===me.nick&&id!==myId)removeOther(id); /* 재접속 전 내 예전 접속이 자리를 쥔 것처럼 보이는 문제 */mySeat=null;sit(s);}else if(r.pos){rig.object3D.position.set(...r.pos);if(Number.isFinite(r.rot))myYaw=r.rot;}}
 function nickErr(why){if(why==='kicked')return;$('entry').classList.remove('hidden');$('hud').classList.add('hidden');alert(why==='bad'?'사용할 수 없는 닉네임이에요':'이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.');$('nick').focus();}
 function enterOk(){
- buildAvatar($('myAvatar'),{...me,id:myId},true);$('enter').textContent='입장하기 (소리 켜짐)';userGesture=true;applyMusic(true);}
+ buildAvatar($('myAvatar'),{...me,id:myId},true);$('enter').textContent='입장하기 (소리 켜짐)';userGesture=true;applyMusic(true);
+ if(window.AUTO_JOIN){window.AUTO_JOIN=false;sys('🔄 이어서 입장했어요');}}
 $('setBtn').onclick=()=>{$('enter').textContent='저장';$('entry').classList.remove('hidden');};
 // 모바일: 채팅/음악 패널은 같은 자리라 하나만 열림 (음악 패널이 채팅을 가리던 문제 수정)
 $('chatToggle').onclick=()=>{const h=$('hud');h.classList.toggle('showChat');if(h.classList.contains('showChat')){h.classList.remove('showMusic');clearTimeout(chatHoldT);chatHold=0;chatBottom(true);}};
@@ -137,7 +146,7 @@ function sit(s){if(!s||seatTaken(s))return;mySeat=s.id;goal=null;goalSeat=null;m
  socket.emit('seat',s.id);socket.emit('move',{pos:[s.x,s.y||0,s.z],rot:myYaw});updateWhere();}
 function stand(){if(!mySeat)return;camGoal=null;const s=SEATS.find(x=>x.id===mySeat);mySeat=null;if(s.stand)rig.object3D.position.set(s.stand[0],0,s.stand[1]);else{const c=tableCenter(s.table);
  rig.object3D.position.set(clampX(s.x+(s.x-c.x)*.45),0,clampZ(s.z+(s.z-c.z)*.45));}route=[];socket.emit('seat',null);updateWhere();}
-function updateWhere(){const t=mySeat&&mySeat.split('-')[0];$('where').textContent=t==='BAR'?'🍸 바 스툴':t==='TH'?'🎬 극장':window.IN_THEATER?'🎬 극장':t&&t[0]==='Y'?'🏮 야장':t?'🛋 테이블':'🌐 로비';}
+function updateWhere(){document.body.classList.toggle('thseat',!!(mySeat&&mySeat.startsWith('TH-')));const t=mySeat&&mySeat.split('-')[0];$('where').textContent=t==='BAR'?'🍸 바 스툴':t==='TH'?'🎬 극장':window.IN_THEATER?'🎬 극장':t&&t[0]==='Y'?'🏮 야장':t?'🛋 테이블':'🌐 로비';}
 AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const p=rig.object3D.position;moving=false;
  if(joined){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),r=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
   let mx=0,mz=0,ignore=null,spd=1;if(joyX||joyY){f=-joyY;r=joyX;spd=Math.min(1,Math.hypot(f,r));}
@@ -191,7 +200,7 @@ socket.on('chat',m=>{if(m.sys){sys(m.text);return;}bubble(m.id,m.text);addMsg(`<
 socket.on('online',n=>{const e=document.getElementById('onlineCnt');if(e)e.textContent=' · 👥 '+n+'명';});
 // ---------- 네트워크 ----------
 socket.on('init',d=>{myId=d.id;clearOthers();for(const id in d.players)upsertOther({id,...d.players[id]});setMusic(d.music);if(joined){saveState();socket.emit('join',{...me,clientId:CID,last:lastState()},r=>{if(r&&!r.ok){joined=false;nickErr(r.error);}});}});
-socket.on('rekey',({old,id})=>{if(id===myId||!others[old])return;others[id]=others[old];delete others[old];});
+socket.on('rekey',({old,id})=>{if(id===myId){if(others[old])removeOther(old);return;}if(!others[old])return;others[id]=others[old];delete others[old];});
 socket.on('disconnect',clearOthers);
 socket.on('player',upsertOther);
 socket.on('snapshot',ps=>{for(const id in others)if(!ps[id])removeOther(id);for(const id in ps)if(id!==myId)upsertOther({id,...ps[id]});});
@@ -371,7 +380,7 @@ setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElemen
 $('cleanBtn').onclick=()=>{if(!adminToken)return;socket.emit('adminCleanup',adminToken,r=>{if(r&&r.ok)sys(`🔄 유령 정리 완료: ${r.removed}명 제거`);else{sys('정리 실패: '+((r&&r.error)||'오류'));}});};
 
 // 관리자 강퇴
-let kickedOut=false;socket.on('kicked',k=>{kickedOut=true;socket.io.opts.reconnection=false;socket.io.reconnection(false);const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:20px;padding:20px';d.innerHTML='🚫 관리자에 의해 강퇴되었습니다<br><small style="color:#aaa">'+((k&&k.min)||10)+'분 후에 다시 들어올 수 있어요</small>';document.body.appendChild(d);});
+let kickedOut=false;socket.on('kicked',k=>{kickedOut=true;localStorage.removeItem('joinedAt');socket.io.opts.reconnection=false;socket.io.reconnection(false);const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:20px;padding:20px';d.innerHTML='🚫 관리자에 의해 강퇴되었습니다<br><small style="color:#aaa">'+((k&&k.min)||10)+'분 후에 다시 들어올 수 있어요</small>';document.body.appendChild(d);});
 function doKick(id,nick){if(!adminToken||!id)return;if(id===myId){alert('자기 자신은 강퇴할 수 없어요');return;}if(!confirm(nick+' 님을 강퇴할까요? (10분간 재입장 차단)'))return;socket.emit('adminKick',{token:adminToken,id},r=>{if(!(r&&r.ok))sys('강퇴 실패: '+((r&&r.error)||'오류'));loadKickList();});}
 function loadKickList(){const box=$('kickList');if(!box)return;if(!adminToken){box.innerHTML='';return;}socket.emit('adminList',adminToken,r=>{if(!r||!r.ok){box.innerHTML='';return;}box.innerHTML='<b>👥 접속자 ('+r.list.length+')</b>'+r.list.map(p=>`<div class="krow">${esc(p.nick)}${p.id===r.me?' <small>(나)</small>':` <button data-kick="${esc(p.id)}" data-kn="${esc(p.nick)}">강퇴</button>`}</div>`).join('');});}
 (function(){const ac=$('adminCtl');const box=document.createElement('div');box.id='kickList';box.style.cssText='max-height:150px;overflow:auto;font-size:12px;margin-top:4px;width:100%';ac.appendChild(box);
@@ -393,12 +402,12 @@ function loadKickList(){const box=$('kickList');if(!box)return;if(!adminToken){b
 // ---------- 극장 자막 켜기/끄기 (극장 안에서만 보임, 선택은 기억) ----------
 let subsPref=localStorage.getItem('subs')==='1',subsKey='';
 function applySubs(){const btn=$('subsBtn');if(!btn)return;const cur=music.playlist[music.index],u=THEATER.subsUI(cur,subsPref,!!window.IN_THEATER);
- btn.classList.toggle('hidden',!u.visible);btn.disabled=!u.enabled;btn.textContent=u.enabled?(u.on?'💬 자막 켬':'💬 자막 끔'):'💬 자막 · '+u.note;btn.classList.toggle('sel',u.on);
+ btn.classList.toggle('hidden',!u.visible);btn.disabled=!u.enabled;btn.textContent=u.enabled?(u.on?'💬 자막 켬':'💬 자막 끔'):'💬 자막 · '+u.note;btn.classList.toggle('sel',u.on);{const m=$('subsMob');if(m){m.disabled=!u.enabled;m.classList.toggle('sel',u.on);m.innerHTML='💬<br><small>'+(u.enabled?(u.on?'자막 켬':'자막 끔'):'자막 없음')+'</small>';m.title=u.note||'';}}
  const want=u.on;
  if(cur&&cur.type==='yt'&&ytReady){try{if(want){yt.loadModule('captions');const tr=THEATER.pickTrack(yt.getOption('captions','tracklist'));if(tr)yt.setOption('captions','track',{languageCode:tr.languageCode});else setTimeout(()=>{if(subsPref&&window.IN_THEATER){const t2=THEATER.pickTrack(yt.getOption('captions','tracklist'));if(t2)yt.setOption('captions','track',{languageCode:t2.languageCode});}},1500);}
   else{yt.unloadModule('captions');yt.setOption('captions','track',{});}}catch(e){}}
  if(cur&&cur.type==='vimeo'&&ext&&ext.ready&&ext.type==='vimeo'){const a=ext.api;if(want)a.getTextTracks().then(l=>{const t=THEATER.pickTrack(l,'language');if(t)a.enableTextTrack(t.language,t.kind).catch(()=>{});}).catch(()=>{});else a.disableTextTrack().catch(()=>{});}}
-$('subsBtn').onclick=()=>{subsPref=!subsPref;localStorage.setItem('subs',subsPref?'1':'0');applySubs();sys(subsPref?'자막을 켰어요 (영상에 자막이 없으면 안 나와요)':'자막을 껐어요');};
+$('subsMob').onclick=e=>{e.stopPropagation();$('subsBtn').onclick();};$('subsBtn').onclick=()=>{subsPref=!subsPref;localStorage.setItem('subs',subsPref?'1':'0');applySubs();sys(subsPref?'자막을 켰어요 (영상에 자막이 없으면 안 나와요)':'자막을 껐어요');};
 applySubs();
 
 window.WAITER_JOBS={};socket.on('waiterJob',j=>{WAITER_JOBS[j.w]=j;});
