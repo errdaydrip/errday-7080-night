@@ -143,10 +143,12 @@ let music={playlist:[],index:-1,playing:false},offset=0,userGesture=false;const 
 let muted=localStorage.getItem('muted')==='1',volume=+(localStorage.getItem('vol')||80);$('vol').value=volume;
 let yt=null,ytReady=false,ytVid=null;
 window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player('yt',{width:200,height:200,playerVars:{autoplay:0,controls:0,disablekb:1,playsinline:1,rel:0},
- events:{onReady:()=>{ytReady=true;applyMusic(true);},onStateChange:e=>{if(e.data===YT.PlayerState.ENDED)socket.emit('music',{type:'ended',index:music.index});},
+ events:{onReady:()=>{ytReady=true;applyMusic(true);},onStateChange:e=>{if(e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.CUED){const d=yt.getDuration();if(d>1)reportDur(d);}if(e.data===YT.PlayerState.ENDED)socket.emit('music',{type:'ended',index:music.index});},
   onError:e=>{const code=e.data;sys('⚠ 유튜브 재생 불가('+({2:'잘못된 ID',5:'HTML5 오류',100:'삭제/비공개',101:'퍼가기 금지',150:'퍼가기 금지'}[code]||code)+') → 다음 곡');socket.emit('music',{type:'error',index:music.index});}}});};
 function setMusic(m){music=m;offset=m.serverNow-Date.now();window.MUSIC_PLAYING=!!(m.playing&&m.playlist[m.index]);renderMusic();applyMusic(true);}
 socket.on('music',setMusic);
+function curDur(){const c=music.playlist[music.index];return c&&(c.dur||(music.durations||{})[c.type==='yt'?c.videoId:c.id]);}
+function reportDur(sec){const c=music.playlist[music.index];if(c&&sec>1&&!curDur())socket.emit('duration',{index:music.index,sec});}
 function curPos(){return music.playing?(Date.now()+offset-music.startedAt)/1000:(music.pausedAt||0)/1000;}
 function renderMusic(){const cur=music.playlist[music.index];$('shufBtn').textContent=music.shuffle?'🔀 랜덤 켬':'🔀 랜덤 끔';$('shufBtn').classList.toggle('sel',!!music.shuffle);$('now').textContent=cur?(music.shuffle?'🔀 ':'')+(music.playing?'▶ ':'⏸ ')+(cur.type==='yt'?'📺 ':'')+cur.title:'재생 중인 곡 없음';
  $('pl').classList.toggle('hidden',!adminToken);$('pl').innerHTML=!adminToken?'':music.playlist.map((t,i)=>`<li class="${i===music.index?'cur':''}">${t.type==='yt'?'📺 ':''}${esc(t.title)} <small>(${esc(t.by)})</small>${adminToken?` <button data-sel="${i}">▶</button><button data-del="${i}">🗑</button>`:''}</li>`).join('');
@@ -157,11 +159,12 @@ function applyMusic(force){applyVolume();const cur=music.playlist[music.index];
  if(!cur||cur.type!=='yt'){if(ytReady&&ytVid){yt.stopVideo();ytVid=null;}}
  if(!cur)return;const pos=curPos(),wantPlay=music.playing&&!muted&&userGesture;
  if(cur.type==='mp3'){if(!audio.src.endsWith(cur.url))audio.src=cur.url;
-  const go=()=>{if(force||Math.abs(audio.currentTime-pos)>1.5){if(isFinite(audio.duration)&&pos<audio.duration)audio.currentTime=pos;}
+  const go=()=>{if(force||Math.abs(audio.currentTime-pos)>1.5){if(isFinite(audio.duration)){reportDur(audio.duration);if(pos>=audio.duration-0.5){audio.pause();return;}audio.currentTime=pos;}}
    if(wantPlay)audio.play().then(()=>$('unmute').classList.add('hidden')).catch(()=>$('unmute').classList.remove('hidden'));else audio.pause();};
   audio.readyState>=1?go():audio.addEventListener('loadedmetadata',go,{once:true});}
  else if(ytReady){if(ytVid!==cur.videoId){ytVid=cur.videoId;wantPlay?yt.loadVideoById(cur.videoId,pos):yt.cueVideoById(cur.videoId,pos);}
-  else{if(force||Math.abs(yt.getCurrentTime()-pos)>2)yt.seekTo(pos,true);wantPlay?yt.playVideo():yt.pauseVideo();}
+  else{const d=yt.getDuration&&yt.getDuration();if(d>1)reportDur(d);if(d>1&&pos>=d-0.5){yt.pauseVideo();return;} // 곡 끝 지남: 처음부터 다시 틀지 않고 서버의 다음 곡을 기다림
+   if(force||Math.abs(yt.getCurrentTime()-pos)>2)yt.seekTo(pos,true);wantPlay?yt.playVideo():yt.pauseVideo();}
   if(wantPlay)setTimeout(()=>{const st=yt.getPlayerState&&yt.getPlayerState();if(music.playing&&!muted&&st!==1&&st!==3)$('unmute').classList.remove('hidden');else $('unmute').classList.add('hidden');},2500);}}
 $('unmute').onclick=()=>{userGesture=true;muted=false;localStorage.setItem('muted','0');renderMusic();applyMusic(true);$('unmute').classList.add('hidden');};
 $('muteBtn').onclick=()=>{muted=!muted;localStorage.setItem('muted',muted?'1':'0');userGesture=true;renderMusic();applyMusic(true);};

@@ -7,6 +7,7 @@ const tokens=new Set();const isAdmin=t=>!!t&&tokens.has(t);
 const app=express(),server=http.createServer(app),io=new Server(server,{maxHttpBufferSize:1e6});
 app.use(express.static(path.join(__dirname,'public')));
 app.use(express.json());
+app.get('/health',(req,res)=>res.json({ok:true,uptime:process.uptime(),playing:music.playing,track:(music.playlist[music.index]||{}).title||null}));
 app.post('/admin/login',(req,res)=>{if(req.body&&req.body.password===ADMIN_PW){const t=require('crypto').randomBytes(16).toString('hex');tokens.add(t);return res.json({token:t});}res.status(401).json({error:'비밀번호가 틀렸어요'});});
 app.use('/uploads',express.static(UP));
 // ---- 유튜브: 링크 → 영상 ID 목록 (API 키 없이, 최선 노력) ----
@@ -26,6 +27,10 @@ app.post('/youtube',async(req,res)=>{if(!isAdmin(req.get('x-admin-token')))retur
  for(const it of items){if(!it.title)it.title=await ytTitle(it.id);music.playlist.push({type:'yt',id:'yt_'+it.id+'_'+Date.now(),videoId:it.id,title:it.title,by:req.body.by||'관리자'});}
  if(music.index<0){music.index=music.playlist.length-items.length;music.playing=true;music.startedAt=Date.now();music.pausedAt=0;}
  broadcastMusic();res.json({added:items.length});});
+const {advance}=require('./playback');
+const STATE=process.env.STATE_FILE||path.join(__dirname,'data','state.json');
+const durations={}; // videoId 또는 mp3 id -> 초 (클라이언트가 알려줌)
+const durOf=t=>t&&(t.dur||durations[t.type==='yt'?t.videoId:t.id]);
 const players={}; // id -> {nick,gender,outfit,skin,style,pos,rot,seat}
 const music={playlist:[],index:-1,playing:false,startedAt:0,pausedAt:0,shuffle:false};
 let played=new Set(); // 랜덤 재생: 이미 튼 곡 id
@@ -43,8 +48,16 @@ app.post('/upload',(req,res,next)=>isAdmin(req.get('x-admin-token'))?next():res.
  music.playlist.push(t); if(music.index<0){music.index=music.playlist.length-1;music.playing=true;music.startedAt=Date.now();}
  broadcastMusic(); res.json(t);
 }));
-const state=()=>({...music,serverNow:Date.now()});
-function broadcastMusic(){io.emit('music',state());}
+function save(){try{fs.mkdirSync(path.dirname(STATE),{recursive:true});fs.writeFileSync(STATE,JSON.stringify({music,durations,played:[...played]}));}catch(e){}}
+function load(){try{const j=JSON.parse(fs.readFileSync(STATE,'utf8'));Object.assign(music,j.music);Object.assign(durations,j.durations||{});played=new Set(j.played||[]);
+ music.playlist=music.playlist.filter(t=>t.type!=='mp3'||fs.existsSync(path.join(UP,t.id)));if(music.index>=music.playlist.length)music.index=music.playlist.length?0:-1;}catch(e){}}
+load();
+let timer=null;
+function tick(){const ch=advance(music,durOf,Date.now(),nextIndex);if(ch){io.emit('music',state());save();}schedule();}
+function schedule(){clearTimeout(timer);const t=music.playlist[music.index],d=durOf(t);
+ if(music.playing&&d)timer=setTimeout(tick,Math.max(500,music.startedAt+d*1000-Date.now()+300));}
+const state=()=>{advance(music,durOf,Date.now(),nextIndex);return {...music,durations,serverNow:Date.now()};};
+function broadcastMusic(){io.emit('music',state());save();schedule();}
 io.on('connection',s=>{
  s.emit('init',{id:s.id,players,music:state()});
  s.on('join',p=>{players[s.id]={nick:String(p.nick||'손님').slice(0,16),gender:p.gender,outfit:p.outfit,skin:p.skin,style:p.style,pos:[0,0,4],rot:0,seat:null};io.emit('player',{id:s.id,...players[s.id]});
@@ -54,12 +67,13 @@ io.on('connection',s=>{
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.on('chat',text=>{const pl=players[s.id];if(!pl)return;text=String(text).slice(0,200);if(!text.trim())return;
   io.emit('chat',{id:s.id,nick:pl.nick,text});});
+ s.on('duration',d=>{const t=music.playlist[d&&d.index];const sec=+(d&&d.sec);if(!t||!(sec>1&&sec<36000))return;const k=t.type==='yt'?t.videoId:t.id;if(durations[k])return;durations[k]=sec;broadcastMusic();});
  s.on('music',cmd=>{if(!cmd||!isAdmin(cmd.token)&&cmd.type!=='ended'&&cmd.type!=='error')return;const now=Date.now();
   if(cmd.type==='play'&&!music.playing&&music.index>=0){music.startedAt=now-music.pausedAt;music.playing=true;}
   else if(cmd.type==='pause'&&music.playing){music.pausedAt=now-music.startedAt;music.playing=false;}
   else if(cmd.type==='skip'||cmd.type==='ended'||cmd.type==='error'){ if(cmd.type!=='skip'&&cmd.index!==music.index)return;
    if(cmd.type==='error')io.emit('chat',{sys:true,text:'⚠ 재생할 수 없는 곡이라 다음 곡으로 넘어가요: '+(music.playlist[music.index]||{}).title});
-   if(cmd.type==='ended'&&Date.now()-music.startedAt<3000)return;
+   if(cmd.type==='ended'&&(Date.now()-music.startedAt<3000||durOf(music.playlist[music.index])))return; // 길이를 알면 서버 시계가 넘김
    if(music.playlist.length){music.index=nextIndex();music.startedAt=now;music.pausedAt=0;music.playing=true;}}
   else if(cmd.type==='select'&&music.playlist[cmd.index]){music.index=cmd.index;music.startedAt=now;music.pausedAt=0;music.playing=true;}
   else if(cmd.type==='shuffleToggle'){music.shuffle=!music.shuffle;played=new Set();}
@@ -70,5 +84,6 @@ io.on('connection',s=>{
   broadcastMusic();});
  s.on('disconnect',()=>{const pl=players[s.id];delete players[s.id];io.emit('leave',s.id);if(pl)io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});});
 });
-server.listen(PORT,'0.0.0.0',()=>{console.log('ERRDAY 7080 나이트 서버: http://localhost:'+PORT);console.log('관리자 로그인: 사용 가능 (고정 비밀번호)');
+server.listen(PORT,'0.0.0.0',()=>{tick();
+ const ext=process.env.RENDER_EXTERNAL_URL;if(ext)setInterval(()=>fetch(ext.replace(/\/$/,'')+'/health').catch(()=>{}),10*60*1000);console.log('ERRDAY 7080 나이트 서버: http://localhost:'+PORT);console.log('관리자 로그인: 사용 가능 (고정 비밀번호)');
  const n=require('os').networkInterfaces();for(const k in n)for(const a of n[k])if(a.family==='IPv4'&&!a.internal)console.log('같은 Wi-Fi 친구 접속: http://'+a.address+':'+PORT);});
