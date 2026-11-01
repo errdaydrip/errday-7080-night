@@ -177,6 +177,7 @@ function buildTables(){
  });
 }
 // ---------- 귀여운 2등신 캐릭터 (코드로 직접 만든 오리지널 디자인) ----------
+const RED_FACE=new THREE.Color('#ff2a2a');
 // opts: {gender:'m'|'f', style:'suit'|'disco'|'hanbok', outfit:'#색', skin:'#피부색', dj:bool}
 const TOON_GRAD=(()=>{const c=document.createElement('canvas');c.width=4;c.height=1;const x=c.getContext('2d');['#777','#aaa','#ddd','#fff'].forEach((v,i)=>{x.fillStyle=v;x.fillRect(i,0,1,1);});
  const t=new THREE.CanvasTexture(c);t.minFilter=t.magFilter=THREE.NearestFilter;return t;})();
@@ -321,12 +322,14 @@ window.makeHuman=async function(holder,opts){const c=makeChibi(opts);holder.obje
  const map={Idle_Loop:'idle',Walk_Loop:'walk',Sitting_Idle_Loop:'sit',Dance_Loop:'dance1',Dance_1:'dance1',Dance_2:'dance2',Dance_3:'dance3'};
  const h={root:c.root,chibi:c,cur:null,play(name){this.cur=name;state=map[name]||'idle';},drinks:[],cup:null,dT:-1,
   carry(kind){if(this.held){this.held.parent.remove(this.held);this.held=null;}this.carryKind=kind||null;if(kind){this.held=makeItem(kind,true);c.arms[0].children[0].add(this.held);}},
-  drink(type){if(this.cup){this.cup.parent.remove(this.cup);}this.cup=makeCup(type);c.arms[1].children[0].add(this.cup);this.dT=0;this.d0=performance.now();this.pouring=type==='pour';if(this.pouring||type==='eat')return;const n=Date.now();this.drinks=this.drinks.filter(x=>n-x<300000);this.drinks.push(n);},
+  drink(type){if(this.cup){this.cup.parent.remove(this.cup);}this.cup=makeCup(type);c.arms[1].children[0].add(this.cup);this.dT=0;this.d0=performance.now();this.pouring=type==='pour';if(this.pouring||type==='eat')return;const n=Date.now();this.drinks=this.drinks.filter(x=>n-x<1800000);this.drinks.push(n);},
   mixer:{timeScale:1,update(dt){t+=dt*h.mixer.timeScale;animateChibi(c,state,t,opts);if(h.after)h.after(t,c);
    if(h.dT>=0){h.dT=(performance.now()-h.d0)/1000;const q=h.dT/2,r=q<.3?q/.3:q<.75?1:Math.max(0,1-(q-.75)/.25),e=r*r*(3-2*r);
     const a=c.arms[1];if(h.pouring){a.rotation.x=a.rotation.x*(1-e)-1.5*e;a.rotation.z=a.rotation.z*(1-e)+.5*e;if(h.cup)h.cup.rotation.x=e*1.6;c.head.rotation.x+=.2*e;}else{a.rotation.x=a.rotation.x*(1-e)-2.3*e;a.rotation.z=a.rotation.z*(1-e)+.35*e;c.head.rotation.x+=-.4*e*(q>.25&&q<.8?1:.6);}
     if(q>=1){h.dT=-1;if(h.cup){h.cup.parent.remove(h.cup);h.cup=null;}}}
-   const n=Date.now(),k=h.drinks.filter(x=>n-x<300000).length,lv=Math.min(1,Math.max(0,(k-2)/4));c.M.blush.opacity=.35+.5*lv;c.M.blush.color.set(lv>0?'#ff5a5a':'#ff9b8a');h.rosy=lv;}},
+   const n=Date.now(),k=h.drinks.filter(x=>n-x<300000).length,lv=Math.min(1,Math.max(0,(k-2)/4));c.M.blush.opacity=.35+.5*lv;c.M.blush.color.set(lv>0?'#ff5a5a':'#ff9b8a');h.rosy=lv;
+   if(!c.faceM){c.faceM=c.M.skin.clone();c.faceBase=c.faceM.color.clone();c.head.children.forEach(m=>{if(m.material===c.M.skin)m.material=c.faceM;});}
+   const last=h.drinks[h.drinks.length-1]||0,drunk=h.drinks.filter(x=>n-x<1800000).length>=10&&n-last<30000;const want=drunk?1:0;h.red=(h.red||0)+(want-(h.red||0))*.05;c.faceM.color.copy(c.faceBase).lerp(RED_FACE,h.red*.75);}},
   dispose(){holder.object3D.remove(c.root);c.root.traverse(n=>{if(n.isMesh){n.geometry.dispose();}});}};h.play('Idle_Loop');animateChibi(c,'idle',0,opts);return h;};
 function makeCup(type){const g=new THREE.Group();g.position.set(0,-.3,.06);
  if(type==='whiskey'||type==='rock'){return rockGlass(g);}
