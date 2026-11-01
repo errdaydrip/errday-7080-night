@@ -1,0 +1,13 @@
+const p=require('puppeteer-core');const W=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
+ const open=async(nick)=>{const ctx=await b.createBrowserContext();const pg=await ctx.newPage();await pg.setViewport({width:900,height:600});pg.on('pageerror',e=>console.log('ERR',e.message));
+  await pg.goto('http://localhost:8080');await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
+  await pg.evaluate(n=>{document.querySelector('#nick,input[type=text]').value=n;},nick);await pg.click('#enter');await W(2500);return pg;};
+ const g=await open('손님A');await g.evaluate(()=>sit(SEATS.find(s=>s.id==='BAR-2')));
+ const t=await open('바텐더');console.log('path free',await t.evaluate(()=>{const pts=[[8.5,6.8],[9.9,6.8],[11.02,6.8],[11.02,2.3]];let ok=true;for(let i=0;i<3;i++)for(let k=0;k<=20;k++){const [a,b]=pts[i],[c,d]=pts[i+1];if(blocked(a+(c-a)*k/20,b+(d-b)*k/20))ok=false;}return ok;}));
+ await t.evaluate(()=>{rig.object3D.position.set(8.5,0,6.8);setRoute(11.02,2.3);});await W(12000);
+ console.log('bt pos',await t.evaluate(()=>{const p=rig.object3D.position;return [p.x.toFixed(2),p.z.toFixed(2),!$('serveBar').classList.contains('hidden')];}));
+ await t.click('#serveBtn');await g.bringToFront();await g.evaluate(()=>{camGoal=null;camYaw=-Math.PI/2-.7;camPitch=.35;});await W(700);await g.screenshot({path:'/workspace/errday-7080-night/screenshot_bartender.png'});await W(2500);console.log('wBtn',await g.evaluate(()=>!$('wBtn').classList.contains('hidden')));
+ await g.screenshot({path:'/workspace/errday-7080-night/screenshot_whiskey_glass.png'});
+ await g.evaluate(()=>{camGoal=null;camYaw=-Math.PI/2+1.1;camPitch=.25;});await W(800);await g.click('#wBtn');await W(900);await g.screenshot({path:'/workspace/errday-7080-night/screenshot_whiskey.png'});
+ await W(1500);console.log('glass gone',await g.evaluate(()=>!Object.keys(GLASSES).length));await b.close();process.exit();})();

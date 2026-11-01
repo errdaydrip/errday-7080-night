@@ -87,21 +87,26 @@ window.SEATS=[];window.OBSTACLES=[]; // {x,z,r} 원형 / {x0,x1,z0,z1} 사각
 })();
 function buildBar(){
  const X=10,Z=3;
- const counter=E('a-box',{position:`${X} .6 ${Z}`,width:1,height:1.2,depth:9,material:'roughness:.6'});texMesh(counter,TEX.wood());
- E('a-box',{position:`${X} 1.22 ${Z}`,width:1.25,height:.06,depth:9.2,material:'color:#c9a24a;metalness:.8;roughness:.25'});
- E('a-box',{position:`${X-.51} .15 ${Z}`,width:.02,height:.05,depth:9,material:'color:#ff3cac;emissive:#ff3cac;emissiveIntensity:1'});
- E('a-box',{position:`${X-.51} 1.1 ${Z}`,width:.02,height:.04,depth:9,material:'color:#00e5ff;emissive:#00e5ff;emissiveIntensity:1'});
+ const counter=E('a-box',{position:`${X} .6 ${Z-.7}`,width:1,height:1.2,depth:7.6,material:'roughness:.6'});texMesh(counter,TEX.wood());
+ E('a-box',{position:`${X} 1.22 ${Z-.75}`,width:1.25,height:.06,depth:7.7,material:'color:#c9a24a;metalness:.8;roughness:.25'});
+ E('a-box',{position:`${X-.51} .15 ${Z-.7}`,width:.02,height:.05,depth:7.6,material:'color:#ff3cac;emissive:#ff3cac;emissiveIntensity:1'});
+ E('a-box',{position:`${X-.51} 1.1 ${Z-.7}`,width:.02,height:.04,depth:7.6,material:'color:#00e5ff;emissive:#00e5ff;emissiveIntensity:1'});
  // 뒷선반 + 술병
  const back=E('a-box',{position:'11.7 2.2 '+Z,width:.5,height:3.2,depth:9,material:'roughness:.6'});texMesh(back,TEX.wood());
  E('a-box',{position:'11.6 2.2 '+Z,width:.05,height:3,depth:8.8,material:'color:#331100;emissive:#ff9933;emissiveIntensity:.25;metalness:1;roughness:.1'}); // 거울 느낌
  const bt=['wine-red','wine-white','soda-bottle','wine-red','cocktail','glass-wine'];
  for(let s=0;s<3;s++){E('a-box',{position:`11.35 ${1.2+s*.85} ${Z}`,width:.4,height:.04,depth:8.6,material:'color:#c9a24a;metalness:.8'});
   for(let k=0;k<12;k++)prop(bt[(k+s)%bt.length],{pos:[11.35,1.22+s*.85,Z-4+k*.72],scale:.5});}
- for(let k=0;k<6;k++){const sx=X-1.1,sz=Z-3.5+k*1.4,el=prop('stoolBar',{pos:[sx,0,sz],scale:2.2,tint:'#8b0018'});el.dataset.seat='BAR-'+k;el.classList.add('seat');
+ for(let k=0;k<5;k++){const sx=X-1.1,sz=Z-3.5+k*1.4,el=prop('stoolBar',{pos:[sx,0,sz],scale:2.2,tint:'#8b0018'});el.dataset.seat='BAR-'+k;el.classList.add('seat');
   SEATS.push({id:'BAR-'+k,table:'BAR',x:sx,z:sz,y:.52,yaw:Math.PI/2,el,stand:[sx-.8,sz]});} // 바 스툴도 좌석 (바 쪽을 봄)
  for(let k=0;k<4;k++)prop(['cocktail','glass-wine'][k%2],{pos:[X,1.25,Z-3+k*2],scale:.35});
  E('a-entity',{position:'11.4 4.3 '+Z,rotation:'0 -90 0',ktext:'value:BAR;color:#fff;glow:#00e5ff;size:90;width:2;font:Georgia,serif'});
- OBSTACLES.push({x0:X-.7,x1:12,z0:Z-4.7,z1:Z+4.7});
+ // 여닫이 상판(위로 젖힌 상태) → 바텐더 출입구
+ E('a-box',{position:`${X} 1.75 ${Z+3.07}`,width:1.2,height:1.05,depth:.05,material:'color:#c9a24a;metalness:.8;roughness:.25'});
+ E('a-box',{position:`${X} .6 ${Z+4.6}`,width:1,height:1.2,depth:.2,material:'color:#3a2416;roughness:.6'}); // 끝 기둥
+ E('a-entity',{position:`${X-.62} 1.5 ${Z+3.8}`,rotation:'0 -90 0',ktext:'value:STAFF;color:#fff;glow:#ffd84a;size:40;width:.7'});
+ window.BAR_ZONE={x0:10.55,x1:11.4,z0:-1.6,z1:6.75};
+ OBSTACLES.push({x0:X-.7,x1:X+.55,z0:Z-4.7,z1:Z+3.1},{x0:X-.55,x1:X+.55,z0:Z+4.5,z1:Z+4.7},{x0:11.5,x1:12,z0:Z-4.7,z1:Z+4.7});
 }
 function buildStage(){
  const Z=-9.6,H=.7;
@@ -244,7 +249,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit',
   [-1,1].forEach(s=>g.add(mesh(G.cyl(.07,.07,.02,20),new THREE.MeshStandardMaterial({color:'#111',metalness:1,roughness:.1}),[s*.11,0,0],null,[Math.PI/2,0,0])));g.add(mesh(G.box(.08,.015,.01),M.black));
   head.add(mesh(new THREE.TorusGeometry(.4,.025,8,24,Math.PI),M.black,[0,.3,0],null,[0,Math.PI/2,0]));
   [-1,1].forEach(s=>head.add(mesh(G.cyl(.09,.09,.07,20),new THREE.MeshStandardMaterial({color:'#ff3cac',emissive:'#ff3cac',emissiveIntensity:.5}),[s*.37,.25,0],null,[0,0,Math.PI/2])));}
- return {root,hips,torso,head,arms,legs};}
+ return {root,hips,torso,head,arms,legs,M};}
 function T2(M,c){return M.T(c);}
 function curls(head,H,pts,r){pts.forEach(([x,y,z,k=1])=>head.add(mesh(G.sph(r*k,18,14),H,[x,y,z])));}
 function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';
@@ -308,9 +313,24 @@ function animateChibi(c,state,t,o){const k=t*Math.PI*2;let bob=0,armA=0,legA=0,l
  c.legs.forEach((l,i)=>{const s=i?1:-1;l.rotation.x=sit?-1.45:legA*s;l.rotation.z=0;});}
 window.makeHuman=async function(holder,opts){const c=makeChibi(opts);holder.object3D.add(c.root);let state='idle',t=Math.random()*10;
  const map={Idle_Loop:'idle',Walk_Loop:'walk',Sitting_Idle_Loop:'sit',Dance_Loop:'dance1',Dance_1:'dance1',Dance_2:'dance2',Dance_3:'dance3'};
- const h={root:c.root,cur:null,play(name){this.cur=name;state=map[name]||'idle';},mixer:{timeScale:1,update(dt){t+=dt*h.mixer.timeScale;animateChibi(c,state,t,opts);}},
+ const h={root:c.root,cur:null,play(name){this.cur=name;state=map[name]||'idle';},drinks:[],cup:null,dT:-1,
+  drink(type){if(this.cup){this.cup.parent.remove(this.cup);}this.cup=makeCup(type);c.arms[1].children[0].add(this.cup);this.dT=0;this.d0=performance.now();this.pouring=type==='pour';if(this.pouring)return;const n=Date.now();this.drinks=this.drinks.filter(x=>n-x<300000);this.drinks.push(n);},
+  mixer:{timeScale:1,update(dt){t+=dt*h.mixer.timeScale;animateChibi(c,state,t,opts);
+   if(h.dT>=0){h.dT=(performance.now()-h.d0)/1000;const q=h.dT/2,r=q<.3?q/.3:q<.75?1:Math.max(0,1-(q-.75)/.25),e=r*r*(3-2*r);
+    const a=c.arms[1];if(h.pouring){a.rotation.x=a.rotation.x*(1-e)-1.5*e;a.rotation.z=a.rotation.z*(1-e)+.5*e;if(h.cup)h.cup.rotation.x=e*1.6;c.head.rotation.x+=.2*e;}else{a.rotation.x=a.rotation.x*(1-e)-2.3*e;a.rotation.z=a.rotation.z*(1-e)+.35*e;c.head.rotation.x+=-.4*e*(q>.25&&q<.8?1:.6);}
+    if(q>=1){h.dT=-1;if(h.cup){h.cup.parent.remove(h.cup);h.cup=null;}}}
+   const n=Date.now(),k=h.drinks.filter(x=>n-x<300000).length,lv=Math.min(1,Math.max(0,(k-2)/4));c.M.blush.opacity=.35+.5*lv;c.M.blush.color.set(lv>0?'#ff5a5a':'#ff9b8a');h.rosy=lv;}},
   dispose(){holder.object3D.remove(c.root);c.root.traverse(n=>{if(n.isMesh){n.geometry.dispose();}});}};h.play('Idle_Loop');animateChibi(c,'idle',0,opts);return h;};
-window.makeChibi=makeChibi;window.animateChibi=animateChibi;
+function makeCup(type){const g=new THREE.Group();g.position.set(0,-.3,.06);
+ if(type==='whiskey'||type==='rock'){return rockGlass(g);}
+ if(type==='pour'){g.add(mesh(G.cyl(.045,.05,.22,14),new THREE.MeshStandardMaterial({color:'#7a3d0a',transparent:true,opacity:.85,roughness:.15}),[0,.02,0]));g.add(mesh(G.cyl(.015,.02,.09,10),new THREE.MeshStandardMaterial({color:'#7a3d0a'}),[0,.17,0]));g.add(mesh(G.box(.06,.06,.005),new THREE.MeshBasicMaterial({color:'#f3e2b0'}),[0,.02,.05]));return g;}
+ if(type==='beer'){const glass=new THREE.MeshStandardMaterial({color:'#f2b632',transparent:true,opacity:.85,roughness:.2});g.add(mesh(G.cyl(.06,.055,.15,16),glass,[0,0,0]));g.add(mesh(G.cyl(.062,.062,.04,16),new THREE.MeshToonMaterial({color:'#fffdf2'}),[0,.09,0]));g.add(mesh(new THREE.TorusGeometry(.04,.012,6,12),glass,[.07,0,0],null,[0,0,Math.PI/2]));}
+ else{g.add(mesh(G.cyl(.035,.028,.06,14),new THREE.MeshStandardMaterial({color:'#e8f4ff',transparent:true,opacity:.7,roughness:.1}),[0,0,0]));g.add(mesh(G.cyl(.03,.026,.03,14),new THREE.MeshBasicMaterial({color:'#ffffff'}),[0,-.005,0]));}
+ return g;}
+function rockGlass(g){g.add(mesh(G.cyl(.05,.045,.09,16),new THREE.MeshStandardMaterial({color:'#eef6ff',transparent:true,opacity:.45,roughness:.05}),[0,0,0]));
+ g.add(mesh(G.cyl(.043,.04,.045,16),new THREE.MeshStandardMaterial({color:'#c46a12',transparent:true,opacity:.9,emissive:'#5a2a00'}),[0,-.018,0]));
+ g.add(mesh(G.box(.035,.035,.035),new THREE.MeshStandardMaterial({color:'#ffffff',transparent:true,opacity:.7}),[.008,.01,0],null,[.4,.5,.2]));return g;}
+window.rockGlass=rockGlass;window.makeCup=makeCup;window.makeChibi=makeChibi;window.animateChibi=animateChibi;
 AFRAME.registerComponent('mixers',{tick(t,dt){for(const h of window.HUMANS||[])h.mixer.update(Math.min(dt,50)/1000);}});
 window.HUMANS=new Set();
 (async function dj(){const holder=E('a-entity',{position:`${DJ_SPOT.x} ${DJ_SPOT.y+.25} ${DJ_SPOT.z}`,scale:'1.15 1.15 1.15'});
@@ -347,7 +367,7 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  bld(13.5,15,2,8,6,-90,'#463a33',['연탄',4,'#ff9040',1.4]);bld(13.5,22.5,2,10,8,-90,'#3c3633',null);
  bld(-13.5,16,2,7,8,90,'#40342c',['이발소',4,'#ff4060',1.6]);bld(-13.5,23,2,11,6,90,'#3a3a3a',null);
  // 천막 (낡은 주황 방수포)
- const T={x0:-10,x1:0,z0:14,z1:22.3,e:2.8,r:3.6};window.TENT=T;const cx=(T.x0+T.x1)/2,cz=(T.z0+T.z1)/2,hw=(T.z1-T.z0)/2,sl=Math.hypot(hw,T.r-T.e);const ang=Math.atan2(T.r-T.e,hw)*57.3;
+ const T={x0:-10,x1:0,z0:14,z1:22.3,e:3.2,r:4.0};window.TENT=T;const cx=(T.x0+T.x1)/2,cz=(T.z0+T.z1)/2,hw=(T.z1-T.z0)/2,sl=Math.hypot(hw,T.r-T.e);const ang=Math.atan2(T.r-T.e,hw)*57.3;
  const tarp=()=>TEX.tarp();
  [-1,1].forEach(s=>texMesh(E('a-plane',{position:`${cx} ${(T.e+T.r)/2} ${cz+s*hw/2}`,rotation:`${-90+s*-ang*0+ (s<0?ang:-ang)} 0 0`,width:T.x1-T.x0+.4,height:sl+.2,material:'side:double;roughness:1'}),tarp()));
  texMesh(E('a-plane',{position:`${cx} ${T.e/2+.4} ${T.z1}`,rotation:'0 180 0',width:T.x1-T.x0,height:T.e-.8,material:'side:double;roughness:1;opacity:.92;transparent:true'}),tarp());

@@ -70,7 +70,7 @@ AFRAME.registerComponent('others-lerp',{tick(){for(const id in others){const o=o
 scene.setAttribute('others-lerp','');
 function bubble(id,text){const el=id===myId?$('myAvatar'):others[id]&&others[id].el;if(!el)return;const b=el.querySelector('.bubble');if(!b)return;
  b.setAttribute('ktext',`value:${text.slice(0,30).replace(/;/g,' ')};color:#000;glow:;bg:#fff;size:36;width:1.4;top:true`);b.setAttribute('visible',true);
- clearTimeout(b._t);b._t=setTimeout(()=>b.setAttribute('visible',false),5000);}
+ clearTimeout(b._t);b._t=setTimeout(()=>b.setAttribute('visible',false),Math.min(15000,10000+text.length*150));}
 // ---------- 3인칭 카메라 · 이동 · 클릭 이동 · 자동 앉기 ----------
 const rig=$('rig'),cam=$('cam'),myAv=$('myAvatar'),marker=$('marker');
 const keys={};let camGoal=null,myDance=0,idleT=0,camYaw=0,camPitch=.4,camDist=IS_MOBILE?5.5:4.5,myYaw=Math.PI,goal=null,goalSeat=null,stillT=0,moving=false;
@@ -105,6 +105,8 @@ function setRoute(x,z){const p=rig.object3D.position,up=heightAt(x,z)>.35,me_up=
  const bottom=new THREE.Vector3(0,0,STAGE.sz1+.35),top=new THREE.Vector3(0,0,STAGE.sz0-.35);
  if(up&&!me_up)route=[bottom,top];else if(!up&&me_up)route=[top,bottom];
  if(isOut(z)!==isOut(p.z)){const D=window.DOOR,a=new THREE.Vector3(D.x,0,11.1),b=new THREE.Vector3(D.x,0,12.9);if(isOut(z))route.push(a,b);else route.push(b,a);}
+ {const inZ=(X,Z)=>{const B=window.BAR_ZONE;return B&&X>=B.x0-.1&&X<=B.x1&&Z>=B.z0&&Z<=B.z1;},A=new THREE.Vector3(9.9,0,6.8),Bv=new THREE.Vector3(11.02,0,6.8);
+  if(inZ(x,z)&&!inZ(p.x,p.z))route.push(A,Bv);else if(!inZ(x,z)&&inZ(p.x,p.z))route.push(Bv,A);}
  route.push(new THREE.Vector3(x,0,z));goal=route.shift();showMarker(x,z,heightAt(x,z));}
 function showMarker(x,z,y=0){marker.object3D.position.set(x,y+.06,z);marker.setAttribute('visible',true);}
 const BOUND={x0:-11.4,x1:11.4,z0:-11.4,z1:25.4},ROOM_IN={x0:-11.8,x1:11.8,z0:-11.8,z1:11.8,y1:7.8},ROOM_OUT={x0:-11.8,x1:11.8,z0:12.2,z1:25.8,y1:14};let ROOM=ROOM_IN;
@@ -112,7 +114,7 @@ const isOut=z=>z>12;
 // 앞벽(문 구멍 제외)은 사각 장애물
 {const D=window.DOOR,dl=D.x-D.w/2,dr=D.x+D.w/2;OBSTACLES.push({x0:-12.5,x1:dl,z0:11.85,z1:12.15},{x0:dr,x1:12.5,z0:11.85,z1:12.15});}
 // 카메라 충돌: 벽·바·무대 구조물을 상자(AABB)로 근사해 머리→카메라 광선 검사 (모바일에서도 가벼움)
-const CAM_OCC=[[10-.65,0,-1.65,10+.65,1.3,7.65],[11.4,0,-1.6,12.5,3.9,7.6],[-3.6,0,-11.8,3.6,4.9,-11.45],[-5.6,.7,-11.6,-3.5,5.5,-11.05],[3.5,.7,-11.6,5.6,5.5,-11.05],[-5.6,4.8,-11.4,5.6,5.5,-11],[1.65,.7,-9.45,4.35,1.95,-8.55],[TENT.x0-.1,TENT.e-.1,TENT.z0-.1,TENT.x1+.1,TENT.r+.2,TENT.z1+.1],[TENT.x0-.1,.4,TENT.z0,TENT.x0+.1,TENT.e,TENT.z1],[TENT.x0,.4,TENT.z1-.1,TENT.x1,TENT.e,TENT.z1+.1],[4.1,0,15.8,6.9,1.1,17.2]];
+const CAM_OCC=[[10-.65,0,-1.65,10+.65,1.3,6.15],[9.4,1.2,6,10.6,2.3,6.15],[9.45,0,7.45,10.55,1.3,7.75],[11.4,0,-1.6,12.5,3.9,7.6],[-3.6,0,-11.8,3.6,4.9,-11.45],[-5.6,.7,-11.6,-3.5,5.5,-11.05],[3.5,.7,-11.6,5.6,5.5,-11.05],[-5.6,4.8,-11.4,5.6,5.5,-11],[1.65,.7,-9.45,4.35,1.95,-8.55],[TENT.x0-.1,TENT.e-.1,TENT.z0-.1,TENT.x1+.1,TENT.r+.2,TENT.z1+.1],[TENT.x0-.1,.4,TENT.z0,TENT.x0+.1,TENT.e,TENT.z1],[TENT.x0,.4,TENT.z1-.1,TENT.x1,TENT.e,TENT.z1+.1],[4.1,0,15.8,6.9,1.1,17.2]];
 function camHit(ox,oy,oz,dr,max){let t=max;const lim=[[dr.x,ox,ROOM.x0+.1,ROOM.x1-.1],[dr.y,oy,.25,ROOM.y1-.1],[dr.z,oz,ROOM.z0+.1,ROOM.z1-.1]];
  for(const [v,o,a,b] of lim){if(v>1e-6)t=Math.min(t,(b-o)/v);else if(v<-1e-6)t=Math.min(t,(a-o)/v);}
  const O=[ox,oy,oz],D=[dr.x,dr.y,dr.z];for(const bx of CAM_OCC){let t0=0,t1=t,ok=true;for(let i=0;i<3&&ok;i++){const lo=bx[i],hi=bx[i+3];
@@ -182,6 +184,18 @@ socket.on('seat',({id,seat})=>{const o=others[id];if(o)applySeatPose(o,seat);});
 function removeOther(id){const o=others[id];if(o){try{if(o.el._h){HUMANS.delete(o.el._h);o.el._h.dispose();}}catch(e){}o.el.remove();delete others[id];}}
 function clearOthers(){for(const id in others)removeOther(id);}
 socket.on('leave',removeOther);
+socket.on('drink',({id,type})=>{if(id===myId)return;const el=id===myId?$('myAvatar'):others[id]&&others[id].el;if(el&&el._h)el._h.drink(type);});
+function drink(type){if(!mySeat||type==='whiskey'&&!GLASSES[mySeat])return;const n=Date.now();if(n-(window._lastDrink||0)<2000)return;window._lastDrink=n;const m=$('myAvatar');if(m._h)m._h.drink(type);socket.emit('drink',type);}
+document.querySelectorAll('#drinkBar button').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();drink(b.dataset.drink);}));
+const GLASS_EL={};let GLASSES={};
+function inBarZone(){const B=window.BAR_ZONE,p=rig.object3D.position;return !mySeat&&B&&p.x>=B.x0&&p.x<=B.x1&&p.z>=B.z0&&p.z<=B.z1;}
+socket.on('glasses',g=>{GLASSES=g||{};for(const k in GLASS_EL)if(!GLASSES[k]){GLASS_EL[k].parent.remove(GLASS_EL[k]);delete GLASS_EL[k];}
+ for(const k in GLASSES)if(!GLASS_EL[k]){const s=SEATS.find(q=>q.id===k);if(!s)continue;const g3=rockGlass(new THREE.Group());g3.position.set(9.68,1.3,s.z);g3.scale.setScalar(1.6);scene.object3D.add(g3);GLASS_EL[k]=g3;}});
+socket.on('pour',({id})=>{const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink('pour');});
+function serveWhiskey(){if(!inBarZone())return;const n=Date.now();if(n-(window._lastServe||0)<3000)return;window._lastServe=n;const m=$('myAvatar');if(m._h)m._h.drink('pour');
+ const p=rig.object3D.position;socket.emit('serve',{x:p.x,z:p.z});}
+$('serveBtn').addEventListener('click',e=>{e.stopPropagation();serveWhiskey();});
+setInterval(()=>{$('drinkBar').classList.toggle('hidden',!mySeat);$('wBtn').classList.toggle('hidden',!(mySeat&&GLASSES[mySeat]));$('serveBar').classList.toggle('hidden',!inBarZone());},200);
 // ---------- 공유 음악 (MP3 업로드 + 유튜브) ----------
 let music={playlist:[],index:-1,playing:false},offset=0,userGesture=false;const audio=$('audio');
 let muted=localStorage.getItem('muted')==='1',volume=+(localStorage.getItem('vol')||80);$('vol').value=volume;
