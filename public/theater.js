@@ -34,6 +34,8 @@
   return{visible:true,enabled:true,on:!!pref,note:''};}
  // 자막 트랙 고르기: 한국어 우선, 없으면 첫 번째(기본)
  function pickTrack(list,key){if(!Array.isArray(list)||!list.length)return null;key=key||'languageCode';return list.find(t=>/^ko/i.test(t[key]||''))||list[0];}
- const api={aim,subsUI,pickTrack,CAM_LIFT,T,seats,inside,floorAt,obstacles,camOcc,corners,quadMatrix};
+ // 스크린(폭 w, 높이 h)을 거리 D에서 여백(margin) 두고 다 보이게 하는 세로 시야각(도). 가로가 좁은 세로폰이면 폭 기준으로 넓힘
+ function fitFov(D,aspect,base,margin){margin=margin||1.2;const S=T.screen,r=Math.PI/180;const v1=2*Math.atan(S.h*margin/2/D)/r,v2=2*Math.atan(Math.tan(Math.atan(S.w*margin/2/D))/aspect)/r;return Math.max(base||0,v1,v2);}
+ const api={fitFov,aim,subsUI,pickTrack,CAM_LIFT,T,seats,inside,floorAt,obstacles,camOcc,corners,quadMatrix};
  if(typeof module!=='undefined')module.exports=api;else root.THEATER=api;
 })(typeof window!=='undefined'?window:this);

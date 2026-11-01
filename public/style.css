@@ -77,3 +77,6 @@ html,body{height:100%;height:100dvh}a-scene{height:100dvh!important}
 #subsBtn{position:fixed;left:50%;top:58px;transform:translateX(-50%);z-index:9;font-size:16px;padding:8px 16px;border-radius:22px;border:2px solid #ffd84a;background:rgba(30,10,40,.85);color:#fff;pointer-events:auto;touch-action:manipulation}#subsBtn.sel{background:#ff3cac}#subsBtn:disabled{opacity:.6;font-size:13px}#subsBtn.hidden{display:none}
 /* 모바일 전체화면: 아래쪽 안내 띠/라벨 끔 */
 body.fs #fsHint,body.fs #actBar .lbl,body.fs #prompt{display:none!important}
+body.pfs{height:100dvh;overflow:hidden;overscroll-behavior:none}
+#fsHint b{color:#ffd84a}
+@media (orientation:landscape) and (max-height:500px){#subsBtn{left:auto;right:calc(12px + env(safe-area-inset-right));top:12px;transform:none;font-size:13px;padding:6px 12px}}

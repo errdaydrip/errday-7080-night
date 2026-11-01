@@ -29,4 +29,7 @@ a(TH.subsUI({type:'yt'},true,true).enabled&&TH.subsUI({type:'yt'},true,true).on)
 a(TH.subsUI({type:'vimeo'},true,true).enabled);const au=TH.subsUI({type:'url'},true,true);a(au.visible&&!au.enabled&&au.note);a(!TH.subsUI({type:'sc'},true,true).enabled);
 a.strictEqual(TH.pickTrack([{languageCode:'en'},{languageCode:'ko'}]).languageCode,'ko');a.strictEqual(TH.pickTrack([{languageCode:'en'}]).languageCode,'en');a.strictEqual(TH.pickTrack([]),null);
 a.strictEqual(TH.pickTrack([{language:'ja'},{language:'ko-KR'}],'language').language,'ko-KR');
+// 폰 세로/가로: 계산한 시야각이면 스크린 폭·높이가 여백 두고 화면 안에 들어감
+[[9/19.5,70],[19.5/9,55],[16/9,70],[3/4,70]].forEach(([asp,base])=>[6,9,11].forEach(D=>{const f=TH.fitFov(D,asp,base)*Math.PI/180,th=Math.tan(f/2);
+ a(T.screen.h/2/D<=th/1.19,'height fits '+asp+' '+D);a(T.screen.w/2/D<=th*asp/1.19,'width fits '+asp+' '+D);a(TH.fitFov(D,asp,base)>=base);}));
 console.log('theater OK');

@@ -86,16 +86,16 @@ window.addEventListener('keydown',e=>{if(typing())return;keys[e.code]=true;if(/K
  if(e.code==='KeyE'){mySeat?stand():(()=>{const s=nearestSeat(1.6);if(s)sit(s);})();}if(e.code==='Escape')stand();});
 window.addEventListener('keyup',e=>{keys[e.code]=false;});window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
 // 포인터: 드래그=회전, 짧은 탭=이동, 두 손가락=줌
-const ptrs=new Map();let down=null,pinch0=0,dist0=0;
+const ptrs=new Map();let down=null,pinch0=0,dist0=0,zoom0=1,thZoom=1;const inThSeat=()=>!!(mySeat&&mySeat.startsWith('TH-'));
 scene.addEventListener('loaded',()=>{const c=scene.canvas;
- c.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});c.setPointerCapture(e.pointerId);
-  if(ptrs.size===1)down={x:e.clientX,y:e.clientY,t:performance.now(),moved:0};else{down=null;const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);dist0=camDist;}});
+ c.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});try{c.setPointerCapture(e.pointerId);}catch(_){}
+  if(ptrs.size===1)down={x:e.clientX,y:e.clientY,t:performance.now(),moved:0};else{down=null;const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);dist0=camDist;zoom0=thZoom;}});
  c.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
-  if(ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0)camDist=Math.max(2,Math.min(10,dist0*pinch0/d));return;}
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0){if(inThSeat())thZoom=Math.max(.6,Math.min(1.8,zoom0*pinch0/d));else camDist=Math.max(2,Math.min(10,dist0*pinch0/d));}return;}
   if(down){down.moved+=Math.abs(dx)+Math.abs(dy);if(down.moved>8){camGoal=null;const T=e.pointerType==='touch',sg=T?1.3:1;camYaw-=dx*.006*sg;camPitch=Math.max(mySeat&&mySeat.startsWith('TH-')?-.4:.05,Math.min(1.2,camPitch+dy*.005*sg));}}});
  const up=e=>{ptrs.delete(e.pointerId);if(down&&e.type==='pointerup'&&down.moved<=8&&performance.now()-down.t<600)tapAt(e.clientX,e.clientY);if(ptrs.size===0)down=null;pinch0=0;};
  c.addEventListener('pointerup',up);c.addEventListener('pointercancel',up);
- c.addEventListener('wheel',e=>{e.preventDefault();camDist=Math.max(2,Math.min(10,camDist+e.deltaY*.004));},{passive:false});});
+ c.addEventListener('wheel',e=>{e.preventDefault();if(inThSeat()){thZoom=Math.max(.6,Math.min(1.8,thZoom*(1+e.deltaY*.001)));return;}camDist=Math.max(2,Math.min(10,camDist+e.deltaY*.004));},{passive:false});});
 const ray=new THREE.Raycaster(),v2=new THREE.Vector2(),floorPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
 function tapAt(x,y){if(!joined)return;const r=scene.canvas.getBoundingClientRect();v2.set((x-r.left)/r.width*2-1,-(y-r.top)/r.height*2+1);ray.setFromCamera(v2,scene.camera);
  // 의자/소파를 눌렀나?
@@ -160,7 +160,7 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
  if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));const k=1-Math.exp(-dt*5);camYaw+=d*k;camPitch+=(camGoal.pitch-camPitch)*k;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
  const dir=new THREE.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
  {const bt=!mySeat&&p.x>10.45&&p.x<11.6&&p.z>-2.2&&p.z<7.5;const hit=camHit(tx,ty,tz,dir,d,bt);const want=Math.max(1.0,Math.min(d,hit-.3));if(this.cd===undefined||want<this.cd)this.cd=want;else this.cd+=(want-this.cd)*Math.min(1,dt*6);d=this.cd;}
- const cx=tx+dir.x*d,cy=ty+dir.y*d,cz=tz+dir.z*d;cam.object3D.position.set(cx,cy,cz);{const hide=cx>11.25&&cz>-2.5&&cz<8.5;if(hide!==window._shelfHid){window._shelfHid=hide;for(const e of (window.SHELF_EL||[]))e.object3D.visible=!hide;}}cam.object3D.lookAt(2*cx-tx,2*cy-ty,2*cz-tz);hideWalls(tx,ty,tz,cx,cy,cz);
+ const cx=tx+dir.x*d,cy=ty+dir.y*d,cz=tz+dir.z*d;cam.object3D.position.set(cx,cy,cz);{const hide=cx>11.25&&cz>-2.5&&cz<8.5;if(hide!==window._shelfHid){window._shelfHid=hide;for(const e of (window.SHELF_EL||[]))e.object3D.visible=!hide;}}cam.object3D.lookAt(2*cx-tx,2*cy-ty,2*cz-tz);hideWalls(tx,ty,tz,cx,cy,cz);theaterFov(cx,cy,cz);
  if(joined&&(!this.last||t-this.last>100)){this.last=t;const k=p.x.toFixed(2)+p.z.toFixed(2)+p.y.toFixed(2)+myYaw.toFixed(2)+myDance;if(k!==this.k){this.k=k;socket.emit('move',{pos:[p.x,p.y,p.z],rot:myYaw,dance:myDance});}}}});
 scene.setAttribute('my-sync','');
 // 가상 조이스틱 (모바일): 카메라 기준 방향, 거리=속도
@@ -340,7 +340,7 @@ setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElemen
  function fitFov(){const w=innerWidth,h=innerHeight,a=w/h;const v=70,maxH=95;let f=v;
   if(a>1){f=2*Math.atan(Math.tan(maxH*Math.PI/360)/a)*180/Math.PI;f=Math.max(48,Math.min(v,f));}
   const c=document.getElementById('cam');c.setAttribute('camera','fov',f);
-  const o=sc.camera;if(o&&o.isPerspectiveCamera){o.fov=f;o.aspect=a;o.updateProjectionMatrix();}
+  window.BASE_FOV=f;const o=sc.camera;if(o&&o.isPerspectiveCamera){o.fov=f;o.aspect=a;o.updateProjectionMatrix();}
   if(sc.renderer){sc.resize&&sc.resize();}}
  let t;const later=()=>{clearTimeout(t);fitFov();t=setTimeout(fitFov,350);};
  addEventListener('resize',later);addEventListener('orientationchange',later);
@@ -354,9 +354,15 @@ setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElemen
  function exitFs(){try{(document.exitFullscreen||document.webkitExitFullscreen).call(document);}catch(e){}}
  const btn=document.getElementById('fsBtn'),hint=document.getElementById('fsHint');
  let entered=false,optOut=false;
- document.addEventListener('touchend',()=>{if(entered&&!optOut&&!isFs())goFs();},{passive:true});
- window.enterFullscreenMobile=()=>{if(!touch)return;entered=true;if(canFs)goFs();else if(!standalone&&!localStorage.getItem('fsHintSeen')){hint.classList.remove('hidden');localStorage.setItem('fsHintSeen','1');}};
- btn.onclick=()=>{if(!canFs){if(!standalone)hint.classList.toggle('hidden');return;}if(isFs()){optOut=true;exitFs();}else{optOut=false;goFs();}};
+ // 모바일: 크롬 전체화면 API는 '상단에서 드래그…' 안내를 강제로 띄움 → 모바일에선 API를 안 쓰고 앱 설치(홈 화면) 전체화면을 안내
+ let installEvt=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;});
+ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+ const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ const hintTxt=()=>isIOS?'📱 Safari 공유 버튼 → <b>홈 화면에 추가</b> 후 그 아이콘으로 열면 안내 문구 없이 전체화면이에요':'📱 크롬 메뉴(⋮) → <b>홈 화면에 추가 / 앱 설치</b> 후 그 아이콘으로 열면 안내 문구 없이 전체화면이에요';
+ const showHint=()=>{hint.querySelector('span').innerHTML=hintTxt();hint.classList.remove('hidden');};
+ window.enterFullscreenMobile=()=>{if(!touch)return;entered=true;document.body.classList.add('pfs');scrollTo(0,0);};
+ btn.onclick=()=>{if(touch){if(isFs()){exitFs();return;}if(installEvt){installEvt.prompt();installEvt.userChoice.finally(()=>{installEvt=null;});return;}if(hint.classList.contains('hidden'))showHint();else hint.classList.add('hidden');return;}
+  if(!canFs)return;if(isFs()){optOut=true;exitFs();}else{optOut=false;goFs();}};
  document.getElementById('fsHintX').onclick=()=>hint.classList.add('hidden');
  if(standalone)btn.style.display='none';
  document.addEventListener('fullscreenchange',later);const fsCls=()=>document.body.classList.toggle('fs',isFs()&&touch);document.addEventListener('fullscreenchange',fsCls);document.addEventListener('webkitfullscreenchange',fsCls);
@@ -407,3 +413,8 @@ window.isWallBox=(sx,sy,sz)=>sy>=1.9&&Math.min(sx,sz)<=3.2&&Math.max(sx,sz)>=1.4
 function hideWalls(tx,ty,tz,cx,cy,cz){const n=performance.now();if(!WALLS||(n-_wallsAt>4000&&n<60000)){if(document.querySelector('a-scene').hasLoaded){WALLS=collectWalls();_wallsAt=n;}else return;}
  _ray.origin.set(tx,ty,tz);_hv.set(cx-tx,cy-ty,cz-tz);const len=_hv.length();if(len<1e-4)return;_ray.direction.copy(_hv).divideScalar(len);
  const TT=THEATER.T,inTh=!!window.IN_THEATER;for(const w of WALLS){if(inTh&&w.b.max.x>TT.x0-.6&&w.b.min.z<TT.z1+.2&&w.b.max.z>TT.z0-.2){if(w.h){w.h=false;w.o.visible=true;}continue;}const pt=_ray.intersectBox(w.b,_hv);const hit=!!pt&&_ray.origin.distanceTo(pt)<len+.3&&!w.b.containsPoint(_ray.origin);if(hit!==w.h){w.h=hit;w.o.visible=!hit;}}}
+
+// 극장 좌석: 화면 비율(세로/가로 폰)에 맞춰 스크린 전체가 여유 있게 들어오도록 시야각 조절 (+두 손가락/휠 줌)
+let _fovNow=0;function theaterFov(cx,cy,cz){const o=scene.camera;if(!o||!o.isPerspectiveCamera)return;const base=window.BASE_FOV||70;let want=base;
+ if(inThSeat()){const S=THEATER.T.screen;want=THEATER.fitFov(Math.hypot(S.x-cx,S.y-cy,S.z-cz),o.aspect||innerWidth/innerHeight,base)*thZoom;want=Math.max(25,Math.min(125,want));}
+ if(Math.abs(want-o.fov)>.05){o.fov+= (want-o.fov)*.2;o.updateProjectionMatrix();}}
