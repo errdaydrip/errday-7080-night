@@ -78,12 +78,12 @@ const glasses={};const glassPub=()=>{const o={};for(const k in glasses)o[k]=glas
 const DRINKS=['soju','beer','whiskey','cocktail'];
 const TABLES={Y1:[-7.6,16.4],Y2:[-3,16.4],Y3:[-7.6,20.2],Y4:[-3,20.2],Y5:[2.6,21.5],T1:[-7,-4,2.4],T2:[-7,2,2.4],T3:[-7,7.5,2.4],T4:[4.5,6,2.4],T5:[0,8.5,2.4],T6:[-2.5,3.5,2.4]};const tables={};for(const k in TABLES)tables[k]={items:[null,null,null,null],t:0};
 const PICK={soju:{x:-0.7,z:21.5,r:1.8},beer:{x:-0.7,z:21.5,r:1.8}};for(const f of ['dakbal','kkom','fish','squid'])PICK[f]={x:5.5,z:16.5,r:2.4};
-const tablePub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.k:null);return o;};
+const usesPub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.u:0);return o;};const tablePub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.k:null);return o;};
 const FOODS=['dakbal','kkom','fish','squid'],MAX_ITEMS=4,USES=4;
-function useItem(tb,kind){const t=tables[tb],i=t.items.findIndex(x=>x&&x.k===kind);if(i<0)return false;if(--t.items[i].u<=0)t.items[i]=null;t.t=Date.now();io.emit('table',tablePub());return true;}
+function useItem(tb,kind){const t=tables[tb],i=t.items.findIndex(x=>x&&x.k===kind);if(i<0)return false;if(--t.items[i].u<=0)t.items[i]=null;t.t=Date.now();(io.emit('tableUses',usesPub()),io.emit('table',tablePub()));return true;}
 const pochaTable=seat=>{const m=/^([YT]\d)-/.exec(seat||'');return m&&tables[m[1]]?m[1]:null;};
 function canDrink(seat,type){if(BAR_Z[seat]!==undefined)return !!glasses[seat]&&(glasses[seat].type||'whiskey')===type;if(type==='whiskey'||type==='cocktail')return false;const tb=pochaTable(seat);if(tb)return tables[tb].items.some(i=>i&&i.k===type);return false;}
-setInterval(()=>{const n=Date.now();let ch=false;for(const k in tables)if(tables[k].items.some(Boolean)&&n-tables[k].t>1200000){tables[k].items=[null,null,null,null];ch=true;}if(ch)io.emit('table',tablePub());},10000).unref();
+setInterval(()=>{const n=Date.now();let ch=false;for(const k in tables)if(tables[k].items.some(Boolean)&&n-tables[k].t>1200000){tables[k].items=[null,null,null,null];ch=true;}if(ch)(io.emit('tableUses',usesPub()),io.emit('table',tablePub()));},10000).unref();
 setInterval(()=>{const n=Date.now();let ch=false;for(const k in glasses)if(n-glasses[k].t>60000){delete glasses[k];ch=true;}if(ch)io.emit('glasses',glassPub());},2000).unref();
 io.on('connection',s=>{
  s.emit('init',{id:s.id,players:pub(),music:state()});s.emit('chatHistory',chatHist);
@@ -97,7 +97,7 @@ io.on('connection',s=>{
  s.on('move',m=>{const pl=players[s.id];if(!pl)return;pl.pos=m.pos;pl.rot=m.rot;pl.dance=(+m.dance|0)%4;s.broadcast.volatile.emit('move',{id:s.id,pos:m.pos,rot:m.rot,dance:pl.dance});});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.emit('glasses',glassPub());
- s.emit('table',tablePub());
+ s.emit('tableUses',usesPub());s.emit('table',tablePub());
  s.on('drink',type=>{const pl=players[s.id];if(!pl||!pl.seat||!DRINKS.includes(type))return;if(!canDrink(pl.seat,type))return;const n=Date.now();if(n-(pl.lastDrink||0)<2000)return;pl.lastDrink=n;
   if(BAR_Z[pl.seat]!==undefined){delete glasses[pl.seat];io.emit('glasses',glassPub());}const tb=pochaTable(pl.seat);if(tb)useItem(tb,type);io.emit('drink',{id:s.id,type});});
  s.on('eat',kind=>{const pl=players[s.id];if(!pl||!FOODS.includes(kind))return;const tb=pochaTable(pl.seat);if(!tb||!tables[tb].items.some(i=>i&&i.k===kind))return;const n=Date.now();if(n-(pl.lastEat||0)<2000)return;pl.lastEat=n;useItem(tb,kind);io.emit('eat',{id:s.id,kind});});
@@ -110,7 +110,7 @@ io.on('connection',s=>{
  s.on('pickup',kind=>{const pl=players[s.id];if(!pl||pl.seat)return;const src=PICK[kind];if(!src)return;const p=pl.pos||[0,0,0];if(Math.hypot(p[0]-src.x,p[2]-src.z)>src.r)return;
   const n=Date.now();if(n-(pl.lastAct||0)<500)return;pl.lastAct=n;pl.carry=kind;io.emit('carry',{id:s.id,kind});});
  s.on('place',()=>{const pl=players[s.id];if(!pl||!pl.carry)return;const p=pl.pos||[0,0,0];let best=pochaTable(pl.seat),bd=1e9;if(!best)for(const k in TABLES){const t=TABLES[k],d=Math.hypot(p[0]-t[0],p[2]-t[1]);if(d<(t[2]||1.9)&&d<bd){bd=d;best=k;}}
-  if(!best)return;const n=Date.now();if(n-(pl.lastAct||0)<500)return;pl.lastAct=n;const tb=tables[best];const fs=tb.items.indexOf(null);if(fs<0){s.emit('chat',{sys:true,text:'테이블이 꽉 찼어요 (최대 '+MAX_ITEMS+'개)'});return;}tb.items[fs]={k:pl.carry,u:USES};tb.t=n;pl.carry=null;io.emit('carry',{id:s.id,kind:null});io.emit('table',tablePub());});
+  if(!best)return;const n=Date.now();if(n-(pl.lastAct||0)<500)return;pl.lastAct=n;const tb=tables[best];const fs=tb.items.indexOf(null);if(fs<0){s.emit('chat',{sys:true,text:'테이블이 꽉 찼어요 (최대 '+MAX_ITEMS+'개)'});return;}tb.items[fs]={k:pl.carry,u:USES};tb.t=n;pl.carry=null;io.emit('carry',{id:s.id,kind:null});(io.emit('tableUses',usesPub()),io.emit('table',tablePub()));});
  s.on('chat',text=>{const pl=players[s.id];if(!pl)return;text=String(text).slice(0,200);if(!text.trim())return;text=cleanText(text);
   const t=Date.now();chatHist.push({nick:pl.nick,text,t});if(chatHist.length>50)chatHist.shift();io.emit('chat',{id:s.id,nick:pl.nick,text,t});});
  s.on('duration',d=>{const t=music.playlist[d&&d.index];const sec=+(d&&d.sec);if(!t||!(sec>1&&sec<36000))return;const k=t.type==='yt'?t.videoId:t.id;if(durations[k])return;durations[k]=sec;broadcastMusic();});

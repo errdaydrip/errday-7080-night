@@ -211,6 +211,8 @@ function nearTable(){const p=rig.object3D.position;let best=null,bd=1e9;for(cons
 socket.on('glasses',g=>{GLASSES=g||{};for(const k in GLASS_EL)if(GLASSES[k]!==GLASS_EL[k].kind){GLASS_EL[k].parent.remove(GLASS_EL[k]);delete GLASS_EL[k];}
  for(const k in GLASSES)if(!GLASS_EL[k]){const s=SEATS.find(q=>q.id===k);if(!s)continue;const g3=(GLASSES[k]==='cocktail'?cocktailGlass:rockGlass)(new THREE.Group());g3.kind=GLASSES[k];g3.position.set(9.68,1.3,s.z);g3.scale.setScalar(1.6);scene.object3D.add(g3);GLASS_EL[k]=g3;}refreshAct(true);});
 const SLOT=[[-.22,-.22],[.22,-.22],[-.22,.22],[.22,.22],[0,-.28],[0,.28],[-.28,0],[.28,0]];
+let TABLE_USES={};socket.on('tableUses',u=>{TABLE_USES=u||{};});
+function usesTxt(k){const t=myTable();const it=TABLE_ITEMS[t]||[],i=it.indexOf(k);const n=i<0?0:((TABLE_USES[t]||[])[i]||4);return n;}
 socket.on('table',t=>{TABLE_ITEMS=t||{};for(const k in TABLE_ITEMS){if(TABLE_EL[k])TABLE_EL[k].parent.remove(TABLE_EL[k]);const g=new THREE.Group(),c=(window.POCHA_TABLES||{})[k];if(!c)continue;g.position.set(c[0],c[2]||.7,c[1]);
  TABLE_ITEMS[k].forEach((it,i)=>{if(!it||!SLOT[i])return;const m=makeItem(it);m.position.set(SLOT[i][0],0,SLOT[i][1]);g.add(m);});scene.object3D.add(g);TABLE_EL[k]=g;}refreshAct(true);});
 socket.on('carry',({id,kind})=>{if(id===myId){myCarry=kind;const m=$('myAvatar');if(m._h)m._h.carry(kind);refreshAct(true);return;}const el=others[id]&&others[id].el;if(el&&el._h)el._h.carry(kind);});
@@ -220,7 +222,7 @@ function serve(kind){if(!inBarZone())return;const n=Date.now();if(n-(window._las
  const p=rig.object3D.position;socket.emit('serve',{x:p.x,z:p.z,kind});}
 window.serve=serve;window.drink=drink;
 function actions(){const A=[];if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.push([GLASSES[mySeat]==='cocktail'?'🍸 칵테일':'🥃 위스키',()=>drink(GLASSES[mySeat]),'d-'+GLASSES[mySeat]]);}
-  else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k]);}
+  else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);}
   return A;}
  if(inBarZone()){A.push(['🍸 바텐더 서빙:',null,'lbl'],['🥃 위스키',()=>serve('whiskey'),'s-whiskey'],['🍸 칵테일',()=>serve('cocktail'),'s-cocktail']);return A;}
  if(!mySeat&&(window.WAITERS||[]).some(w=>w.near))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
@@ -229,8 +231,8 @@ function actions(){const A=[];if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.pu
  if(near(window.COOK,2.2))for(const k of ['dakbal','kkom','fish','squid'])A.push([ITEM_NAME[k],()=>socket.emit('pickup',k),'p-'+k]);
  if(myCarry&&!A.length)A.push(['들고 있음: '+ITEM_NAME[myCarry],null,'lbl']);
  return A;}
-let actKey='';function refreshAct(force){const A=actions(),k=A.map(a=>a[2]+a[0]).join('|')+myCarry;if(!force&&k===actKey)return;actKey=k;const bar=$('actBar');bar.innerHTML='';bar.classList.toggle('hidden',!A.length);
- for(const [t,f,id] of A){const b=document.createElement(f?'button':'span');b.textContent=t;b.dataset.act=id;if(f)b.addEventListener('click',e=>{e.stopPropagation();f();});else b.className='lbl';bar.appendChild(b);}}
+let actKey='';function refreshAct(force){const A=actions(),k=A.map(a=>a[2]+a[0]+(a[3]||'')).join('|')+myCarry;if(!force&&k===actKey)return;actKey=k;const bar=$('actBar');bar.innerHTML='';bar.classList.toggle('hidden',!A.length);
+ for(const [t,f,id,n] of A){const b=document.createElement(f?'button':'span');b.textContent=t;if(n){const c=n>=3?'#3ee05a':n===2?'#ffd23a':'#ff3b3b';b.classList.add('uses');b.style.background=`linear-gradient(rgba(30,10,40,.9),rgba(30,10,40,.9)) padding-box,conic-gradient(${c} 0 ${n*25}%,#3a3a3a 0) border-box`;b.title=n+'/4';}b.dataset.act=id;if(f)b.addEventListener('click',e=>{e.stopPropagation();f();});else b.className='lbl';bar.appendChild(b);}}
 setInterval(()=>refreshAct(),200);
 // ---------- 공유 음악 (MP3 업로드 + 유튜브) ----------
 let music={playlist:[],index:-1,playing:false},offset=0,userGesture=false;const audio=$('audio');
@@ -280,3 +282,5 @@ $('file').onchange=async()=>{const f=$('file').files[0];if(!f)return;if(f.size>3
 $('ytForm').onsubmit=async e=>{e.preventDefault();const url=$('ytUrl').value.trim();if(!url)return;$('upMsg').textContent='유튜브 불러오는 중...';
  const r=await fetch('/youtube',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':adminToken},body:JSON.stringify({url,by:me.nick||'관리자'})});
  const j=await r.json();$('upMsg').textContent=r.ok?`${j.added}곡 추가!`:(j.error||'실패');adminFail(r);if(r.ok)$('ytUrl').value='';};
+// 점프 버튼: 오른쪽 끝, 액션바 바로 위
+setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElementById('actBar');if(!j)return;let top=innerHeight-70;if(a&&!a.classList.contains('hidden')&&a.offsetHeight){top=Math.min(top,a.getBoundingClientRect().top);}j.style.bottom=(innerHeight-top+10)+'px';},200);
