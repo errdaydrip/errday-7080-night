@@ -8,4 +8,4 @@ const p=require('puppeteer-core');const W=ms=>new Promise(r=>setTimeout(r,ms));c
  console.log('walk',await pg.evaluate(()=>[rig.object3D.position.x.toFixed(2),rig.object3D.position.y.toFixed(2),$('where').textContent,window.IN_THEATER]));
  await pg.evaluate(()=>sit(SEATS.find(s=>s.id==='TH-12')));await W(3500);
  console.log('sit',await pg.evaluate(()=>[$('where').textContent,$('ytWrap').className,$('ytWrap').style.transform.slice(0,60),music.playlist[music.index]&&music.playlist[music.index].type]));
- await pg.screenshot({path:D+'theater_in.png'});await b.close();process.exit();})();
+ console.log('subs',await pg.evaluate(()=>[$('subsBtn').className,$('subsBtn').textContent,camYaw.toFixed(3),camPitch.toFixed(3),JSON.stringify(THEATER.aim(SEATS.find(s=>s.id==='TH-12')))]));await pg.click('#subsBtn');await W(1500);console.log('after',await pg.evaluate(()=>[$('subsBtn').textContent,localStorage.getItem('subs')]));await pg.screenshot({path:D+'theater_in.png'});await pg.evaluate(()=>{stand();rig.object3D.position.set(10,0,18);});await W(1500);console.log('outside',await pg.evaluate(()=>$('subsBtn').className));await b.close();process.exit();})();

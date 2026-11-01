@@ -92,7 +92,7 @@ scene.addEventListener('loaded',()=>{const c=scene.canvas;
   if(ptrs.size===1)down={x:e.clientX,y:e.clientY,t:performance.now(),moved:0};else{down=null;const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);dist0=camDist;}});
  c.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
   if(ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0)camDist=Math.max(2,Math.min(10,dist0*pinch0/d));return;}
-  if(down){down.moved+=Math.abs(dx)+Math.abs(dy);if(down.moved>8){camGoal=null;const T=e.pointerType==='touch',sg=T?1.3:1;camYaw-=dx*.006*sg;camPitch=Math.max(.05,Math.min(1.2,camPitch+dy*.005*sg));}}});
+  if(down){down.moved+=Math.abs(dx)+Math.abs(dy);if(down.moved>8){camGoal=null;const T=e.pointerType==='touch',sg=T?1.3:1;camYaw-=dx*.006*sg;camPitch=Math.max(mySeat&&mySeat.startsWith('TH-')?-.4:.05,Math.min(1.2,camPitch+dy*.005*sg));}}});
  const up=e=>{ptrs.delete(e.pointerId);if(down&&e.type==='pointerup'&&down.moved<=8&&performance.now()-down.t<600)tapAt(e.clientX,e.clientY);if(ptrs.size===0)down=null;pinch0=0;};
  c.addEventListener('pointerup',up);c.addEventListener('pointercancel',up);
  c.addEventListener('wheel',e=>{e.preventDefault();camDist=Math.max(2,Math.min(10,camDist+e.deltaY*.004));},{passive:false});});
@@ -133,7 +133,7 @@ function blocked(x,z,ignoreSeatTable){const p0=rig.object3D.position;if(heightAt
 function seatTaken(s){return Object.values(others).some(o=>o.seat===s.id);}
 function nearestSeat(maxD){const p=rig.object3D.position;let best=null,bd=maxD;for(const s of SEATS){const d=Math.hypot(s.x-p.x,s.z-p.z);if(d<bd&&!seatTaken(s)){bd=d;best=s;}}return best;}
 function tableCenter(t){const ss=SEATS.filter(s=>s.table===t);return{x:ss.reduce((a,s)=>a+s.x,0)/ss.length,z:ss.reduce((a,s)=>a+s.z,0)/ss.length};}
-function sit(s){if(!s||seatTaken(s))return;mySeat=s.id;goal=null;goalSeat=null;marker.setAttribute('visible',false);rig.object3D.position.set(s.x,s.y||0,s.z);myYaw=s.yaw;{const bar=s.table==='BAR'||s.table==='TH';camGoal=bar?{yaw:myYaw+Math.PI,pitch:.4}:{yaw:myYaw,pitch:.4};}
+function sit(s){if(!s||seatTaken(s))return;mySeat=s.id;goal=null;goalSeat=null;marker.setAttribute('visible',false);rig.object3D.position.set(s.x,s.y||0,s.z);myYaw=s.yaw;{const bar=s.table==='BAR';camGoal=s.table==='TH'?THEATER.aim(s):bar?{yaw:myYaw+Math.PI,pitch:.4}:{yaw:myYaw,pitch:.4};}
  socket.emit('seat',s.id);socket.emit('move',{pos:[s.x,s.y||0,s.z],rot:myYaw});updateWhere();}
 function stand(){if(!mySeat)return;camGoal=null;const s=SEATS.find(x=>x.id===mySeat);mySeat=null;if(s.stand)rig.object3D.position.set(s.stand[0],0,s.stand[1]);else{const c=tableCenter(s.table);
  rig.object3D.position.set(clampX(s.x+(s.x-c.x)*.45),0,clampZ(s.z+(s.z-c.z)*.45));}route=[];socket.emit('seat',null);updateWhere();}
@@ -155,9 +155,9 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
   {const ss=mySeat&&SEATS.find(q=>q.id===mySeat);const hy=mySeat?(ss.y||0):heightAt(p.x,p.z);if(mySeat)jumpV=null;else if(jumpV===null&&p.y-hy>.25)jumpV=0;if(jumpV!==null){jumpV-=14*dt;p.y+=jumpV*dt;if(p.y<=hy&&jumpV<0){p.y=hy;jumpV=null;}}else p.y+=(hy-p.y)*Math.min(1,dt*14);}if(!mySeat)$('prompt').classList.add('hidden');}
  if(!mySeat&&!moving&&!goal&&joined){idleT+=dt;if(idleT>3&&!myDance)myDance=1+Math.floor(Math.random()*3);}else{idleT=0;myDance=0;}
  myAv.object3D.rotation.y=myYaw;if(myAv._h)myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
-{const out=isOut(p.z);ROOM=out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();}}
- const tx=p.x,ty=p.y+(mySeat?.95:1.1),tz=p.z;let d=camDist;
- if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));camYaw+=d*.08;camPitch+=(camGoal.pitch-camPitch)*.08;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
+{const out=isOut(p.z);ROOM=out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();applySubs();}}
+ const tx=p.x,ty=p.y+(mySeat?.95:1.1)+(mySeat&&mySeat.startsWith('TH-')?THEATER.CAM_LIFT:0),tz=p.z;let d=camDist;
+ if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));const k=1-Math.exp(-dt*5);camYaw+=d*k;camPitch+=(camGoal.pitch-camPitch)*k;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
  const dir=new THREE.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
  {const bt=!mySeat&&p.x>10.45&&p.x<11.6&&p.z>-2.2&&p.z<7.5;const hit=camHit(tx,ty,tz,dir,d,bt);const want=Math.max(1.0,Math.min(d,hit-.3));if(this.cd===undefined||want<this.cd)this.cd=want;else this.cd+=(want-this.cd)*Math.min(1,dt*6);d=this.cd;}
  const cx=tx+dir.x*d,cy=ty+dir.y*d,cz=tz+dir.z*d;cam.object3D.position.set(cx,cy,cz);{const hide=cx>11.25&&cz>-2.5&&cz<8.5;if(hide!==window._shelfHid){window._shelfHid=hide;for(const e of (window.SHELF_EL||[]))e.object3D.visible=!hide;}}cam.object3D.lookAt(2*cx-tx,2*cy-ty,2*cz-tz);
@@ -253,15 +253,15 @@ setInterval(()=>refreshAct(),200);
 let music={playlist:[],index:-1,playing:false},offset=0,userGesture=false;const audio=$('audio');
 let muted=localStorage.getItem('muted')==='1',volume=+(localStorage.getItem('vol')||80);$('vol').value=volume;
 let yt=null,ytReady=false,ytVid=null;
-window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player('yt',{width:200,height:200,playerVars:{autoplay:0,controls:0,disablekb:1,playsinline:1,rel:0},
- events:{onReady:()=>{ytReady=true;applyMusic(true);},onStateChange:e=>{if(e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.CUED){const d=yt.getDuration();if(d>1)reportDur(d);}if(e.data===YT.PlayerState.ENDED)socket.emit('music',{type:'ended',index:music.index});},
+window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player('yt',{width:200,height:200,playerVars:{autoplay:0,cc_load_policy:0,cc_lang_pref:'ko',hl:'ko',controls:0,disablekb:1,playsinline:1,rel:0},
+ events:{onReady:()=>{ytReady=true;applyMusic(true);},onStateChange:e=>{if(e.data===YT.PlayerState.PLAYING){applySubs();}if(e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.CUED){const d=yt.getDuration();if(d>1)reportDur(d);}if(e.data===YT.PlayerState.ENDED)socket.emit('music',{type:'ended',index:music.index});},
   onError:e=>{const code=e.data;sys('⚠ 유튜브 재생 불가('+({2:'잘못된 ID',5:'HTML5 오류',100:'삭제/비공개',101:'퍼가기 금지',150:'퍼가기 금지'}[code]||code)+') → 다음 곡');socket.emit('music',{type:'error',index:music.index});}}});};
 function setMusic(m){music=m;offset=m.serverNow-Date.now();window.SERVER_OFFSET=offset;window.MUSIC_PLAYING=!!(m.playing&&m.playlist[m.index]);renderMusic();applyMusic(true);}
 socket.on('music',setMusic);
 function curDur(){const c=music.playlist[music.index];return c&&(c.dur||(music.durations||{})[c.type==='yt'?c.videoId:c.id]);}
 function reportDur(sec){const c=music.playlist[music.index];if(c&&sec>1&&!curDur())socket.emit('duration',{index:music.index,sec});}
 function curPos(){return music.playing?(Date.now()+offset-music.startedAt)/1000:(music.pausedAt||0)/1000;}
-const ICON={yt:'📺 ',sc:'☁️ ',vimeo:'🎬 ',url:'🔗 '};function renderMusic(){const cur=music.playlist[music.index];window.theaterScreen&&window.theaterScreen(cur,!!music.playing);$('shufBtn').textContent=music.shuffle?'🔀 랜덤 켬':'🔀 랜덤 끔';$('shufBtn').classList.toggle('sel',!!music.shuffle);$('now').textContent=cur?(music.shuffle?'🔀 ':'')+(music.playing?'▶ ':'⏸ ')+(ICON[cur.type]||'')+(cur.live?'📻 ':'')+cur.title:'재생 중인 곡 없음';
+const ICON={yt:'📺 ',sc:'☁️ ',vimeo:'🎬 ',url:'🔗 '};function renderMusic(){const cur=music.playlist[music.index];window.theaterScreen&&window.theaterScreen(cur,!!music.playing);typeof applySubs==='function'&&applySubs();$('shufBtn').textContent=music.shuffle?'🔀 랜덤 켬':'🔀 랜덤 끔';$('shufBtn').classList.toggle('sel',!!music.shuffle);$('now').textContent=cur?(music.shuffle?'🔀 ':'')+(music.playing?'▶ ':'⏸ ')+(ICON[cur.type]||'')+(cur.live?'📻 ':'')+cur.title:'재생 중인 곡 없음';
  $('pl').classList.toggle('hidden',!adminToken);$('pl').innerHTML=!adminToken?'':music.playlist.map((t,i)=>`<li class="${i===music.index?'cur':''}">${ICON[t.type]||''}${esc(t.title)} <small>(${esc(t.by)})</small>${adminToken?` <button data-sel="${i}">▶</button><button data-del="${i}">🗑</button>`:''}</li>`).join('');
  $('adminCtl').classList.toggle('hidden',!adminToken);const fold=localStorage.getItem('admFold')==='1';$('admFold').classList.toggle('hidden',!adminToken);$('music').classList.toggle('fold',!!adminToken&&fold);$('admFold').textContent=fold?'⚙ 관리자 ▼':'⚙ 관리자 ▲';$('adminBtn').textContent=adminToken?'🔑ON':'🔑';$('muteBtn').textContent=muted?'🔇':'🔊';}
 function applyVolume(){const v=window.OUTSIDE&&!window.IN_THEATER?volume*.5:volume;audio.volume=v/100;audio.muted=muted;extVol();if(ytReady){yt.setVolume(v);muted?yt.mute():yt.unMute();}}
@@ -274,7 +274,7 @@ function setAudioSrc(cur){if(cur.type==='url'&&cur.hls&&!audio.canPlayType('appl
 // 외부 플레이어 (사운드클라우드 / 비메오): 숨은 iframe
 let ext=null; // {type,key,api,ready,el}
 function extStop(){if(!ext)return;try{ext.type==='sc'?ext.api.pause():ext.api.destroy();}catch(e){}if(ext.el)ext.el.remove();ext=null;}
-function extVol(){if(!ext||!ext.ready)return;const v=muted?0:(window.OUTSIDE?volume*.5:volume);try{ext.type==='sc'?ext.api.setVolume(v):ext.api.setVolume(v/100);}catch(e){}}
+function extVol(){if(!ext||!ext.ready)return;const v=muted?0:(window.OUTSIDE&&!window.IN_THEATER?volume*.5:volume);try{ext.type==='sc'?ext.api.setVolume(v):ext.api.setVolume(v/100);}catch(e){}}
 async function extEnsure(cur){const key=cur.type+'|'+cur.url+'|'+cur.id;if(ext&&ext.key===key)return ext;extStop();
  const me_={type:cur.type,key,ready:false};ext=me_;const wrap=$('ytWrap');
  try{if(cur.type==='sc'){if(!window.SC)await loadScript('https://w.soundcloud.com/player/api.js');
@@ -285,7 +285,7 @@ async function extEnsure(cur){const key=cur.type+'|'+cur.url+'|'+cur.id;if(ext&&
    w.bind(E.ERROR,()=>{sys('⚠ 사운드클라우드 재생 불가 → 다음 곡');socket.emit('music',{type:'error',index:music.index});});}
   else{if(!window.Vimeo)await loadScript('https://player.vimeo.com/api/player.js');
    const d=document.createElement('div');wrap.appendChild(d);me_.el=d;const pl=new Vimeo.Player(d,{id:+cur.vimeoId,width:200,autoplay:false,controls:false,playsinline:true});me_.api=pl;
-   pl.ready().then(()=>{me_.ready=true;pl.getDuration().then(reportDur).catch(()=>{});extVol();applyMusic(true);}).catch(()=>{sys('⚠ 비메오 재생 불가 → 다음 곡');socket.emit('music',{type:'error',index:music.index});});
+   pl.ready().then(()=>{me_.ready=true;applySubs();pl.getDuration().then(reportDur).catch(()=>{});extVol();applyMusic(true);}).catch(()=>{sys('⚠ 비메오 재생 불가 → 다음 곡');socket.emit('music',{type:'error',index:music.index});});
    pl.on('ended',()=>socket.emit('music',{type:'ended',index:music.index}));}}
  catch(e){sys('⚠ 플레이어를 불러오지 못했어요 → 다음 곡');socket.emit('music',{type:'error',index:music.index});}return me_;}
 function extApply(cur,force,pos,wantPlay){if(!ext||!ext.ready)return;const a=ext.api,d=curDur();extVol();
@@ -383,3 +383,14 @@ function loadKickList(){const box=$('kickList');if(!box)return;if(!adminToken){b
   for(const c of THEATER.corners()){v.set(c[0],c[1],c[2]).applyMatrix4(cam.matrixWorldInverse);if(v.z>-.05){hide();return;}v.applyMatrix4(cam.projectionMatrix);pts.push([r.left+(v.x+1)/2*r.width,r.top+(1-v.y)/2*r.height]);}
   const M=THEATER.quadMatrix(PW,PH,pts);if(!M){hide();return;}shown=true;wrap.classList.add('theater');wrap.style.transform=`matrix3d(${M.join(',')})`;}});
  document.querySelector('a-scene').setAttribute('theater-screen','');})();
+
+// ---------- 극장 자막 켜기/끄기 (극장 안에서만 보임, 선택은 기억) ----------
+let subsPref=localStorage.getItem('subs')==='1',subsKey='';
+function applySubs(){const btn=$('subsBtn');if(!btn)return;const cur=music.playlist[music.index],u=THEATER.subsUI(cur,subsPref,!!window.IN_THEATER);
+ btn.classList.toggle('hidden',!u.visible);btn.disabled=!u.enabled;btn.textContent=u.enabled?(u.on?'💬 자막 켬':'💬 자막 끔'):'💬 자막 · '+u.note;btn.classList.toggle('sel',u.on);
+ const want=u.on;
+ if(cur&&cur.type==='yt'&&ytReady){try{if(want){yt.loadModule('captions');const tr=THEATER.pickTrack(yt.getOption('captions','tracklist'));if(tr)yt.setOption('captions','track',{languageCode:tr.languageCode});else setTimeout(()=>{if(subsPref&&window.IN_THEATER){const t2=THEATER.pickTrack(yt.getOption('captions','tracklist'));if(t2)yt.setOption('captions','track',{languageCode:t2.languageCode});}},1500);}
+  else{yt.unloadModule('captions');yt.setOption('captions','track',{});}}catch(e){}}
+ if(cur&&cur.type==='vimeo'&&ext&&ext.ready&&ext.type==='vimeo'){const a=ext.api;if(want)a.getTextTracks().then(l=>{const t=THEATER.pickTrack(l,'language');if(t)a.enableTextTrack(t.language,t.kind).catch(()=>{});}).catch(()=>{});else a.disableTextTrack().catch(()=>{});}}
+$('subsBtn').onclick=()=>{subsPref=!subsPref;localStorage.setItem('subs',subsPref?'1':'0');applySubs();sys(subsPref?'자막을 켰어요 (영상에 자막이 없으면 안 나와요)':'자막을 껐어요');};
+applySubs();

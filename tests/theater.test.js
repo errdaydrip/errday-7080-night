@@ -17,4 +17,16 @@ for(let z=12.3;z<=25.4;z+=.2)for(let x=-11;x<=13.3;x+=.5)a(!hit(x,z)||x>13.4,'st
 const pts=[[100,50],[700,80],[650,420],[120,400]],M=TH.quadMatrix(640,360,pts);
 const ap=(x,y)=>{const X=M[0]*x+M[4]*y+M[12],Y=M[1]*x+M[5]*y+M[13],Wv=M[3]*x+M[7]*y+M[15];return[X/Wv,Y/Wv];};
 [[0,0],[640,0],[640,360],[0,360]].forEach(([x,y],i)=>{const [X,Y]=ap(x,y);a(Math.abs(X-pts[i][0])<1e-6&&Math.abs(Y-pts[i][1])<1e-6,'corner '+i);});
-a.strictEqual(TH.corners().length,4);console.log('theater OK');
+a.strictEqual(TH.corners().length,4);
+// 앉으면 시선이 스크린 정중앙: 카메라 C=H+dir*d 에서 -dir 방향이 스크린 중심을 정확히 향함 (줄마다 높이 달라도, 거리 상관없이)
+const S=T.screen;TH.seats.forEach(s=>{const {yaw,pitch}=TH.aim(s);const dir=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)];
+ const H=[s.x,s.y+.95+TH.CAM_LIFT,s.z];[1,2.5,4.5,5.5].forEach(d=>{const C=H.map((h,i)=>h+dir[i]*d),v=[S.x-C[0],S.y-C[1],S.z-C[2]],l=Math.hypot(...v);
+  const cos=-(v[0]*dir[0]+v[1]*dir[1]+v[2]*dir[2])/l;a(cos>1-1e-9,'aim '+s.id+' d'+d);a(C[1]>.25,'cam above floor');});});
+a.notStrictEqual(TH.aim(TH.seats[0]).pitch,TH.aim(TH.seats[TH.seats.length-1]).pitch,'per-row pitch');
+// 자막 토글
+a.deepStrictEqual(TH.subsUI({type:'yt'},true,false).visible,false,'hidden outside theater');
+a(TH.subsUI({type:'yt'},true,true).enabled&&TH.subsUI({type:'yt'},true,true).on);a(!TH.subsUI({type:'yt'},false,true).on);
+a(TH.subsUI({type:'vimeo'},true,true).enabled);const au=TH.subsUI({type:'url'},true,true);a(au.visible&&!au.enabled&&au.note);a(!TH.subsUI({type:'sc'},true,true).enabled);
+a.strictEqual(TH.pickTrack([{languageCode:'en'},{languageCode:'ko'}]).languageCode,'ko');a.strictEqual(TH.pickTrack([{languageCode:'en'}]).languageCode,'en');a.strictEqual(TH.pickTrack([]),null);
+a.strictEqual(TH.pickTrack([{language:'ja'},{language:'ko-KR'}],'language').language,'ko-KR');
+console.log('theater OK');

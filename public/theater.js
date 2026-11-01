@@ -24,6 +24,16 @@
   const g=(sx*dy2-dx2*sy)/den,hh=(dx1*sy-sx*dy1)/den;
   const a=x1-x0+g*x1,b=x3-x0+hh*x3,d=y1-y0+g*y1,e=y3-y0+hh*y3;
   const M=[a/w,d/w,0,g/w, b/h,e/h,0,hh/h, 0,0,1,0, x0,y0,0,1];return M;}
- const api={T,seats,inside,floorAt,obstacles,camOcc,corners,quadMatrix};
+ // 앉았을 때 시선: 카메라는 (머리 위 기준점 + dir*거리)에 있고 -dir 을 봄 → dir 을 (기준점-스크린중심) 방향으로 두면 거리와 상관없이 정중앙을 봄
+ const CAM_LIFT=.55,HEAD_SIT=.95;
+ function aim(seat){const S=T.screen,hx=seat.x,hy=(seat.y||0)+HEAD_SIT+CAM_LIFT,hz=seat.z;const dx=hx-S.x,dy=hy-S.y,dz=hz-S.z,l=Math.hypot(dx,dy,dz);return{yaw:Math.atan2(dx,dz),pitch:Math.asin(dy/l)};}
+ // 자막 토글 상태: 극장 안 + 영상(유튜브/비메오)일 때만 사용 가능
+ function subsUI(cur,pref,inTheater){if(!inTheater)return{visible:false,enabled:false,on:false,note:''};
+  if(!cur)return{visible:true,enabled:false,on:false,note:'재생 중인 영상 없음'};
+  if(cur.type!=='yt'&&cur.type!=='vimeo')return{visible:true,enabled:false,on:false,note:'오디오 곡이라 자막 없음'};
+  return{visible:true,enabled:true,on:!!pref,note:''};}
+ // 자막 트랙 고르기: 한국어 우선, 없으면 첫 번째(기본)
+ function pickTrack(list,key){if(!Array.isArray(list)||!list.length)return null;key=key||'languageCode';return list.find(t=>/^ko/i.test(t[key]||''))||list[0];}
+ const api={aim,subsUI,pickTrack,CAM_LIFT,T,seats,inside,floorAt,obstacles,camOcc,corners,quadMatrix};
  if(typeof module!=='undefined')module.exports=api;else root.THEATER=api;
 })(typeof window!=='undefined'?window:this);
