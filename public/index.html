@@ -1,0 +1,45 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,interactive-widget=resizes-content">
+<title>ERRDAY NIGHTCLUB · ERRDAY 7080 나이트</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<link rel="stylesheet" href="style.css"></head><body>
+<a-scene renderer="antialias:auto;colorManagement:true" fog="type:exponential;color:#12020c;density:0.03" vr-mode-ui="enabled:false" loading-screen="enabled:false" device-orientation-permission-ui="enabled:false">
+ <a-entity id="world"></a-entity>
+ <a-entity id="others"></a-entity>
+ <a-entity id="rig" position="0 0 6"><a-entity id="myAvatar"></a-entity></a-entity>
+ <a-ring id="marker" rotation="-90 0 0" radius-inner="0.22" radius-outer="0.32" material="shader:flat;color:#ffd84a;opacity:.9;transparent:true" visible="false"></a-ring>
+ <a-entity id="cam" camera="fov:70" position="0 3 10"></a-entity>
+</a-scene>
+<div id="loading"><div class="spin">🪩</div><div id="loadTxt">3D 모델 불러오는 중…</div></div>
+<div id="entry" class="panel center">
+ <h1>ERRDAY NIGHTCLUB</h1><div class="sub">ERRDAY 7080 나이트</div>
+ <label>닉네임 <input id="nick" maxlength="16" placeholder="예: 춤신춤왕"></label>
+ <div class="pv"><canvas id="preview" width="240" height="260"></canvas></div>
+ <div class="row"><b>성별</b><button class="opt g sel" data-v="m">👨 남</button><button class="opt g" data-v="f">👩 여</button></div>
+ <div class="row"><b>의상</b><span id="styles"></span></div>
+ <div class="row"><b>옷 색</b><span id="sw"></span></div>
+ <div class="row"><b>피부</b><span id="skins"></span></div>
+ <button id="enter" class="big" disabled>입장하기 (소리 켜짐)</button>
+ <p class="hint">바닥 클릭/탭 = 그 자리로 걸어가기 · 의자 클릭/탭 = 가서 앉기 · WASD 이동 · 드래그 = 시점 회전 · 휠/두 손가락 = 줌</p>
+</div>
+<div id="hud" class="hidden">
+ <div id="topbar"><span id="where">🌐 로비</span><button id="setBtn">⚙</button><button id="adminBtn">🔑</button>
+  <button id="muteBtn" title="내 소리 켜기/끄기">🔊</button><input id="vol" type="range" min="0" max="100" value="80" title="볼륨"></div>
+ <button id="chatToggle" class="fab">💬</button><button id="musicToggle" class="fab">🎵</button>
+ <div id="chat" class="panel"><div id="chatTitle">💬 전체 채팅</div><div id="msgs"></div>
+  <form id="chatForm"><input id="chatIn" maxlength="200" placeholder="메시지 입력 (Enter)" autocomplete="off"><button>전송</button></form></div>
+ <div id="music" class="panel"><div>🎵 <b id="now">재생 중인 곡 없음</b></div>
+  <div id="adminCtl" class="hidden"><button data-c="play">▶</button><button data-c="pause">⏸</button><button data-c="skip">⏭</button><button data-c="shuffleToggle" id="shufBtn" title="랜덤 재생 켜기/끄기">🔀 랜덤 끔</button><button data-c="shuffleNow" title="대기열 순서 섞기">섞기</button>
+   <div class="arow">MP3: <input type="file" id="file" accept=".mp3,audio/mpeg"></div>
+   <form id="ytForm" class="arow"><input id="ytUrl" placeholder="유튜브 영상/재생목록 링크"><button>추가</button></form><span id="upMsg"></span></div>
+  <ol id="pl" class="hidden"></ol></div>
+ <button id="unmute" class="hidden">🔊 탭해서 소리 켜기</button>
+ <div id="prompt" class="hidden"></div>
+ <div id="mob"><button data-k="KeyW">▲</button><div><button data-k="KeyA">◀</button><button data-k="KeyS">▼</button><button data-k="KeyD">▶</button></div></div>
+</div>
+<audio id="audio" preload="auto"></audio>
+<div id="ytWrap"><div id="yt"></div></div>
+<script src="world.js"></script><script src="app.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body></html>
