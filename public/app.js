@@ -113,7 +113,7 @@ function blocked(x,z,ignoreSeatTable){const p0=rig.object3D.position;if(Math.abs
 function seatTaken(s){return Object.values(others).some(o=>o.seat===s.id);}
 function nearestSeat(maxD){const p=rig.object3D.position;let best=null,bd=maxD;for(const s of SEATS){const d=Math.hypot(s.x-p.x,s.z-p.z);if(d<bd&&!seatTaken(s)){bd=d;best=s;}}return best;}
 function tableCenter(t){const ss=SEATS.filter(s=>s.table===t);return{x:ss.reduce((a,s)=>a+s.x,0)/ss.length,z:ss.reduce((a,s)=>a+s.z,0)/ss.length};}
-function sit(s){if(!s||seatTaken(s))return;mySeat=s.id;goal=null;goalSeat=null;marker.setAttribute('visible',false);rig.object3D.position.set(s.x,s.y||0,s.z);myYaw=s.yaw;{const bar=s.table==='BAR';camGoal={yaw:myYaw,pitch:bar?.55:.4};}
+function sit(s){if(!s||seatTaken(s))return;mySeat=s.id;goal=null;goalSeat=null;marker.setAttribute('visible',false);rig.object3D.position.set(s.x,s.y||0,s.z);myYaw=s.yaw;{const bar=s.table==='BAR';camGoal=bar?{yaw:myYaw+Math.PI,pitch:.4}:{yaw:myYaw,pitch:.4};}
  socket.emit('seat',s.id);socket.emit('move',{pos:[s.x,s.y||0,s.z],rot:myYaw});updateWhere();}
 function stand(){if(!mySeat)return;camGoal=null;const s=SEATS.find(x=>x.id===mySeat);mySeat=null;if(s.stand)rig.object3D.position.set(s.stand[0],0,s.stand[1]);else{const c=tableCenter(s.table);
  rig.object3D.position.set(clampX(s.x+(s.x-c.x)*.45),0,clampZ(s.z+(s.z-c.z)*.45));}route=[];socket.emit('seat',null);updateWhere();}
