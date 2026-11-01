@@ -7,15 +7,15 @@ const U='http://localhost:'+(process.env.PORT||8080);
  b.emit('seat','Y2-0');await W(200);b.emit('drink','soju');await W(300);assert(!dr.length,'empty table: no soju');
  a.emit('move',{pos:[0,0,4],rot:0});await W(100);a.emit('pickup','soju');await W(300);assert(!carry.length,'far from fridge');
  a.emit('move',{pos:[-.7,0,20.8],rot:0});await W(100);a.emit('pickup','soju');await W(300);assert.strictEqual(carry[0].kind,'soju');
- a.emit('move',{pos:[-3,0,17.5],rot:0});await W(600);a.emit('place');await W(300);assert.deepStrictEqual(tb.Y2,['soju']);
- a.emit('move',{pos:[5.5,0,15.5],rot:0});await W(600);a.emit('pickup','squid');await W(600);a.emit('move',{pos:[-3,0,17.5],rot:0});await W(100);a.emit('place');await W(300);assert.deepStrictEqual(tb.Y2,['soju','squid']);
+ a.emit('move',{pos:[-3,0,17.5],rot:0});await W(600);a.emit('place');await W(300);assert.deepStrictEqual(tb.Y2,['soju',null,null,null]);
+ a.emit('move',{pos:[5.5,0,15.5],rot:0});await W(600);a.emit('pickup','squid');await W(600);a.emit('move',{pos:[-3,0,17.5],rot:0});await W(100);a.emit('place');await W(300);assert.deepStrictEqual(tb.Y2,['soju','squid',null,null]);
  b.emit('drink','beer');await W(300);assert(!dr.length,'no beer on table');
- for(let i=0;i<4;i++){b.emit('drink','soju');await W(2100);}assert.strictEqual(dr.length,4);assert.deepStrictEqual(tb.Y2,['squid'],'soju gone after 4');
+ for(let i=0;i<4;i++){b.emit('drink','soju');await W(2100);}assert.strictEqual(dr.length,4);assert.deepStrictEqual(tb.Y2,[null,'squid',null,null],'soju gone in place, squid keeps slot');
  let eats=[];b.on('eat',e=>eats.push(e));b.emit('eat','dakbal');await W(300);assert(!eats.length,'no dakbal');
  b.emit('eat','squid');b.emit('eat','squid');await W(300);assert.strictEqual(eats.length,1,'rate limit');
- for(let i=0;i<3;i++){await W(2100);b.emit('eat','squid');}await W(300);assert.strictEqual(eats.length,4);assert.deepStrictEqual(tb.Y2,[],'squid gone');
+ for(let i=0;i<3;i++){await W(2100);b.emit('eat','squid');}await W(300);assert.strictEqual(eats.length,4);assert.deepStrictEqual(tb.Y2,[null,null,null,null],'squid gone');
  // max 4
  for(let i=0;i<5;i++){a.emit('move',{pos:[-.7,0,20.8],rot:0});await W(100);a.emit('pickup','beer');await W(600);a.emit('move',{pos:[-3,0,17.5],rot:0});await W(100);a.emit('place');await W(600);}
- assert.strictEqual(tb.Y2.length,4,'max 4');
+ assert.strictEqual(tb.Y2.filter(Boolean).length,4,'max 4');
  assert(!chats.filter(c=>!c.sys).length,'no chat');
  console.log('pocha OK');process.exit(0);})().catch(e=>{console.error(e);process.exit(1);});

@@ -1,0 +1,12 @@
+const p=require('puppeteer-core');const W=ms=>new Promise(r=>setTimeout(r,ms));const D='/workspace/errday-7080-night/';
+(async()=>{const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
+ const pg=await b.newPage();pg.on('pageerror',e=>console.log('ERR',e.message));await pg.setViewport({width:900,height:600});await pg.goto('http://localhost:8080');await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
+ await pg.evaluate(()=>{document.querySelector('#nick,input[type=text]').value='구경꾼';});await pg.click('#enter');await W(4000);
+ const set=(a)=>pg.evaluate(a=>{rig.object3D.position.set(a[0],0,a[1]);myYaw=a[2];camGoal=null;camYaw=a[3];camPitch=a[4];camDist=a[5];},a);
+ await set([2,22,0,Math.PI,.55,11]);await W(1500);await pg.screenshot({path:D+'screenshot_pocha_street2.png'});
+ await set([7.2,18.4,Math.PI,-0.5,.3,3]);await W(1500);await pg.screenshot({path:D+'screenshot_imo.png'});
+ await set([0,9.5,Math.PI,Math.PI*0,.9,9]);await W(1500);
+ console.log(await pg.evaluate(()=>{let bad=0;for(let i=0;i<200;i++){const now=Date.now()/1000+i*1.7;for(const w of WAITERS){const d=((now*w.sp+w.ph)%w.L+w.L)%w.L;const sg=w.segs.find(q=>d>=q.s&&d<q.s+q.l)||w.segs[0];const k=(d-sg.s)/sg.l,x=sg.a[0]+(sg.b[0]-sg.a[0])*k,z=sg.a[1]+(sg.b[1]-sg.a[1])*k;if((Math.abs(x)<4.2&&z<.7)||(Math.abs(x)<6.5&&z<-6.2))bad++;}}return 'waiter bad samples '+bad;}));
+ await pg.screenshot({path:D+'screenshot_waiter_route.png'});
+ console.log(await pg.evaluate(async()=>{const p=rig.object3D.position;p.set(0,.7,-8.5);await new Promise(r=>setTimeout(r,500));const y1=p.y;p.set(0,.7,-6.0);await new Promise(r=>setTimeout(r,1000));return 'stage y '+y1.toFixed(2)+' after off-edge '+p.y.toFixed(2)+' blockedUp(no jump) '+blocked(0,-8)+' ';}));
+ await b.close();})();
