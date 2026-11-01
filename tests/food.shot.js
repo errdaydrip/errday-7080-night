@@ -1,0 +1,13 @@
+const p=require('puppeteer-core');const W=ms=>new Promise(r=>setTimeout(r,ms));const D='/workspace/errday-7080-night/';
+(async()=>{const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
+ const pg=await b.newPage();await pg.setViewport({width:900,height:600});pg.on('pageerror',e=>console.log('ERR',e.message));
+ await pg.goto('http://localhost:8080');await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
+ await pg.evaluate(()=>{document.querySelector('#nick,input[type=text]').value='음식';});await pg.click('#enter');await W(2500);
+ console.log(await pg.evaluate(()=>{const g=new THREE.Group();g.position.set(0,-.35,-1.0);g.rotation.x=.8;['dakbal','kkom','fish','squid'].forEach((k,i)=>{const m=makeItem(k);m.position.set(-.6+i*.4,0,0);m.scale.setScalar(1);g.add(m);});
+  const fl=new THREE.Mesh(new THREE.PlaneGeometry(3,2),new THREE.MeshStandardMaterial({color:'#5a3a22'}));fl.rotation.x=-Math.PI/2;g.add(fl);const L=new THREE.PointLight('#fff',3,5);L.position.set(0,1,.5);g.add(L);g.add(new THREE.AmbientLight('#fff',1));
+  cam.object3D.add(g);document.getElementById('hud').style.display='none';return 'ok';}));
+ await W(1500);await pg.screenshot({path:D+'screenshot_food_closeup.png'});
+ await pg.reload();await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});await pg.evaluate(()=>{document.querySelector('#nick,input[type=text]').value='음식2';});await pg.click('#enter');await W(2500);
+ await pg.evaluate(()=>{rig.object3D.position.set(3,0,13.8);camGoal=null;myYaw=Math.PI;camYaw=Math.PI-.2;camPitch=.2;camDist=3.5;});await W(2000);await pg.screenshot({path:D+'screenshot_pocha_sign.png'});
+ await pg.evaluate(()=>{rig.object3D.position.set(-3,0,13.2);camGoal=null;camYaw=Math.PI;camPitch=.3;camDist=5;});await W(2000);await pg.screenshot({path:D+'screenshot_pocha_street.png'});
+ await b.close();process.exit();})();

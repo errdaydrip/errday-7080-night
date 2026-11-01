@@ -5,13 +5,15 @@ const U='http://localhost:'+(process.env.PORT||8080);
  await new Promise(r=>a.emit('join',{nick:'Drinker',clientId:'D1'},r));await new Promise(r=>b.emit('join',{nick:'Watcher',clientId:'D2'},r));
  const got=[],chats=[];b.on('drink',d=>got.push(d));b.on('chat',m=>chats.push(m));
  a.emit('drink','soju');await W(300);assert.strictEqual(got.length,0,'standing: ignored');
- a.emit('seat','T1_0');await W(200);a.emit('drink','soju');a.emit('drink','beer');a.emit('drink','makgeolli');await W(400);
+ a.emit('seat','T1-0');await W(200);a.emit('drink','soju');await W(300);assert.strictEqual(got.length,0,'club table empty: no soju');
+ for(const k of ['soju','beer']){a.emit('seat',null);a.emit('move',{pos:[-.7,0,20.8],rot:0});await W(100);a.emit('pickup',k);await W(600);a.emit('move',{pos:[-7,0,-2.3],rot:0});await W(100);a.emit('place');await W(600);}
+ a.emit('seat','T1-0');await W(200);a.emit('drink','soju');a.emit('drink','beer');a.emit('drink','makgeolli');await W(400);
  assert.strictEqual(got.length,1,'rate-limited');assert.strictEqual(got[0].type,'soju');assert.strictEqual(got[0].id,a.id);
  await W(2000);a.emit('drink','makgeolli');await W(300);assert.strictEqual(got.length,1,'makgeolli rejected');
  a.emit('drink','beer');await W(300);assert.strictEqual(got.length,2);assert.strictEqual(got[1].type,'beer');
- assert(!chats.length,'no chat posts');console.log('drink OK');a.close();b.close();})().catch(e=>{console.error(e);process.exit(1);});
+ assert(!chats.filter(c=>!c.sys).length,'no chat posts');console.log('drink OK');a.close();b.close();})().catch(e=>{console.error(e);process.exit(1);});
 // 바텐더 위스키
-(async()=>{await W(6000);const a=io(U,{forceNew:true}),c=io(U,{forceNew:true});await W(400);
+(async()=>{await W(12000);const a=io(U,{forceNew:true}),c=io(U,{forceNew:true});await W(400);
  await new Promise(r=>a.emit('join',{nick:'Bartender',clientId:'B1'},r));await new Promise(r=>c.emit('join',{nick:'Guest',clientId:'B2'},r));
  let gl={},pours=0,dr=[];c.on('glasses',g=>gl=g);c.on('pour',()=>pours++);c.on('drink',d=>dr.push(d));
  c.emit('seat','BAR-2');await W(200);c.emit('drink','whiskey');await W(300);assert(!dr.length,'no glass, no whiskey');

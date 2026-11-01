@@ -43,3 +43,6 @@ button:disabled{opacity:.5}.sel{background:#b0005a}.big{width:100%;padding:13px;
 
 #actBar{position:fixed;right:12px;bottom:12px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:60vw;z-index:21;pointer-events:auto}#actBar.hidden{display:none}#actBar button,#actBar .lbl{font-size:16px;padding:8px 14px;border-radius:22px;border:2px solid #ffd84a;background:rgba(30,10,40,.85);color:#fff;touch-action:manipulation}#actBar .lbl{border-color:transparent;background:rgba(0,0,0,.5);font-size:14px}
 @media (max-width:700px),(pointer:coarse){#actBar{right:10px;bottom:70px;flex-direction:column;align-items:flex-end;max-width:45vw}#actBar button{font-size:14px;padding:7px 11px}}
+
+#jumpBtn{position:fixed;left:150px;bottom:90px;width:64px;height:64px;border-radius:50%;background:rgba(255,60,172,.35);border:2px solid rgba(255,216,74,.7);color:#fff;font-size:22px;line-height:1;text-align:center;padding-top:10px;box-sizing:border-box;display:none;touch-action:none;pointer-events:auto;z-index:20;user-select:none}#jumpBtn small{font-size:11px}
+@media (max-width:700px),(pointer:coarse){#jumpBtn{display:block}#hud.showChat #jumpBtn,#hud.showMusic #jumpBtn{display:none}}
