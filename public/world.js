@@ -602,7 +602,7 @@ window.WAITERS=[];
   }
   return g;};
  [[-7.5,31.2,'다방',  '#ff6688','#6b5a4a'],[-1.5,31.2,'전파사','#66ccff','#5a5a62'],[4.5,31.2,'연탄가게','#ffcc55','#6a4a3a'],[10,31.2,'오락실','#a8ff60','#4a4f6a']].forEach(([x,z,l,sc,c])=>shop(x,z,5,4.2+((x*7)%3+3)%2*1.4,3,0,c,l,sc));
- [[15,'횟집','#33aaff'],[20.5,'통닭','#ff5533']].forEach(([z,l,sc])=>{openShop(-15.1,z,5,4.6,3,90,'#5e5048',l,sc,l==='통닭'?'chicken':'hoe');OBSTACLES.push({x0:-17.2,x1:-13.65,z0:z-2.55,z1:z+2.55});shop(15.6,z,5,4.6,3,-90,'#544a52',l==='통닭'?'비디오':'만화방',l==='통닭'?'#66ddff':'#ff77cc');E('a-box',{position:`-12.7 .5 ${z}`,width:.6,height:1,depth:2.4,material:`color:${l==='통닭'?'#c8a070':'#e0e4e8'};roughness:.7`});OBSTACLES.push({x0:-13.0,x1:-12.4,z0:z-1.2,z1:z+1.2});});
+ [[15,'횟집','#33aaff'],[20.5,'통닭','#ff5533']].forEach(([z,l,sc])=>{openShop(-15.1,z,5,4.6,3,90,'#5e5048',l,sc,l==='통닭'?'chicken':'hoe');OBSTACLES.push({x0:-17.2,x1:-13.65,z0:z-2.55,z1:z+2.55});E('a-box',{position:`-12.7 .5 ${z}`,width:.6,height:1,depth:2.4,material:`color:${l==='통닭'?'#c8a070':'#e0e4e8'};roughness:.7`});OBSTACLES.push({x0:-13.0,x1:-12.4,z0:z-1.2,z1:z+1.2});});
  // 횟집 수족관
  E('a-box',{position:'-13.25 .9 13.2',width:.7,height:1.2,depth:1.4,material:'color:#5ac8ff;opacity:.45;transparent:true;metalness:.2;roughness:.05;emissive:#1060a0;emissiveIntensity:.4'});OBSTACLES.push({x0:-13.6,x1:-12.9,z0:12.5,z1:13.9});
  window.AQFISH=[];for(let k=0;k<5;k++){const f=E('a-entity',{position:`-13.25 ${.6+k*.13} 13.2`});E('a-sphere',{radius:.07,scale:'1.8 .7 .5',color:['#e86a40','#c0c8d0','#ff9a50','#8090a0','#d84a30'][k]},f);E('a-cone',{position:'-.14 0 0',rotation:'0 0 90','radius-bottom':.05,height:.08,scale:'1 1 .3',color:'#777'},f);window.AQFISH.push(f);}
@@ -659,3 +659,59 @@ async function shopGuy(z,name,outfit,apron,band,kind){const holder=E('a-entity',
   else{const f=(t%3)/3;basket.position.y=.25-(f<.7?.12:.12-Math.sin((f-.7)/.3*Math.PI)*.15);}};
  OBSTACLES.push({x:-13.35,z,r:.35});}
 shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy(15,'횟집 아저씨','#2a4a7a','#2a6ab0','#d02020','hoe');
+
+// ---------- 야장 극장 (비디오방+만화방 합침) : 큰 스크린에 지금 플레이리스트 영상 ----------
+(function theater(){const TH=window.THEATER,T=TH.T,S=T.screen,D=T.door,W=T.wall,cx=(T.x0+T.x1)/2,cz=(T.z0+T.z1)/2,L=T.x1-T.x0,Wz=T.z1-T.z0;
+ const wall=(x,y,z,w,h,d,c)=>E('a-box',{position:`${x} ${y} ${z}`,width:w,height:h,depth:d,material:`color:${c};roughness:1`});
+ // 외벽: 앞벽(문 양옆 + 문 위), 옆벽, 뒷벽, 지붕
+ const fz0=T.z0,fz1=D.z0,gz0=D.z1,gz1=T.z1;
+ [[fz0,fz1],[gz0,gz1]].forEach(([a,b])=>wall(T.x0+W/2,T.h/2,(a+b)/2,W,T.h,b-a,'#4a2a3a'));
+ wall(T.x0+W/2,(T.h+2.7)/2,(D.z0+D.z1)/2,W,T.h-2.7,D.z1-D.z0,'#3a2030');
+ wall(cx,T.h/2,T.z0+W/2,L,T.h,W,'#3a2030');wall(cx,T.h/2,T.z1-W/2,L,T.h,W,'#3a2030');wall(T.x1-W/2,T.h/2,cz,W,T.h,Wz,'#1a0e14');
+ wall(cx,T.h+.05,cz,L+.3,.1,Wz+.3,'#2a1a20');
+ // 내부: 빨간 벨벳 벽 커튼, 카펫, 계단식 단, 천장 조명
+ E('a-box',{position:`${cx} .005 ${cz}`,width:L-.4,height:.01,depth:Wz-.4,material:'color:#5a1018;roughness:1'});
+ [[16.85,18.15,.12],[18.15,T.x1-W,.24]].forEach(([a,b,h])=>E('a-box',{position:`${(a+b)/2} ${h/2} ${cz}`,width:b-a,height:h,depth:Wz-.4,material:'color:#6a1820;roughness:1'}));
+ [T.z0+W+.03,T.z1-W-.03].forEach(z=>{for(let i=0;i<14;i++)E('a-box',{position:`${T.x0+.6+i*.52} 2.3 ${z}`,width:.3,height:4.4,depth:.06,material:'color:#9a1020;roughness:.8;emissive:#300008;emissiveIntensity:.4'});});
+ for(let i=0;i<5;i++)E('a-entity',{position:`${T.x0+1.2+i*1.5} ${T.h-.3} ${cz}`,light:'type:point;color:#ffb070;intensity:.35;distance:5;decay:2'});
+ [-1,1].forEach(s=>{for(let i=0;i<4;i++)E('a-sphere',{position:`${T.x0+1+i*1.8} ${T.h-.15} ${cz+s*2.5}`,radius:.08,material:'color:#fff;emissive:#ffd090;emissiveIntensity:1'});});
+ // 스크린 (상영 정보 캔버스 + 금테 + 무대 커튼)
+ const cv=document.createElement('canvas');cv.width=1024;cv.height=576;const ctx=cv.getContext('2d');
+ const scr=E('a-plane',{position:`${S.x} ${S.y} ${S.z}`,rotation:'0 -90 0',width:S.w,height:S.h,material:'shader:flat;color:#fff'});
+ const tex=new THREE.CanvasTexture(cv);scr.addEventListener('loaded',()=>{const m=scr.getObject3D('mesh');m.material=new THREE.MeshBasicMaterial({map:tex});});
+ E('a-box',{position:`${S.x+.05} ${S.y} ${S.z}`,width:.06,height:S.h+.3,depth:S.w+.3,material:'color:#c8a040;metalness:.7;roughness:.3'});
+ [-1,1].forEach(s=>E('a-box',{position:`${S.x-.15} ${T.h/2} ${S.z+s*(S.w/2+.55)}`,width:.15,height:T.h-.2,depth:.9,material:'color:#a01020;roughness:.9;emissive:#400010;emissiveIntensity:.4'}));
+ E('a-box',{position:`${S.x-.15} ${S.y+S.h/2+.45} ${S.z}`,width:.15,height:.7,depth:S.w+2,material:'color:#a01020;roughness:.9;emissive:#400010;emissiveIntensity:.4'});
+ E('a-entity',{position:`${S.x-.3} 1 ${S.z}`,light:`type:point;color:#9ab8ff;intensity:.5;distance:7;decay:1.5`});
+ let lastKey='';const thumb=new Image();thumb.crossOrigin='anonymous';let thumbOk=false;thumb.onload=()=>{thumbOk=true;lastKey='';};thumb.onerror=()=>{thumbOk=false;};
+ window.theaterScreen=(cur,playing)=>{const key=(cur?cur.title+cur.videoId+cur.type:'')+playing+thumbOk;if(key===lastKey)return;lastKey=key;
+  if(cur&&cur.type==='yt'&&thumb.dataset.v!==cur.videoId){thumb.dataset.v=cur.videoId;thumbOk=false;thumb.src=`https://i.ytimg.com/vi/${cur.videoId}/hqdefault.jpg`;}
+  const g=ctx.createLinearGradient(0,0,0,576);g.addColorStop(0,'#0a0820');g.addColorStop(1,'#200818');ctx.fillStyle=g;ctx.fillRect(0,0,1024,576);
+  if(thumbOk&&cur&&cur.type==='yt'){try{ctx.globalAlpha=.55;ctx.drawImage(thumb,0,0,1024,576);ctx.globalAlpha=1;}catch(e){}}
+  ctx.textAlign='center';ctx.fillStyle='#ffd23a';ctx.font='bold 54px "Malgun Gothic",sans-serif';ctx.shadowColor='#ff3cac';ctx.shadowBlur=18;
+  ctx.fillText(cur?(playing?'▶ 지금 상영중':'⏸ 잠시 멈춤'):'상영 준비중',512,200);ctx.shadowBlur=0;ctx.fillStyle='#fff';ctx.font='40px "Malgun Gothic",sans-serif';
+  const t=cur?String(cur.title||''):'플레이리스트에 곡을 추가해 주세요';ctx.fillText(t.length>34?t.slice(0,33)+'…':t,512,300);
+  ctx.fillStyle='#9ab';ctx.font='28px "Malgun Gothic",sans-serif';ctx.fillText(cur&&cur.type==='yt'?'극장 안으로 들어오면 영상이 크게 나와요':'(오디오 전용 곡은 화면 대신 정보만 표시)',512,420);
+  try{tex.needsUpdate=true;}catch(e){}};
+ window.theaterScreen(null,false);
+ // 좌석 (빨간 극장 의자)
+ TH.seats.forEach(s=>{const fy=s.y-.42;const el=E('a-entity',{position:`${s.x} ${fy} ${s.z}`});el.classList.add('seat');el.dataset.seat=s.id;
+  E('a-box',{position:'0 .38 0',width:.5,height:.1,depth:.5,material:'color:#b01828;roughness:.8'},el);E('a-box',{position:'-.24 .7 0',width:.1,height:.6,depth:.5,material:'color:#b01828;roughness:.8'},el);
+  [-1,1].forEach(k=>E('a-box',{position:`0 .45 ${k*.27}`,width:.5,height:.25,depth:.05,color:'#333'},el));E('a-box',{position:'0 .17 0',width:.3,height:.34,depth:.3,color:'#222'},el);
+  SEATS.push({...s,el});});
+ // 매표소/입구 & 80년대 간판
+ const fx=T.x0-.02;
+ E('a-box',{position:`${fx-.1} 2.75 ${(D.z0+D.z1)/2}`,width:.08,height:.1,depth:D.z1-D.z0,color:'#c8a040'});
+ E('a-box',{position:`${fx-.25} ${T.h-.2} ${cz}`,width:.3,height:1.5,depth:Wz*.8,material:'color:#1a0610;emissive:#ff2a6a;emissiveIntensity:.15'});
+ E('a-entity',{position:`${fx-.42} ${T.h-.2} ${cz}`,rotation:'0 -90 0',ktext:`value:★ 야장 극 장 ★;color:#fff3c0;glow:#ff2a6a;size:96;width:6.5`});
+ for(let i=0;i<22;i++){const z=T.z0+1.1+i*(Wz-2.2)/21;[T.h-.95,T.h+.55].forEach(y=>E('a-sphere',{position:`${fx-.42} ${y} ${z}`,radius:.06,material:`color:#fff;emissive:${i%2?'#ffd060':'#ff8040'};emissiveIntensity:1`,class:'marq'}));}
+ E('a-box',{position:`${fx-.2} 2.95 ${cz}`,width:.4,height:.08,depth:Wz*.9,material:'color:#c8a040;metalness:.6'});
+ // 포스터 (문 양옆)
+ [[D.z0-1.6,'#1a3a8a','영웅본색'],[D.z0-3.1,'#8a1a3a','E.T.'],[D.z1+1.6,'#2a6a2a','로보트 태권V'],[D.z1+3.1,'#6a3a10','007']].forEach(([z,c,t])=>{E('a-box',{position:`${fx-.03} 1.6 ${z}`,width:.04,height:1.5,depth:1.0,color:c});
+  E('a-entity',{position:`${fx-.07} 1.6 ${z}`,rotation:'0 -90 0',ktext:hand(t,{c:'#fff',g:'#ffd060',s:56,w:.95})});});
+ E('a-entity',{position:`${fx-.3} 2.35 ${(D.z0+D.z1)/2}`,rotation:'0 -90 0',ktext:hand('입장 무료 · 동시상영',{c:'#ffe070',g:'#ff3cac',s:44,w:2.2})});
+ let t0=0;AFRAME.registerComponent('marq-blink',{tick(t){if(t-t0<350)return;t0=t;const on=Math.floor(t/350)%2;document.querySelectorAll('.marq').forEach((m,i)=>{const o=m.getObject3D('mesh');if(o)o.material.emissiveIntensity=(i+on)%2?1.2:.25;});}});
+ document.querySelector('a-scene').setAttribute('marq-blink','');
+ TH.obstacles.forEach(o=>OBSTACLES.push(o));
+ {const h0=window.heightAt;window.heightAt=(x,z)=>{const f=TH.floorAt(x,z);return f!==null?f:h0(x,z);};}
+})();

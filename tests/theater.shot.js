@@ -1,0 +1,11 @@
+const p=require('puppeteer-core');const W=ms=>new Promise(r=>setTimeout(r,ms));const D='/workspace/errday-7080-night/';
+(async()=>{const b=await p.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader','--autoplay-policy=no-user-gesture-required']});
+ const pg=await b.newPage();await pg.setViewport({width:900,height:600});pg.on('pageerror',e=>console.log('ERR',e.message));
+ await pg.goto('http://localhost:'+(process.env.PORT||8080));await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:120000});
+ await pg.click('#enter');await W(2500);
+ await pg.evaluate(()=>{rig.object3D.position.set(9,0,18);camYaw=-1.9;camPitch=.15;camDist=7;});await W(2500);await pg.screenshot({path:D+'theater_out.png'});
+ await pg.evaluate(()=>{rig.object3D.position.set(12,0,18.1);setRoute(19.5,18.1);});await W(6000);
+ console.log('walk',await pg.evaluate(()=>[rig.object3D.position.x.toFixed(2),rig.object3D.position.y.toFixed(2),$('where').textContent,window.IN_THEATER]));
+ await pg.evaluate(()=>sit(SEATS.find(s=>s.id==='TH-12')));await W(3500);
+ console.log('sit',await pg.evaluate(()=>[$('where').textContent,$('ytWrap').className,$('ytWrap').style.transform.slice(0,60),music.playlist[music.index]&&music.playlist[music.index].type]));
+ await pg.screenshot({path:D+'theater_in.png'});await b.close();process.exit();})();
