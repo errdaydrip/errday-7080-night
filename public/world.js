@@ -32,6 +32,10 @@ const TEX={
   for(const [cx,cy] of [[0,0],[w,0],[0,h],[w,h],[w/2,h/2]]){x.beginPath();x.moveTo(cx,cy-50);x.lineTo(cx+50,cy);x.lineTo(cx,cy+50);x.lineTo(cx-50,cy);x.closePath();x.stroke();x.fillStyle='#7a1430';x.beginPath();x.arc(cx,cy,14,0,7);x.fill();}
   x.fillStyle='#2a0612';for(let i=0;i<600;i++)x.fillRect(Math.random()*w,Math.random()*h,1,1);},10,10),
  wood:()=>canvasTex(256,64,(x,w,h)=>{x.fillStyle='#3b1a0a';x.fillRect(0,0,w,h);for(let i=0;i<30;i++){x.strokeStyle=`rgba(${90+Math.random()*40},${40+Math.random()*20},10,.5)`;x.beginPath();x.moveTo(0,Math.random()*h);x.bezierCurveTo(w/3,Math.random()*h,w*2/3,Math.random()*h,w,Math.random()*h);x.stroke();}},2,1),
+ brick:(w,h)=>canvasTex(256,256,(x,W,H)=>{x.fillStyle='#4a2a22';x.fillRect(0,0,W,H);for(let r=0;r<16;r++)for(let c=-1;c<5;c++){x.fillStyle=`rgb(${100+Math.random()*40},${45+Math.random()*20},${35+Math.random()*15})`;x.fillRect(c*64+(r%2)*32+2,r*16+2,60,12);}},w/2,h/2),
+ asphalt:()=>canvasTex(256,256,(x,W,H)=>{x.fillStyle='#24252a';x.fillRect(0,0,W,H);for(let i=0;i<3000;i++){const v=20+Math.random()*40;x.fillStyle=`rgb(${v},${v},${v+4})`;x.fillRect(Math.random()*W,Math.random()*H,2,2);}x.strokeStyle='rgba(0,0,0,.5)';x.beginPath();x.moveTo(0,90);x.bezierCurveTo(80,120,160,60,256,110);x.stroke();},6,4),
+ tarp:()=>canvasTex(256,256,(x,W,H)=>{const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,'#d2561c');g.addColorStop(.5,'#e06a22');g.addColorStop(1,'#c44a18');x.fillStyle=g;x.fillRect(0,0,W,H);for(let i=0;i<60;i++){x.fillStyle=`rgba(60,20,0,${Math.random()*.15})`;x.beginPath();x.arc(Math.random()*W,Math.random()*H,5+Math.random()*25,0,7);x.fill();}x.fillStyle='rgba(150,20,10,.5)';for(let i=0;i<W;i+=64)x.fillRect(i,0,8,H);},3,2),
+ facade:(w,h,col)=>canvasTex(256,256,(x,W,H)=>{x.fillStyle=col;x.fillRect(0,0,W,H);for(let r=0;r<4;r++)for(let c=0;c<3;c++){const lit=Math.random()<.45;x.fillStyle=lit?['#ffd27a','#ffe9b0','#9ad0ff'][Math.floor(Math.random()*3)]:'#15161c';x.fillRect(20+c*80,20+r*60,50,36);x.strokeStyle='#222';x.strokeRect(20+c*80,20+r*60,50,36);}},Math.max(1,Math.round(w/4)),Math.max(1,Math.round(h/4))),
  ceiling:()=>canvasTex(128,128,(x,w,h)=>{x.fillStyle='#0d0308';x.fillRect(0,0,w,h);x.strokeStyle='#3a1a08';x.lineWidth=3;x.strokeRect(0,0,w,h);},8,8)};
 // ---------- 모델 로더 (한 번 받고 복제) ----------
 const MODEL_CACHE={};let LOADING_TOTAL=0,LOADING_DONE=0;
@@ -53,7 +57,7 @@ window.SEATS=[];window.OBSTACLES=[]; // {x,z,r} 원형 / {x0,x1,z0,z1} 사각
  E('a-entity',{light:'type:ambient;color:#6a3a50;intensity:0.9'});
  E('a-entity',{light:'type:hemisphere;color:#ff9ad5;groundColor:#2a0010;intensity:0.5'});
  texMesh(E('a-plane',{rotation:'-90 0 0',width:24,height:24,material:'roughness:1'}),TEX.carpet());
- [['0 4 -12','0 0 0',24],['0 4 12','0 180 0',24],['-12 4 0','0 90 0',24],['12 4 0','0 -90 0',24]].forEach(([p,r,w])=>texMesh(E('a-plane',{position:p,rotation:r,width:w,height:8,material:'roughness:.9'}),TEX.wall()));
+ [['0 4 -12','0 0 0',24],['-12 4 0','0 90 0',24],['12 4 0','0 -90 0',24]].forEach(([p,r,w])=>texMesh(E('a-plane',{position:p,rotation:r,width:w,height:8,material:'roughness:.9'}),TEX.wall()));
  texMesh(E('a-plane',{rotation:'90 0 0',position:'0 8 0',width:24,height:24}),TEX.ceiling());
  // 몰딩(금색 띠) + 천장 컬러 조명
  [['0 7.85 -11.95',24,0],['0 7.85 11.95',24,0],['-11.95 7.85 0',24,90],['11.95 7.85 0',24,90]].forEach(([p,w,r])=>E('a-box',{position:p,rotation:`0 ${r} 0`,width:w,height:.25,depth:.1,material:'color:#d4a017;metalness:.8;roughness:.3'}));
@@ -313,3 +317,97 @@ window.HUMANS=new Set();
  const h=await makeHuman(holder,{outfit:'#8a5bd6',skin:'#e0a77a',gender:'m',dj:true,style:'disco'});HUMANS.add(h);
  AFRAME.registerComponent('dj-state',{tick(){h.play(window.MUSIC_PLAYING?'Dance_Loop':'Idle_Loop');}});holder.setAttribute('dj-state','');})();
 document.querySelector('a-scene').setAttribute('mixers','');
+// ---------- 출입문 + 바깥 야장 포장마차 (1980년대 골목) ----------
+const DOOR={x:-3.3,w:2,h:3,z:12};window.DOOR=DOOR;
+function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg:${o.bg||''};size:${o.s||64};width:${o.w||1.2};font:"Nanum Pen Script","Gaegu","Malgun Gothic",cursive`;}
+(function buildOutside(){
+ const W=document.getElementById('world');const dl=DOOR.x-DOOR.w/2,dr=DOOR.x+DOOR.w/2;
+ // 앞벽을 문 구멍 있게 다시 만듦 (원래 앞벽 숨김)
+ // 앞벽(z=12)은 아래에서 문 구멍 있게 생성
+ const seg=(x0,x1,y0,y1,inside)=>{const w=x1-x0,h=y1-y0,el=E('a-plane',{position:`${(x0+x1)/2} ${(y0+y1)/2} ${inside?11.99:12.01}`,rotation:inside?'0 180 0':'0 0 0',width:w,height:h,material:inside?'roughness:.9':'color:#3b3532;roughness:1'});
+  if(inside){const t=TEX.wall();t.repeat.set(w/2,h/8);t.offset.y=(y0)/8;texMesh(el,t);}else texMesh(el,TEX.brick(w,h));};
+ [true,false].forEach(i=>{seg(-12,dl,0,8,i);seg(dr,12,0,8,i);seg(dl,dr,DOOR.h,8,i);});
+ // 문틀 + 열린 문짝
+ [[dl-.06,DOOR.h/2,.12,DOOR.h],[dr+.06,DOOR.h/2,.12,DOOR.h],[DOOR.x,DOOR.h+.06,DOOR.w+.24,.12]].forEach(([x,y,w,h])=>E('a-box',{position:`${x} ${y} 12`,width:w,height:h,depth:.3,material:'color:#d4a017;metalness:.7;roughness:.3'}));
+ E('a-box',{position:`${dl+.05} ${DOOR.h/2-.05} 12.5`,rotation:'0 90 0',width:.95,height:DOOR.h-.15,depth:.05,material:'color:#5a1010;roughness:.6'});
+ E('a-box',{position:`${dr-.05} ${DOOR.h/2-.05} 12.5`,rotation:'0 90 0',width:.95,height:DOOR.h-.15,depth:.05,material:'color:#5a1010;roughness:.6'});
+ // 안쪽 EXIT 네온, 바깥 ERRDAY 간판
+ E('a-entity',{position:`${DOOR.x} ${DOOR.h+.5} 11.9`,rotation:'0 180 0',ktext:'value:EXIT · 포장마차 →;color:#d6ffe0;glow:#00ff66;size:70;width:1.9'});
+ E('a-box',{position:`${DOOR.x} ${DOOR.h+.9} 12.15`,width:3.4,height:.9,depth:.12,color:'#120208'});
+ E('a-entity',{position:`${DOOR.x} ${DOOR.h+.9} 12.23`,ktext:'value:ERRDAY;color:#fff0f8;glow:#ff3cac;size:110;width:3;font:Georgia,serif'});
+ E('a-entity',{position:`${DOOR.x} ${DOOR.h+.9} 12.8`,light:`type:point;color:#ff3cac;intensity:.8;distance:5`});
+ // 바닥(아스팔트) + 하늘 + 주변 건물
+ texMesh(E('a-plane',{rotation:'-90 0 0',position:'0 0 19.05',width:26,height:14.1,material:'roughness:1'}),TEX.asphalt());
+ E('a-sky',{color:'#070b1c',radius:120});
+ for(let i=0;i<70;i++){const th=Math.random()*Math.PI-Math.PI/2*0,ph=.15+Math.random()*1.1;E('a-sphere',{radius:.25,'segments-width':4,'segments-height':3,position:`${100*Math.cos(ph)*Math.cos(th)} ${100*Math.sin(ph)} ${20+100*Math.cos(ph)*Math.sin(th)}`,material:'shader:flat;color:#fff'});}
+ E('a-sphere',{position:'-30 45 90',radius:4,material:'shader:flat;color:#fff6d0'});
+ const bld=(x,z,w,h,d,ry,col,sign)=>{const b=E('a-box',{position:`${x} ${h/2} ${z}`,rotation:`0 ${ry} 0`,width:w,height:h,depth:d,material:'roughness:1'});{const ft=TEX.facade(w,h,col);texMesh(b,ft,{emissiveMap:ft,emissive:new THREE.Color('#ffffff'),emissiveIntensity:.55});}
+  if(sign){const s=E('a-entity',{position:`${x} ${sign[1]} ${z}`,rotation:`0 ${ry} 0`});E('a-entity',{position:`0 0 ${d/2+.06}`,ktext:hand(sign[0],{c:'#fff',g:sign[2],bg:'#1a1a1a',s:70,w:sign[3]||2.6})},s);}};
+ bld(-7,27,10,9,2,0,'#4a3b30',['다방',5,'#ff5050',1.6]);bld(2,27.5,8,12,3,0,'#3a3f45',['○○여관',6,'#40c0ff',2.2]);bld(9,27,6,7,2,0,'#504030',['전파사',4.5,'#ffe050',1.8]);
+ bld(13.5,15,2,8,6,-90,'#463a33',['연탄',4,'#ff9040',1.4]);bld(13.5,22.5,2,10,8,-90,'#3c3633',null);
+ bld(-13.5,16,2,7,8,90,'#40342c',['이발소',4,'#ff4060',1.6]);bld(-13.5,23,2,11,6,90,'#3a3a3a',null);
+ // 천막 (낡은 주황 방수포)
+ const T={x0:-10,x1:0,z0:14,z1:22.3,e:2.8,r:3.6};window.TENT=T;const cx=(T.x0+T.x1)/2,cz=(T.z0+T.z1)/2,hw=(T.z1-T.z0)/2,sl=Math.hypot(hw,T.r-T.e);const ang=Math.atan2(T.r-T.e,hw)*57.3;
+ const tarp=()=>TEX.tarp();
+ [-1,1].forEach(s=>texMesh(E('a-plane',{position:`${cx} ${(T.e+T.r)/2} ${cz+s*hw/2}`,rotation:`${-90+s*-ang*0+ (s<0?ang:-ang)} 0 0`,width:T.x1-T.x0+.4,height:sl+.2,material:'side:double;roughness:1'}),tarp()));
+ texMesh(E('a-plane',{position:`${cx} ${T.e/2+.4} ${T.z1}`,rotation:'0 180 0',width:T.x1-T.x0,height:T.e-.8,material:'side:double;roughness:1;opacity:.92;transparent:true'}),tarp());
+ texMesh(E('a-plane',{position:`${T.x0} ${T.e/2+.4} ${cz}`,rotation:'0 90 0',width:T.z1-T.z0,height:T.e-.8,material:'side:double;roughness:1;opacity:.92;transparent:true'}),tarp());
+ [[T.x0,T.z0],[T.x1,T.z0],[T.x0,T.z1],[T.x1,T.z1],[cx,T.z0],[cx,T.z1]].forEach(([x,z])=>{E('a-cylinder',{position:`${x} ${T.e/2} ${z}`,radius:.04,height:T.e,'segments-radial':6,color:'#777'});OBSTACLES.push({x,z,r:.12});});
+ E('a-entity',{position:`${cx} ${T.e-.15} ${T.z0+.02}`,rotation:'0 180 0',ktext:hand('포장마차',{c:'#fff3d0',bg:'#b8321c',s:90,w:2.6})});
+ E('a-entity',{position:`${cx} ${T.e-.15} ${T.z0-.02}`,ktext:hand('포장마차',{c:'#fff3d0',bg:'#b8321c',s:90,w:2.6})});
+ // 백열전구 줄 (비닐 전선)
+ let bi=0;[[T.x0+.3,T.z0+2],[T.x0+.3,T.z1-2.2]].forEach(([x0,z])=>{for(let x=x0;x<T.x1;x+=1.2){const y=T.e+.15-Math.sin((x-x0)/(T.x1-x0)*Math.PI)*.25;
+  E('a-sphere',{position:`${x} ${y} ${z}`,radius:.09,'segments-width':8,'segments-height':6,material:'color:#ffe4a0;emissive:#ffb040;emissiveIntensity:1'});E('a-cylinder',{position:`${x} ${y+.12} ${z}`,radius:.005,height:.2,color:'#222'});bi++;}});
+ E('a-entity',{position:`${cx} ${T.e-.2} ${cz}`,light:`type:point;color:#ffa040;intensity:${IS_MOBILE?1.2:1.6};distance:11;decay:1.2`});
+ // 메뉴판 (손글씨)
+ const menu=E('a-entity',{position:`${T.x0+.05} 1.75 ${cz}`,rotation:'0 90 0'});
+ E('a-plane',{width:2.6,height:1.5,material:'color:#efe2bf;roughness:1'},menu);
+ E('a-entity',{position:'-.65 .52 .01',ktext:hand('안 주',{c:'#b01010',s:70,w:.7})},menu);
+ ['닭발','꼼장어','생선구이','오징어볶음'].forEach((v,i)=>E('a-entity',{position:`-.65 ${.2-i*.28} .01`,ktext:hand(v,{c:'#222',s:64,w:.5+v.length*.13})},menu));
+ E('a-entity',{position:'.65 .52 .01',ktext:hand('술',{c:'#1040a0',s:70,w:.4})},menu);
+ ['소주','맥주','막걸리'].forEach((v,i)=>E('a-entity',{position:`.65 ${.2-i*.32} .01`,ktext:hand(v,{c:'#222',s:64,w:.5+v.length*.13})},menu));
+ E('a-entity',{position:`${T.x1-.3} 1.9 ${T.z1-.05}`,rotation:'0 180 0',ktext:hand('닭발 · 꼼장어 · 오징어볶음',{c:'#fff',bg:'#7a1a10',s:56,w:2.4})});
+ // 포장마차 수레 + 연탄불 + 김
+ const C=E('a-entity',{position:'5.5 0 16.5'});
+ E('a-box',{position:'0 .5 0',width:2.6,height:.9,depth:1.1,material:'color:#c9c2b0;metalness:.5;roughness:.5'},C);
+ E('a-box',{position:'0 .97 0',width:2.8,height:.06,depth:1.3,material:'color:#8a8070;metalness:.6;roughness:.35'},C);
+ [[-1.1,-.4],[1.1,-.4]].forEach(([x,z])=>E('a-cylinder',{position:`${x} .25 ${z+.95}`,radius:.25,height:.08,rotation:'90 0 0',color:'#222'},C));
+ E('a-entity',{position:'0 .55 .56',ktext:hand('원조 실비 포차',{c:'#c01818',s:70,w:1.8})},C);
+ E('a-cylinder',{position:'-.6 1.1 0',radius:.32,height:.22,material:'color:#555;metalness:.8;roughness:.3'},C);
+ E('a-cylinder',{position:'-.6 1.22 0',radius:.3,height:.02,material:'color:#b5772a;emissive:#7a3010;emissiveIntensity:.4'},C); // 오뎅 국물
+ for(let k=0;k<5;k++)E('a-cylinder',{position:`${-.75+k*.08} 1.35 ${(k%2)*.1-.05}`,radius:.008,height:.35,rotation:'0 0 12',color:'#d9b97a'},C);
+ E('a-box',{position:'.55 1.06 0',width:1.1,height:.1,depth:.7,material:'color:#333;emissive:#ff4400;emissiveIntensity:.5'},C); // 석쇠
+ for(let k=0;k<4;k++)E('a-box',{position:`${.2+k*.24} 1.14 0`,width:.18,height:.04,depth:.08,material:'color:#a8501e'},C);
+ for(let k=0;k<6;k++)E('a-sphere',{position:`${-.6+(k%3-1)*.1} 1.5 0`,radius:.18,material:'color:#fff;opacity:.18;transparent:true;depthWrite:false;shader:flat','steam':'i:'+k},C);
+ // 석유 등잔(남포등)
+ E('a-cylinder',{position:'1.2 1.15 -.4',radius:.06,height:.25,material:'color:#fff2c0;emissive:#ff9a30;emissiveIntensity:1;opacity:.85;transparent:true'},C);
+ E('a-entity',{position:'1.2 1.6 -.4',light:`type:point;color:#ff9a40;intensity:${IS_MOBILE?0:.9};distance:5`},C);
+ [[-1.35,-.6],[1.35,-.6],[-1.35,.6],[1.35,.6]].forEach(([x,z])=>E('a-cylinder',{position:`${x} 1.6 ${z}`,radius:.025,height:1.2,color:'#777'},C));
+ texMesh(E('a-box',{position:'0 2.25 0',width:3,height:.05,depth:1.5,material:'roughness:1'},C),TEX.tarp());
+ OBSTACLES.push({x0:4.1,x1:6.9,z0:15.8,z1:17.2});
+ // 가로등
+ const L=E('a-entity',{position:'9 0 22'});E('a-cylinder',{position:'0 2.5 0',radius:.07,height:5,color:'#3a4048'},L);
+ E('a-box',{position:'-.5 4.95 0',width:1.1,height:.07,depth:.07,color:'#3a4048'},L);E('a-cone',{position:'-1 4.85 0','radius-bottom':.3,'radius-top':.08,height:.2,color:'#2a2a2a'},L);
+ E('a-sphere',{position:'-1 4.75 0',radius:.12,material:'color:#fff;emissive:#ffe6b0;emissiveIntensity:1'},L);
+ E('a-entity',{position:'-1 4.6 0',light:'type:spot;color:#ffd9a0;intensity:2.2;angle:45;penumbra:.6;distance:12',rotation:'-90 0 0'},L);OBSTACLES.push({x:9,z:22,r:.15});
+ // 플라스틱 빨간 테이블 + 목욕탕 의자
+ const tables=[[-7.6,16.4],[-3,16.4],[-7.6,20.2],[-3,20.2],[2.6,21.5]];
+ tables.forEach(([tx,tz],ti)=>{const id='Y'+(ti+1);
+  E('a-box',{position:`${tx} .68 ${tz}`,width:.9,height:.04,depth:.9,material:'color:#c41a1a;roughness:.5'});
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>E('a-cylinder',{position:`${tx+a*.38} .34 ${tz+b*.38}`,radius:.03,height:.66,'segments-radial':6,color:'#a81414'}));
+  // 술병·안주
+  E('a-cylinder',{position:`${tx-.2} .82 ${tz-.15}`,radius:.04,height:.24,material:'color:#2e9a4a;opacity:.85;transparent:true;metalness:.2;roughness:.15'});
+  E('a-cylinder',{position:`${tx-.28} .82 ${tz+.05}`,radius:.04,height:.24,material:'color:#2e9a4a;opacity:.85;transparent:true;roughness:.15'});
+  E('a-cylinder',{position:`${tx+.25} .84 ${tz-.25}`,radius:.042,height:.28,material:'color:#5a2c0c;opacity:.9;transparent:true;roughness:.2'});
+  E('a-cylinder',{position:`${tx+.28} .73 ${tz+.22}`,radius:.11,height:.05,material:'color:#d8c890;metalness:.8;roughness:.3'}); // 막걸리 양재기
+  E('a-cylinder',{position:`${tx+.22} .78 ${tz+.02}`,radius:.07,height:.14,material:'color:#c8b878;metalness:.8;roughness:.3'}); // 주전자
+  E('a-cylinder',{position:`${tx} .71 ${tz+.1}`,radius:.17,height:.02,color:'#f4f4f0'});
+  const food=['#b0281a','#7a3a20','#c08a40','#d23a10','#b0281a'][ti];for(let k=0;k<6;k++)E('a-sphere',{position:`${tx+(k%3-1)*.07} .74 ${tz+.1+(k>2?.05:-.04)}`,radius:.035,'segments-width':6,'segments-height':4,color:food});
+  E('a-entity',{position:`${tx} 1.55 ${tz}`,ktext:`value:야장 ${ti+1}번;color:#ffe08a;size:40;width:.8`,billboard:''});
+  OBSTACLES.push({x:tx,z:tz,r:.55});
+  for(let s=0;s<4;s++){const a=s*Math.PI/2,sx=tx+Math.cos(a)*.78,sz=tz+Math.sin(a)*.78,yaw=Math.atan2(tx-sx,tz-sz),seatId=id+'-'+s;
+   const el=E('a-entity',{position:`${sx} 0 ${sz}`});E('a-cylinder',{position:'0 .2 0',radius:.17,'radius-bottom':.2,height:.4,'segments-radial':10,material:'color:#d01e1e;roughness:.5'},el);
+   el.dataset.seat=seatId;el.classList.add('seat');SEATS.push({id:seatId,table:id,x:sx,z:sz,yaw,el});}});
+})();
+AFRAME.registerComponent('steam',{schema:{i:{default:0}},tick(t){const o=this.el.object3D,k=((t/1800+this.data.i/6)%1);o.position.y=1.35+k*1.1;o.scale.setScalar(.5+k*1.4);const m=this.el.getObject3D('mesh');if(m)m.material.opacity=.22*(1-k);}});
+if(document.fonts)document.fonts.load('64px "Nanum Pen Script"').then(()=>document.querySelectorAll('[ktext]').forEach(e=>{const k=e.components.ktext;if(k&&/Nanum/.test(k.data.font))k.update();})).catch(()=>{});

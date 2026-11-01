@@ -104,11 +104,15 @@ let route=[];
 function setRoute(x,z){const p=rig.object3D.position,up=heightAt(x,z)>.35,me_up=heightAt(p.x,p.z)>.35;route=[];
  const bottom=new THREE.Vector3(0,0,STAGE.sz1+.35),top=new THREE.Vector3(0,0,STAGE.sz0-.35);
  if(up&&!me_up)route=[bottom,top];else if(!up&&me_up)route=[top,bottom];
+ if(isOut(z)!==isOut(p.z)){const D=window.DOOR,a=new THREE.Vector3(D.x,0,11.1),b=new THREE.Vector3(D.x,0,12.9);if(isOut(z))route.push(a,b);else route.push(b,a);}
  route.push(new THREE.Vector3(x,0,z));goal=route.shift();showMarker(x,z,heightAt(x,z));}
 function showMarker(x,z,y=0){marker.object3D.position.set(x,y+.06,z);marker.setAttribute('visible',true);}
-const BOUND={x0:-11.4,x1:11.4,z0:-11.4,z1:11.4},ROOM={x0:-11.8,x1:11.8,z0:-11.8,z1:11.8,y1:7.8};
+const BOUND={x0:-11.4,x1:11.4,z0:-11.4,z1:25.4},ROOM_IN={x0:-11.8,x1:11.8,z0:-11.8,z1:11.8,y1:7.8},ROOM_OUT={x0:-11.8,x1:11.8,z0:12.2,z1:25.8,y1:14};let ROOM=ROOM_IN;
+const isOut=z=>z>12;
+// 앞벽(문 구멍 제외)은 사각 장애물
+{const D=window.DOOR,dl=D.x-D.w/2,dr=D.x+D.w/2;OBSTACLES.push({x0:-12.5,x1:dl,z0:11.85,z1:12.15},{x0:dr,x1:12.5,z0:11.85,z1:12.15});}
 // 카메라 충돌: 벽·바·무대 구조물을 상자(AABB)로 근사해 머리→카메라 광선 검사 (모바일에서도 가벼움)
-const CAM_OCC=[[10-.65,0,-1.65,10+.65,1.3,7.65],[11.4,0,-1.6,12.5,3.9,7.6],[-3.6,0,-11.8,3.6,4.9,-11.45],[-5.6,.7,-11.6,-3.5,5.5,-11.05],[3.5,.7,-11.6,5.6,5.5,-11.05],[-5.6,4.8,-11.4,5.6,5.5,-11],[1.65,.7,-9.45,4.35,1.95,-8.55]];
+const CAM_OCC=[[10-.65,0,-1.65,10+.65,1.3,7.65],[11.4,0,-1.6,12.5,3.9,7.6],[-3.6,0,-11.8,3.6,4.9,-11.45],[-5.6,.7,-11.6,-3.5,5.5,-11.05],[3.5,.7,-11.6,5.6,5.5,-11.05],[-5.6,4.8,-11.4,5.6,5.5,-11],[1.65,.7,-9.45,4.35,1.95,-8.55],[TENT.x0-.1,TENT.e-.1,TENT.z0-.1,TENT.x1+.1,TENT.r+.2,TENT.z1+.1],[TENT.x0-.1,.4,TENT.z0,TENT.x0+.1,TENT.e,TENT.z1],[TENT.x0,.4,TENT.z1-.1,TENT.x1,TENT.e,TENT.z1+.1],[4.1,0,15.8,6.9,1.1,17.2]];
 function camHit(ox,oy,oz,dr,max){let t=max;const lim=[[dr.x,ox,ROOM.x0+.1,ROOM.x1-.1],[dr.y,oy,.25,ROOM.y1-.1],[dr.z,oz,ROOM.z0+.1,ROOM.z1-.1]];
  for(const [v,o,a,b] of lim){if(v>1e-6)t=Math.min(t,(b-o)/v);else if(v<-1e-6)t=Math.min(t,(a-o)/v);}
  const O=[ox,oy,oz],D=[dr.x,dr.y,dr.z];for(const bx of CAM_OCC){let t0=0,t1=t,ok=true;for(let i=0;i<3&&ok;i++){const lo=bx[i],hi=bx[i+3];
@@ -124,7 +128,7 @@ function sit(s){if(!s||seatTaken(s))return;mySeat=s.id;goal=null;goalSeat=null;m
  socket.emit('seat',s.id);socket.emit('move',{pos:[s.x,s.y||0,s.z],rot:myYaw});updateWhere();}
 function stand(){if(!mySeat)return;camGoal=null;const s=SEATS.find(x=>x.id===mySeat);mySeat=null;if(s.stand)rig.object3D.position.set(s.stand[0],0,s.stand[1]);else{const c=tableCenter(s.table);
  rig.object3D.position.set(clampX(s.x+(s.x-c.x)*.45),0,clampZ(s.z+(s.z-c.z)*.45));}route=[];socket.emit('seat',null);updateWhere();}
-function updateWhere(){const t=mySeat&&mySeat.split('-')[0];$('where').textContent=t==='BAR'?'🍸 바 스툴':t?'🛋 '+t.slice(1)+'번 테이블':'🌐 로비';}
+function updateWhere(){const t=mySeat&&mySeat.split('-')[0];$('where').textContent=t==='BAR'?'🍸 바 스툴':t&&t[0]==='Y'?'🏮 야장 '+t.slice(1)+'번':t?'🛋 '+t.slice(1)+'번 테이블':'🌐 로비';}
 AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const p=rig.object3D.position;moving=false;
  if(joined){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),r=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
   let mx=0,mz=0,ignore=null,spd=1;if(joyX||joyY){f=-joyY;r=joyX;spd=Math.min(1,Math.hypot(f,r));}
@@ -142,6 +146,7 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
   {const ss=mySeat&&SEATS.find(q=>q.id===mySeat);const hy=mySeat?(ss.y||0):heightAt(p.x,p.z);p.y+=(hy-p.y)*Math.min(1,dt*14);}if(!mySeat)$('prompt').classList.add('hidden');}
  if(!mySeat&&!moving&&!goal&&joined){idleT+=dt;if(idleT>3&&!myDance)myDance=1+Math.floor(Math.random()*3);}else{idleT=0;myDance=0;}
  myAv.object3D.rotation.y=myYaw;if(myAv._h)myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
+{const out=isOut(p.z);ROOM=out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}}
  const tx=p.x,ty=p.y+(mySeat?.95:1.1),tz=p.z;let d=camDist;
  if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));camYaw+=d*.08;camPitch+=(camGoal.pitch-camPitch)*.08;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
  const dir=new THREE.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
@@ -192,7 +197,7 @@ function curPos(){return music.playing?(Date.now()+offset-music.startedAt)/1000:
 function renderMusic(){const cur=music.playlist[music.index];$('shufBtn').textContent=music.shuffle?'🔀 랜덤 켬':'🔀 랜덤 끔';$('shufBtn').classList.toggle('sel',!!music.shuffle);$('now').textContent=cur?(music.shuffle?'🔀 ':'')+(music.playing?'▶ ':'⏸ ')+(cur.type==='yt'?'📺 ':'')+cur.title:'재생 중인 곡 없음';
  $('pl').classList.toggle('hidden',!adminToken);$('pl').innerHTML=!adminToken?'':music.playlist.map((t,i)=>`<li class="${i===music.index?'cur':''}">${t.type==='yt'?'📺 ':''}${esc(t.title)} <small>(${esc(t.by)})</small>${adminToken?` <button data-sel="${i}">▶</button><button data-del="${i}">🗑</button>`:''}</li>`).join('');
  $('adminCtl').classList.toggle('hidden',!adminToken);$('adminBtn').textContent=adminToken?'🔑ON':'🔑';$('muteBtn').textContent=muted?'🔇':'🔊';}
-function applyVolume(){audio.volume=volume/100;audio.muted=muted;if(ytReady){yt.setVolume(volume);muted?yt.mute():yt.unMute();}}
+function applyVolume(){const v=window.OUTSIDE?volume*.5:volume;audio.volume=v/100;audio.muted=muted;if(ytReady){yt.setVolume(v);muted?yt.mute():yt.unMute();}}
 function applyMusic(force){applyVolume();const cur=music.playlist[music.index];
  if(!cur||cur.type!=='mp3'){audio.pause();}
  if(!cur||cur.type!=='yt'){if(ytReady&&ytVid){yt.stopVideo();ytVid=null;}}
