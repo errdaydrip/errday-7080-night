@@ -1,6 +1,6 @@
 const CID=localStorage.getItem('cid')||(()=>{const v=(crypto.randomUUID?crypto.randomUUID():Date.now()+''+Math.random()).toString();localStorage.setItem('cid',v);return v;})();
 // ===== ERRDAY 나이트클럽: 아바타 · 이동 · 채팅 · 음악 =====
-const socket=io();const $=id=>document.getElementById(id);
+const socket=io({transports:['websocket','polling']});const $=id=>document.getElementById(id);
 const COLORS=['#2b3352','#9a9cc0','#2a3f9e','#2fb8b0','#2f8f45','#e2525c','#c8102e','#ffd400','#ff69b4','#7b2cbf','#ff8c00','#f5f5f5'];
 const JOINT={suit:'#1a1a1a',disco:'#ffd700',hanbok:'#ffffff'};
 let me={nick:'',gender:'m',style:'suit',outfit:'#2b3352',skin:'#f2c29a'},myId=null,joined=false,mySeat=null,adminToken=sessionStorage.getItem('adminToken');
@@ -193,6 +193,7 @@ socket.on('init',d=>{myId=d.id;clearOthers();for(const id in d.players)upsertOth
 socket.on('rekey',({old,id})=>{if(id===myId||!others[old])return;others[id]=others[old];delete others[old];});
 socket.on('disconnect',clearOthers);
 socket.on('player',upsertOther);
+socket.on('m',a=>{for(let i=0;i<a.length;i+=6){const o=others[a[i]];if(o){o.dance=a[i+5]||0;if(!o.seat){o.target.set(a[i+1],a[i+2],a[i+3]);o.rot=a[i+4];}}}});
 socket.on('move',m=>{const o=others[m.id];if(o){o.dance=m.dance||0;if(!o.seat){o.target.set(...m.pos);o.rot=m.rot;}}});
 socket.on('seat',({id,seat})=>{const o=others[id];if(o)applySeatPose(o,seat);});
 function removeOther(id){const o=others[id];if(o){try{if(o.el._h){HUMANS.delete(o.el._h);o.el._h.dispose();}}catch(e){}o.el.remove();delete others[id];}}
