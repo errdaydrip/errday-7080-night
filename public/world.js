@@ -445,7 +445,6 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  const tarp=()=>TEX.tarp();
  [-1,1].forEach(s=>texMesh(E('a-plane',{position:`${cx} ${(T.e+T.r)/2} ${cz+s*hw/2}`,rotation:`${-90+s*-ang*0+ (s<0?ang:-ang)} 0 0`,width:T.x1-T.x0+.4,height:sl+.2,material:'side:double;roughness:1'}),tarp()));
  texMesh(E('a-plane',{position:`${cx} ${T.e/2+.4} ${T.z1}`,rotation:'0 180 0',width:T.x1-T.x0,height:T.e-.8,material:'side:double;roughness:1;opacity:.92;transparent:true'}),tarp());
- texMesh(E('a-plane',{position:`${T.x0} ${T.e/2+.4} ${cz}`,rotation:'0 90 0',width:T.z1-T.z0,height:T.e-.8,material:'side:double;roughness:1;opacity:.92;transparent:true'}),tarp());
  [[T.x0,T.z0],[T.x1,T.z0],[T.x0,T.z1],[T.x1,T.z1],[cx,T.z1]].forEach(([x,z])=>{E('a-cylinder',{position:`${x} ${T.e/2} ${z}`,radius:.04,height:T.e,'segments-radial':6,color:'#777'});OBSTACLES.push({x,z,r:.12});});
  // 앞 처마 차양 + 천막에 칠한 글씨
  [-1,1].forEach(s=>texMesh(E('a-plane',{position:`${cx} ${T.e-.35} ${T.z0+s*.01}`,rotation:`0 ${s>0?180:0} 0`,width:T.x1-T.x0,height:.7,material:'side:double;roughness:1'}),TEX.tarp()));
@@ -457,15 +456,15 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
   E('a-sphere',{position:`${x} ${y} ${z}`,radius:.09,'segments-width':8,'segments-height':6,material:'color:#ffe4a0;emissive:#ffb040;emissiveIntensity:1'});E('a-cylinder',{position:`${x} ${y+.12} ${z}`,radius:.005,height:.2,color:'#222'});bi++;}});
  E('a-entity',{position:`${cx} ${T.e-.2} ${cz}`,light:`type:point;color:#ffa040;intensity:${IS_MOBILE?1.5:2};distance:14;decay:1.2`});
  // 메뉴판 (손글씨)
- const menu=E('a-entity',{position:`${T.x0+.05} 1.75 ${cz}`,rotation:'0 90 0'});
+ const menu=E('a-entity',{position:`-6.3 1.75 ${T.z1-.06}`,rotation:'0 180 0'});
  E('a-plane',{width:2.6,height:1.5,material:'color:#efe2bf;roughness:1'},menu);
  E('a-entity',{position:'-.65 .52 .01',ktext:hand('안 주',{c:'#b01010',s:70,w:.7})},menu);
  ['닭발','꼼장어','생선구이','오징어볶음'].forEach((v,i)=>E('a-entity',{position:`-.65 ${.2-i*.28} .01`,ktext:hand(v,{c:'#222',s:64,w:.5+v.length*.13})},menu));
  E('a-entity',{position:'.65 .52 .01',ktext:hand('술',{c:'#1040a0',s:70,w:.4})},menu);
  ['소주','맥주'].forEach((v,i)=>E('a-entity',{position:`.65 ${.2-i*.32} .01`,ktext:hand(v,{c:'#222',s:64,w:.5+v.length*.13})},menu));
- E('a-entity',{position:'5.5 2.35 16.5',billboard:'',ktext:hand('안주 · 닭발 · 꼼장어 · 생선구이 · 오징어볶음',{c:'#fff',bg:'#7a1a10',s:56,w:3.2})});
+ E('a-entity',{position:'0.8 2.35 16.0',billboard:'',ktext:hand('안주 · 닭발 · 꼼장어 · 생선구이 · 오징어볶음',{c:'#fff',bg:'#7a1a10',s:56,w:3.2})});
  // 포장마차 수레 + 연탄불 + 김
- const C=E('a-entity',{position:'5.5 0 16.5'});
+ const C=E('a-entity',{position:'0.8 0 16.0'});
  E('a-box',{position:'0 .5 0',width:2.6,height:.9,depth:1.1,material:'color:#c9c2b0;metalness:.5;roughness:.5'},C);
  E('a-box',{position:'0 .97 0',width:2.8,height:.06,depth:1.3,material:'color:#8a8070;metalness:.6;roughness:.35'},C);
  [[-1.1,-.4],[1.1,-.4]].forEach(([x,z])=>E('a-cylinder',{position:`${x} .25 ${z+.95}`,radius:.25,height:.08,rotation:'90 0 0',color:'#222'},C));
@@ -481,7 +480,7 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  E('a-entity',{position:'1.2 1.6 -.4',light:`type:point;color:#ff9a40;intensity:${IS_MOBILE?0:.9};distance:5`},C);
  [[-1.35,-.6],[1.35,-.6],[-1.35,.6],[1.35,.6]].forEach(([x,z])=>E('a-cylinder',{position:`${x} 1.6 ${z}`,radius:.025,height:1.2,color:'#777'},C));
  texMesh(E('a-box',{position:'0 2.25 0',width:3,height:.05,depth:1.5,material:'roughness:1'},C),TEX.tarp());
- OBSTACLES.push({x0:4.1,x1:6.9,z0:15.8,z1:17.2});
+ OBSTACLES.push({x0:-.6,x1:2.2,z0:15.3,z1:16.7});
  // 가로등
  const L=E('a-entity',{position:'9 0 22'});E('a-cylinder',{position:'0 2.5 0',radius:.07,height:5,color:'#3a4048'},L);
  E('a-box',{position:'-.5 4.95 0',width:1.1,height:.07,depth:.07,color:'#3a4048'},L);E('a-cone',{position:'-1 4.85 0','radius-bottom':.3,'radius-top':.08,height:.2,color:'#2a2a2a'},L);
@@ -493,7 +492,7 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
   for(let r=0;r<4;r++){E('a-box',{position:`0 ${.35+r*.42} -.1`,width:1.15,height:.02,depth:.5,color:'#999'},F);for(let k=0;k<7;k++)E('a-cylinder',{position:`${-.48+k*.16} ${.46+r*.42} -.15`,radius:.035,height:.2,'segments-radial':8,material:`color:${r<2?'#2e9a4a':'#5a2c0c'};opacity:.9;transparent:true;roughness:.15`},F);}
   E('a-entity',{position:'0 2.2 -.37',rotation:'0 180 0',ktext:hand('시원한 소주 · 맥주',{c:'#fff',bg:'#1040a0',s:56,w:1.4})},F);
   E('a-entity',{position:'0 1.2 -.9',light:`type:point;color:#bfe8ff;intensity:${IS_MOBILE?0:.6};distance:3`},F);
-  OBSTACLES.push({x0:-1.4,x1:0,z0:21.6,z1:22.4});window.FRIDGE={x:-.7,z:21.5};window.COOK={x:5.5,z:16.5};}
+  OBSTACLES.push({x0:-1.4,x1:0,z0:21.6,z1:22.4});window.FRIDGE={x:-.7,z:21.5};window.COOK={x:0.8,z:16.0};}
  // 플라스틱 빨간 테이블 + 목욕탕 의자
  const tables=[[-7.6,16.4],[-3,16.4],[-7.6,20.2],[-3,20.2],[2.6,21.5]];
  tables.forEach(([tx,tz],ti)=>{const id='Y'+(ti+1);
@@ -535,11 +534,58 @@ window.WAITERS=[];
   for(let k=0;k<8;k++)E('a-box',{position:`0 ${.2+k*.27} ${d/2+.05}`,width:w*.8,height:.02,depth:.02,color:'#555'},g);
   E('a-box',{position:`0 2.75 ${d/2+.12}`,width:w*.85,height:.6,depth:.12,material:`color:#111;emissive:${sc};emissiveIntensity:.25`},g);
   E('a-entity',{position:`0 2.75 ${d/2+.19}`,ktext:hand(sign,{c:'#fff',g:sc,s:70,w:Math.min(w*.8,2.8)})},g);};
+ // 영업중 가게(샷다 올림, 내부 보임)
+ const openShop=(x,z,w,h,d,ry,col,sign,sc,kind)=>{const g=E('a-entity',{position:`${x} 0 ${z}`,rotation:`0 ${ry} 0`});const F=d/2;
+  const ft=TEX.facade(w,h,col);
+  [[-w/2+.15,.3],[w/2-.15,.3]].forEach(([px,pw])=>{const b=E('a-box',{position:`${px} ${h/2} 0`,width:pw,height:h,depth:d,material:'roughness:1'},g);texMesh(b,ft,{emissiveMap:ft,emissive:new THREE.Color('#ffffff'),emissiveIntensity:.45});});
+  E('a-box',{position:`0 ${(h+2.6)/2} ${F-.15}`,width:w,height:h-2.6,depth:.3,material:`color:${col};roughness:1`},g);
+  E('a-box',{position:`0 ${h/2} ${-F+.05}`,width:w,height:h,depth:.1,material:`color:${kind==='hoe'?'#dfe8ee':'#f0dcb0'};roughness:1`},g);
+  E('a-box',{position:`0 .01 0`,width:w-.6,height:.02,depth:d,material:`color:${kind==='hoe'?'#9aa8b0':'#b08060'};roughness:.9`},g);
+  E('a-box',{position:`0 2.6 0`,width:w,height:.04,depth:d,material:'color:#eee8d8;emissive:#fff2d0;emissiveIntensity:.5'},g);
+  E('a-box',{position:`0 ${h+.15} 0`,width:w+.2,height:.3,depth:d+.2,color:'#3a302a'},g);
+  // 말아 올린 샷다 통
+  E('a-cylinder',{position:`0 2.45 ${F+.08}`,radius:.14,height:w*.82,rotation:'0 0 90',material:'color:#5a5a62;metalness:.6;roughness:.4'},g);
+  // 형광등 + 따뜻한 조명
+  [-1,1].forEach(s=>E('a-box',{position:`${s*1} 2.55 0`,width:1.2,height:.05,depth:.1,material:'color:#fff;emissive:#fffbe8;emissiveIntensity:1'},g));
+  E('a-entity',{position:`0 2.2 .3`,light:`type:point;color:${kind==='hoe'?'#e8f4ff':'#ffd8a0'};intensity:1.3;distance:6;decay:1.5`},g);
+  // 간판
+  E('a-box',{position:`0 ${h-.6} ${F+.12}`,width:w*.9,height:.8,depth:.14,material:`color:${kind==='hoe'?'#f4f8ff':'#ffd23a'};emissive:${kind==='hoe'?'#9ad0ff':'#ff9a20'};emissiveIntensity:.35`},g);
+  E('a-box',{position:`0 ${h-.6} ${F+.2}`,width:w*.9,height:.1,depth:.02,color:kind==='hoe'?'#1a5ab8':'#d02018'},g);
+  E('a-entity',{position:`0 ${h-.6} ${F+.21}`,ktext:hand(kind==='hoe'?'싱싱 횟집':'옛날 통닭',{c:kind==='hoe'?'#1a5ab8':'#d02018',g:'',s:80,w:3})},g);
+  // 메뉴판 (뒷벽)
+  E('a-box',{position:`0 1.85 ${-F+.12}`,width:2.2,height:.9,depth:.03,material:`color:${kind==='hoe'?'#1a4a8a':'#7a1a10'}`},g);
+  E('a-entity',{position:`0 1.85 ${-F+.14}`,ktext:hand(kind==='hoe'?'광어 / 우럭 / 모듬회':'후라이드 / 양념 / 통닭',{c:'#fff',g:'#ffd060',s:56,w:2.1})},g);
+  E('a-entity',{position:`0 1.55 ${-F+.14}`,ktext:hand(kind==='hoe'?'싯가':'한마리 3,000원',{c:'#ffe070',s:40,w:1.2})},g);
+  if(kind==='chicken'){
+   // 맥주 포스터
+   [[-1.85,'#e0a020','시원한 OB'],[1.85,'#c02020','크라운 맥주']].forEach(([px,c,t])=>{E('a-box',{position:`${px} 1.6 ${-F+.12}`,width:.7,height:1,depth:.02,color:c},g);E('a-entity',{position:`${px} 1.6 ${-F+.14}`,ktext:hand(t,{c:'#fff',s:40,w:.65})},g);});
+   // 진열장 + 쌓인 통닭
+   E('a-box',{position:`1.4 .9 ${-F+.5}`,width:1.2,height:.7,depth:.5,material:'color:#ffe0a0;opacity:.35;transparent:true;emissive:#ff9a30;emissiveIntensity:.4'},g);
+   for(let i=0;i<6;i++)E('a-sphere',{position:`${1.05+(i%3)*.33} ${.66+Math.floor(i/3)*.18} ${-F+.5}`,radius:.12,scale:'1.2 .8 1',color:'#c8801e'},g);
+   E('a-box',{position:`1.4 .27 ${-F+.5}`,width:1.2,height:.55,depth:.5,color:'#7a4a2a'},g);
+   // 매달린 통닭
+   for(let i=0;i<4;i++){E('a-cylinder',{position:`${-1.6+i*.3} 2.3 ${-F+.35}`,radius:.005,height:.4,color:'#888'},g);E('a-sphere',{position:`${-1.6+i*.3} 2.0 ${-F+.35}`,radius:.11,scale:'1 1.3 .9',color:'#d08a30'},g);}
+   // 작은 테이블+의자
+   [[-1.3,.2],[ .2,-.3]].forEach(([px,pz])=>{E('a-cylinder',{position:`${px} .55 ${pz}`,radius:.35,height:.04,color:'#c03030'},g);E('a-cylinder',{position:`${px} .27 ${pz}`,radius:.04,height:.54,color:'#888'},g);
+    [-1,1].forEach(s=>E('a-cylinder',{position:`${px+s*.5} .2 ${pz}`,radius:.15,height:.4,color:'#2a62c0'},g));E('a-cylinder',{position:`${px} .63 ${pz}`,radius:.04,height:.14,color:'#6a3a1a'},g);});
+  }else{
+   // 얼음 진열대
+   E('a-box',{position:`1.2 .45 ${-F+.55}`,width:1.6,height:.9,depth:.6,color:'#c8ccd0'},g);
+   E('a-box',{position:`1.2 .92 ${-F+.55}`,width:1.5,height:.06,depth:.55,material:'color:#eaf6ff;emissive:#bfe4ff;emissiveIntensity:.4;roughness:.2'},g);
+   for(let i=0;i<5;i++)E('a-sphere',{position:`${.6+i*.3} 1.0 ${-F+.55}`,radius:.07,scale:'1 .5 3',rotation:'0 20 0',color:['#c0c8d0','#e86a40','#8090a0','#d0a090','#c0c8d0'][i]},g);
+   // 수조 (뒤/옆)
+   [[-1.6,'#3a9ad8'],[-0.7,'#2a80c8']].forEach(([px,c],j)=>{E('a-box',{position:`${px} 1.2 ${-F+.45}`,width:.8,height:.8,depth:.5,material:`color:${c};opacity:.5;transparent:true;emissive:#1080e0;emissiveIntensity:.6`},g);E('a-box',{position:`${px} .4 ${-F+.45}`,width:.8,height:.8,depth:.5,color:'#555'},g);
+    for(let k=0;k<3;k++)E('a-sphere',{position:`${px-.25+k*.25} ${1.0+k*.12} ${-F+.45}`,radius:.06,scale:'1.8 .7 .5',color:j?'#c06030':'#a0a8b0'},g);});
+   // 문어/게
+   E('a-sphere',{position:`-1.6 .95 ${-F+.45}`,radius:.09,color:'#b03a50'},g);for(let k=0;k<4;k++)E('a-cylinder',{position:`${-1.68+k*.05} .86 ${-F+.45}`,radius:.012,height:.14,color:'#b03a50'},g);
+   E('a-sphere',{position:`-.6 .88 ${-F+.45}`,radius:.08,scale:'1.4 .5 1',color:'#d04020'},g);
+  }
+  return g;};
  [[-7.5,31.2,'다방',  '#ff6688','#6b5a4a'],[-1.5,31.2,'전파사','#66ccff','#5a5a62'],[4.5,31.2,'연탄가게','#ffcc55','#6a4a3a'],[10,31.2,'오락실','#a8ff60','#4a4f6a']].forEach(([x,z,l,sc,c])=>shop(x,z,5,4.2+((x*7)%3+3)%2*1.4,3,0,c,l,sc));
- [[15,'횟집','#33aaff'],[22,'통닭','#ff5533']].forEach(([z,l,sc])=>{shop(15.6,z,5,4.6,3,-90,'#5e5048',l,sc);shop(-17.6,z,5,4.6,3,90,'#544a52',l==='통닭'?'비디오':'만화방',l==='통닭'?'#66ddff':'#ff77cc');E('a-box',{position:`13.2 .5 ${z}`,width:.6,height:1,depth:2.4,material:`color:${l==='통닭'?'#c8a070':'#e0e4e8'};roughness:.7`});OBSTACLES.push({x0:12.9,x1:13.5,z0:z-1.2,z1:z+1.2});});
+ [[15,'횟집','#33aaff'],[20.5,'통닭','#ff5533']].forEach(([z,l,sc])=>{openShop(-15.1,z,5,4.6,3,90,'#5e5048',l,sc,l==='통닭'?'chicken':'hoe');OBSTACLES.push({x0:-17.2,x1:-13.65,z0:z-2.55,z1:z+2.55});shop(15.6,z,5,4.6,3,-90,'#544a52',l==='통닭'?'비디오':'만화방',l==='통닭'?'#66ddff':'#ff77cc');E('a-box',{position:`-12.7 .5 ${z}`,width:.6,height:1,depth:2.4,material:`color:${l==='통닭'?'#c8a070':'#e0e4e8'};roughness:.7`});OBSTACLES.push({x0:-13.0,x1:-12.4,z0:z-1.2,z1:z+1.2});});
  // 횟집 수족관
- E('a-box',{position:'13.75 .9 13.2',width:.7,height:1.2,depth:1.4,material:'color:#5ac8ff;opacity:.45;transparent:true;metalness:.2;roughness:.05;emissive:#1060a0;emissiveIntensity:.4'});OBSTACLES.push({x0:13.4,x1:14.1,z0:12.5,z1:13.9});
- window.AQFISH=[];for(let k=0;k<5;k++){const f=E('a-entity',{position:`13.75 ${.6+k*.13} 13.2`});E('a-sphere',{radius:.07,scale:'1.8 .7 .5',color:['#e86a40','#c0c8d0','#ff9a50','#8090a0','#d84a30'][k]},f);E('a-cone',{position:'-.14 0 0',rotation:'0 0 90','radius-bottom':.05,height:.08,scale:'1 1 .3',color:'#777'},f);window.AQFISH.push(f);}
+ E('a-box',{position:'-13.25 .9 13.2',width:.7,height:1.2,depth:1.4,material:'color:#5ac8ff;opacity:.45;transparent:true;metalness:.2;roughness:.05;emissive:#1060a0;emissiveIntensity:.4'});OBSTACLES.push({x0:-13.6,x1:-12.9,z0:12.5,z1:13.9});
+ window.AQFISH=[];for(let k=0;k<5;k++){const f=E('a-entity',{position:`-13.25 ${.6+k*.13} 13.2`});E('a-sphere',{radius:.07,scale:'1.8 .7 .5',color:['#e86a40','#c0c8d0','#ff9a50','#8090a0','#d84a30'][k]},f);E('a-cone',{position:'-.14 0 0',rotation:'0 0 90','radius-bottom':.05,height:.08,scale:'1 1 .3',color:'#777'},f);window.AQFISH.push(f);}
  AFRAME.registerComponent('aq-swim',{tick(t){(window.AQFISH||[]).forEach((f,k)=>{const a=t/1000*(.6+k*.15)+k;f.object3D.position.z=13.2+Math.sin(a)*.5;f.object3D.rotation.y=Math.cos(a)>0?-Math.PI/2:Math.PI/2;});}});document.querySelector('a-scene').setAttribute('aq-swim','');
  const car=(x,z,ry,col,truck)=>{const g=E('a-entity',{position:`${x} 0 ${z}`,rotation:`0 ${ry} 0`}),L=truck?4.2:4.1,W=1.6;
   E('a-box',{position:'0 .55 0',width:W,height:.55,depth:L,material:`color:${col};metalness:.4;roughness:.45`},g);
@@ -556,7 +602,7 @@ window.WAITERS=[];
   E('a-box',{position:`0 .35 ${L/2+.05}`,width:W+.05,height:.12,depth:.1,material:'color:#ccc;metalness:.9'},g);E('a-box',{position:`0 .35 ${-L/2-.05}`,width:W+.05,height:.12,depth:.1,material:'color:#ccc;metalness:.9'},g);
   E('a-box',{position:`0 .5 ${L/2+.07}`,width:.5,height:.12,depth:.01,color:'#e8e0a0'},g);
   const c=Math.cos(ry*Math.PI/180),sn=Math.sin(ry*Math.PI/180),hx=Math.abs(c)*W/2+Math.abs(sn)*L/2,hz=Math.abs(sn)*W/2+Math.abs(c)*L/2;OBSTACLES.push({x0:x-hx,x1:x+hx,z0:z-hz,z1:z+hz});};
- car(1.6,24.1,90,'#d8d2c0');car(6.6,24.1,90,'#2f5fa8',true);car(-11.0,24.0,0,'#8a1e1e');
+ car(1.6,24.1,90,'#d8d2c0');car(6.6,24.1,90,'#2f5fa8',true);car(-4.6,24.1,90,'#8a1e1e');
 })();
 // ---------- 포차 이모 (조리대 뒤에서 볶는 중) ----------
 (async function imo(){const C=window.COOK;const holder=E('a-entity',{position:`${C.x+.4} 0 ${C.z-1.05}`});
@@ -574,12 +620,12 @@ window.WAITERS=[];
  OBSTACLES.push({x:C.x+.4,z:C.z-1.05,r:.35});})();
 
 // ---------- 통닭 아저씨 / 횟집 아저씨 ----------
-async function shopGuy(z,name,outfit,apron,band,kind){const holder=E('a-entity',{position:`13.85 0 ${z}`,rotation:'0 -90 0'});
+async function shopGuy(z,name,outfit,apron,band,kind){const holder=E('a-entity',{position:`-13.35 0 ${z}`,rotation:'0 90 0'});
  const h=await makeHuman(holder,{outfit,skin:'#d9a07a',gender:'m',style:'suit'});HUMANS.add(h);const c=h.chibi,T=c.torso;
  const ap=new THREE.Mesh(new THREE.BoxGeometry(.32,.46,.02),new THREE.MeshStandardMaterial({color:apron,roughness:kind==='hoe'?.25:.8}));T.add(ap);ap.position.set(0,.14,.15);
  const hb=new THREE.Mesh(new THREE.TorusGeometry(.33,.04,6,20),new THREE.MeshStandardMaterial({color:band}));c.head.add(hb);hb.position.set(0,.12,0);hb.rotation.x=Math.PI/2;
- if(kind==='hoe')[-1,1].forEach(s=>{const b=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.3,10),new THREE.MeshStandardMaterial({color:'#e8e8e0',roughness:.3}));b.position.set(13.85-.0,0.15,z+s*.12);document.querySelector('a-scene').object3D.add(b);});
- const SC=document.querySelector('a-scene').object3D,tool=new THREE.Group();tool.position.set(13.25,1.02,z);SC.add(tool);
+ if(kind==='hoe')[-1,1].forEach(s=>{const b=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.3,10),new THREE.MeshStandardMaterial({color:'#e8e8e0',roughness:.3}));b.position.set(-13.35,0.15,z+s*.12);document.querySelector('a-scene').object3D.add(b);});
+ const SC=document.querySelector('a-scene').object3D,tool=new THREE.Group();tool.position.set(-12.75,1.02,z);tool.rotation.y=Math.PI;SC.add(tool);
  const knife=new THREE.Group();knife.add(new THREE.Mesh(new THREE.BoxGeometry(.03,.01,.22),new THREE.MeshStandardMaterial({color:'#ddd',metalness:.9,roughness:.2})));const kh=new THREE.Mesh(new THREE.BoxGeometry(.03,.025,.1),new THREE.MeshStandardMaterial({color:'#3a2010'}));kh.position.z=-.15;knife.add(kh);
  if(kind==='hoe'){tool.add(new THREE.Mesh(new THREE.BoxGeometry(.4,.04,.6),new THREE.MeshStandardMaterial({color:'#e8dcc0'})));const fish=new THREE.Mesh(new THREE.SphereGeometry(.08,10,8),new THREE.MeshToonMaterial({color:'#c0c8d0'}));fish.scale.set(.7,.5,2.2);fish.position.y=.05;tool.add(fish);
   const sl=new THREE.Mesh(new THREE.BoxGeometry(.08,.012,.04),new THREE.MeshToonMaterial({color:'#f6f2ea'}));sl.position.set(-.1,.03,.2);tool.add(sl);}
@@ -591,5 +637,5 @@ async function shopGuy(z,name,outfit,apron,band,kind){const holder=E('a-entity',
  h.play('Idle_Loop');h.after=(t,c)=>{c.head.rotation.x=.3;c.arms.forEach((a,i)=>{a.rotation.z=i?.25:-.25;a.rotation.x=-1.0+(i?0:Math.sin(t*(kind==='hoe'?9:3))*.25);});
   if(kind==='hoe'){const k=Math.abs(Math.sin(t*4.5));knife.position.set(0,.04+k*.06,.1);knife.rotation.x=-k*.3;}
   else{const f=(t%3)/3;basket.position.y=.25-(f<.7?.12:.12-Math.sin((f-.7)/.3*Math.PI)*.15);}};
- OBSTACLES.push({x:13.85,z,r:.35});}
-shopGuy(22,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy(15,'횟집 아저씨','#2a4a7a','#2a6ab0','#d02020','hoe');
+ OBSTACLES.push({x:-13.35,z,r:.35});}
+shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy(15,'횟집 아저씨','#2a4a7a','#2a6ab0','#d02020','hoe');
