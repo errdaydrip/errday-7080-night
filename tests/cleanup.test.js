@@ -1,6 +1,6 @@
 // GRACE_MS=30000 node server.js ; node tests/cleanup.test.js
 const {io}=require('socket.io-client');const assert=require('assert');const W=ms=>new Promise(r=>setTimeout(r,ms));
-const U='http://localhost:'+(process.env.PORT||8080);const c=()=>io(U,{forceNew:true});
+const U=process.env.URL||('http://localhost:'+(process.env.PORT||8080));const c=()=>io(U,{forceNew:true});
 const join=(s,p)=>new Promise(r=>s.emit('join',p,r));const em=(s,e,a)=>new Promise(r=>s.emit(e,a,r));
 (async()=>{const tok=(await (await fetch(U+'/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:process.env.PW||'6651'})})).json()).token;assert(tok,'login');
  const adm=c();await W(300);assert((await join(adm,{nick:'Adm'+Date.now()%1000,clientId:'ADM'})).ok);
