@@ -1,3 +1,4 @@
+const CID=localStorage.getItem('cid')||(()=>{const v=(crypto.randomUUID?crypto.randomUUID():Date.now()+''+Math.random()).toString();localStorage.setItem('cid',v);return v;})();
 // ===== ERRDAY 나이트클럽: 아바타 · 이동 · 채팅 · 음악 =====
 const socket=io();const $=id=>document.getElementById(id);
 const COLORS=['#2b3352','#9a9cc0','#2a3f9e','#2fb8b0','#2f8f45','#e2525c','#c8102e','#ffd400','#ff69b4','#7b2cbf','#ff8c00','#f5f5f5'];
@@ -27,8 +28,10 @@ $('entry').addEventListener('click',e=>{const b=e.target;if(b.classList.contains
  if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('swatch'))me.outfit=b.dataset.v;me.nick=$('nick').value;syncOpts();});
 $('enter').onclick=()=>{me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
  $('entry').classList.add('hidden');$('hud').classList.remove('hidden');
- if(!joined){socket.emit('join',me);joined=true;}else socket.emit('profile',me);
- buildAvatar($('myAvatar'),{...me,id:myId},true);$('enter').textContent='입장하기 (소리 켜짐)';userGesture=true;applyMusic(true);};
+ const ev=joined?'profile':'join';socket.emit(ev,{...me,clientId:CID},r=>{if(r&&!r.ok){nickErr();return;}joined=true;enterOk();});};
+function nickErr(){$('entry').classList.remove('hidden');$('hud').classList.add('hidden');alert('이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.');$('nick').focus();}
+function enterOk(){
+ buildAvatar($('myAvatar'),{...me,id:myId},true);$('enter').textContent='입장하기 (소리 켜짐)';userGesture=true;applyMusic(true);}
 $('setBtn').onclick=()=>{$('enter').textContent='저장';$('entry').classList.remove('hidden');};
 // 모바일: 채팅/음악 패널은 같은 자리라 하나만 열림 (음악 패널이 채팅을 가리던 문제 수정)
 $('chatToggle').onclick=()=>{const h=$('hud');h.classList.toggle('showChat');if(h.classList.contains('showChat'))h.classList.remove('showMusic');};
@@ -139,11 +142,14 @@ $('chatIn').addEventListener('keydown',e=>e.stopPropagation());
 $('chatForm').onsubmit=e=>{e.preventDefault();const t=$('chatIn').value.trim();if(t)socket.emit('chat',t);$('chatIn').value='';};
 socket.on('chat',m=>{if(m.sys){sys(m.text);return;}bubble(m.id,m.text);addMsg(`<b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}`);});
 // ---------- 네트워크 ----------
-socket.on('init',d=>{myId=d.id;for(const id in d.players)upsertOther({id,...d.players[id]});setMusic(d.music);if(joined)socket.emit('join',me);});
+socket.on('init',d=>{myId=d.id;clearOthers();for(const id in d.players)upsertOther({id,...d.players[id]});setMusic(d.music);if(joined)socket.emit('join',{...me,clientId:CID},r=>{if(r&&!r.ok){joined=false;nickErr();}});});
+socket.on('disconnect',clearOthers);
 socket.on('player',upsertOther);
 socket.on('move',m=>{const o=others[m.id];if(o){o.dance=m.dance||0;if(!o.seat){o.target.set(...m.pos);o.rot=m.rot;}}});
 socket.on('seat',({id,seat})=>{const o=others[id];if(o)applySeatPose(o,seat);});
-socket.on('leave',id=>{const o=others[id];if(o){if(o.el._h){HUMANS.delete(o.el._h);o.el._h.dispose();}o.el.remove();delete others[id];}});
+function removeOther(id){const o=others[id];if(o){try{if(o.el._h){HUMANS.delete(o.el._h);o.el._h.dispose();}}catch(e){}o.el.remove();delete others[id];}}
+function clearOthers(){for(const id in others)removeOther(id);}
+socket.on('leave',removeOther);
 // ---------- 공유 음악 (MP3 업로드 + 유튜브) ----------
 let music={playlist:[],index:-1,playing:false},offset=0,userGesture=false;const audio=$('audio');
 let muted=localStorage.getItem('muted')==='1',volume=+(localStorage.getItem('vol')||80);$('vol').value=volume;

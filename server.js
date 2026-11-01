@@ -58,11 +58,18 @@ function schedule(){clearTimeout(timer);const t=music.playlist[music.index],d=du
  if(music.playing&&d)timer=setTimeout(tick,Math.max(500,music.startedAt+d*1000-Date.now()+300));}
 const state=()=>{advance(music,durOf,Date.now(),nextIndex);return {...music,durations,serverNow:Date.now()};};
 function broadcastMusic(){io.emit('music',state());save();schedule();}
+function pub(){const o={};for(const id in players){const {cid,...r}=players[id];o[id]=r;}return o;}
+function nickTaken(n,cid,sid){n=n.trim().toLowerCase();for(const id in players){const q=players[id];if(id!==sid&&q.cid!==cid&&q.nick.trim().toLowerCase()===n)return true;}return false;}
+function sweep(){for(const id in players){const so=io.sockets.sockets.get(id);if(!so||!so.connected){const pl=players[id];delete players[id];io.emit('leave',id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});}}}
+setInterval(sweep,15000).unref();
 io.on('connection',s=>{
- s.emit('init',{id:s.id,players,music:state()});
- s.on('join',p=>{players[s.id]={nick:String(p.nick||'손님').slice(0,16),gender:p.gender,outfit:p.outfit,skin:p.skin,style:p.style,pos:[0,0,4],rot:0,seat:null};io.emit('player',{id:s.id,...players[s.id]});
-  io.emit('chat',{sys:true,text:players[s.id].nick+' 님 입장!'});});
- s.on('profile',p=>{const pl=players[s.id];if(!pl)return;Object.assign(pl,{nick:String(p.nick||pl.nick).slice(0,16),gender:p.gender,outfit:p.outfit,skin:p.skin,style:p.style});io.emit('player',{id:s.id,...pl});});
+ s.emit('init',{id:s.id,players:pub(),music:state()});
+ s.on('join',(p,ack)=>{p=p||{};const cid=String(p.clientId||s.id).slice(0,64);const nick=String(p.nick||'손님').trim().slice(0,16)||'손님';
+  if(nickTaken(nick,cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nick);return;}
+  for(const id in players){if(id!==s.id&&players[id].cid===cid){delete players[id];io.emit('leave',id);const os=io.sockets.sockets.get(id);if(os)os.disconnect(true);}}
+  const re=!!players[s.id];players[s.id]={cid,nick,gender:p.gender,outfit:p.outfit,skin:p.skin,style:p.style,pos:[0,0,4],rot:0,seat:null};io.emit('player',{id:s.id,...players[s.id]});
+  if(typeof ack==='function')ack({ok:true});if(!re)io.emit('chat',{sys:true,text:nick+' 님 입장!'});});
+ s.on('profile',(p,ack)=>{const pl=players[s.id];if(!pl)return;const nn=String(p.nick||pl.nick).trim().slice(0,16)||pl.nick;if(nickTaken(nn,pl.cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nn);return;}if(typeof ack==='function')ack({ok:true});Object.assign(pl,{nick:nn,gender:p.gender,outfit:p.outfit,skin:p.skin,style:p.style});io.emit('player',{id:s.id,...pl});});
  s.on('move',m=>{const pl=players[s.id];if(!pl)return;pl.pos=m.pos;pl.rot=m.rot;pl.dance=(+m.dance|0)%4;s.broadcast.volatile.emit('move',{id:s.id,pos:m.pos,rot:m.rot,dance:pl.dance});});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.on('chat',text=>{const pl=players[s.id];if(!pl)return;text=String(text).slice(0,200);if(!text.trim())return;
