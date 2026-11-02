@@ -881,3 +881,34 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
    for(let i=1;i<10;i++)E('a-box',{position:`0 ${i*D.h/10} ${z<12?-.035:.035}`,width:D.w+.1,height:.03,depth:.01,material:'color:#2a2a30'},e);
    E('a-entity',{position:`0 ${D.h*.55} ${z<12?-.06:.06}`,rotation:z<12?'0 180 0':'0 0 0',ktext:'value:CLOSED;color:#ffe0e0;glow:#ff2040;size:60;width:1.6'},e);g.push(e);}}
  window.setClubDoorVis=open=>g.forEach(e=>e.setAttribute('visible',!open));})();
+// ---------- 🎯 다트판 (바 옆 오른쪽 벽) ----------
+(function dartGame(){const BX=11.94,BY=1.75,ZS=[-4.6,-6.1,-7.6];window.DARTS=ZS.map(z=>({x:10.2,z}));window.DART=window.DARTS[0];
+ const G=ZS.map(z=>E('a-entity',{position:`${BX} ${BY} ${z}`,rotation:'0 -90 0'})),g=G[0];
+ const cv=document.createElement('canvas');cv.width=cv.height=512;const c=cv.getContext('2d'),C=256,R=200;
+ c.fillStyle='#111';c.beginPath();c.arc(C,C,250,0,7);c.fill();
+ for(let i=0;i<20;i++){const a0=(-90-9+i*18)*Math.PI/180,a1=a0+Math.PI/10,dark=i%2===0;
+  [[R,'#c8102e','#0a7d3a'],[R*.92,dark?'#151515':'#f3e6c4',dark?'#151515':'#f3e6c4'],[R*.62,'#c8102e','#0a7d3a'],[R*.55,dark?'#151515':'#f3e6c4',dark?'#151515':'#f3e6c4']].forEach(([r,a,b])=>{c.fillStyle=r===R||r===R*.62?(dark?a:b):a;c.beginPath();c.moveTo(C,C);c.arc(C,C,r,a0,a1);c.fill();});}
+ c.fillStyle='#0a7d3a';c.beginPath();c.arc(C,C,R*.11,0,7);c.fill();c.fillStyle='#c8102e';c.beginPath();c.arc(C,C,R*.05,0,7);c.fill();
+ const ord=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];c.fillStyle='#fff';c.font='bold 26px sans-serif';c.textAlign='center';c.textBaseline='middle';
+ ord.forEach((n,i)=>{const a=(-90+i*18)*Math.PI/180;c.fillText(n,C+Math.cos(a)*228,C+Math.sin(a)*228);});
+ const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace||tex.colorSpace;
+ G.forEach((g,bi)=>{ E('a-cylinder',{position:'0 0 -.03',rotation:'90 0 0',radius:.52,height:.05,material:'color:#3a2410;roughness:.8'},g);
+ const face=E('a-circle',{position:'0 0 .002',radius:.5,'segments':64},g);face.addEventListener('loaded',()=>{const m=face.getObject3D('mesh');m.material=new THREE.MeshBasicMaterial({map:tex});});
+ E('a-entity',{position:'0 .78 0',ktext:'value:🎯 DARTS '+(bi+1)+';color:#fff;glow:#ff3cac;size:70;width:1.4'},g);
+ E('a-entity',{position:'0 2.25 1.5',light:'type:spot;angle:30;penumbra:.5;intensity:1.2;color:#fff3d0;distance:4',rotation:'-50 0 0'},g);
+ // 던지는 선 (바닥)
+ E('a-box',{position:`${window.DARTS[bi].x-.2} .015 ${ZS[bi]}`,width:.05,height:.01,depth:1.2,material:'color:#ffd23c;emissive:#ffd23c;emissiveIntensity:.8'});
+ });
+ // 점수판
+ const sc=document.createElement('canvas');sc.width=512;sc.height=512;const s=sc.getContext('2d');const stex=new THREE.CanvasTexture(sc);stex.colorSpace=THREE.SRGBColorSpace||stex.colorSpace;
+ const sp=E('a-plane',{position:'1.35 .1 0',width:1.2,height:1.2},g);sp.addEventListener('loaded',()=>{sp.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:stex,toneMapped:false});});
+ let last='';window.dartBoard=top=>{s.fillStyle='#14051c';s.fillRect(0,0,512,512);s.strokeStyle='#ff3cac';s.lineWidth=10;s.strokeRect(5,5,502,502);s.textBaseline='middle';
+  s.fillStyle='#ffd23c';s.font='bold 50px "Malgun Gothic","Noto Sans KR",sans-serif';s.textAlign='center';s.fillText('🎯 다트 랭킹',256,60);
+  s.font='bold 36px "Malgun Gothic","Noto Sans KR",sans-serif';(top||[]).slice(0,5).forEach((t,i)=>{s.fillStyle=i?'#fff':'#7cff5c';s.textAlign='left';s.fillText(`${i+1}. ${String(t.nick).slice(0,8)}`,30,140+i*62);s.textAlign='right';s.fillText(`${t.total}점`,482,140+i*62);});
+  if(!(top||[]).length){s.fillStyle='#aaa';s.textAlign='center';s.fillText('아직 기록 없음',256,240);}
+  if(last){s.fillStyle='#3cd8ff';s.textAlign='center';s.font='bold 32px "Malgun Gothic","Noto Sans KR",sans-serif';s.fillText(last,256,470);}stex.needsUpdate=true;};window.dartBoard([]);
+ const stuck=[[],[],[]];window.dartHit=d=>{const bi=Math.max(0,Math.min(2,d.b|0)),g=G[bi];const el=E('a-entity',{position:`${d.x*.5*.98} ${d.y*.5*.98} .9`},g);
+  E('a-cylinder',{position:'0 0 .13',rotation:'90 0 0',radius:.008,height:.14,color:'#ccc'},el);E('a-cone',{position:'0 0 .035',rotation:'-90 0 0','radius-bottom':.03,'radius-top':0,height:.07,color:'#ff3cac'},el);
+  const t0=performance.now(),fly=()=>{const k=Math.min(1,(performance.now()-t0)/350);el.object3D.position.z=.9*(1-k)+.0;if(k<1)requestAnimationFrame(fly);};requestAnimationFrame(fly);
+  stuck[bi].push(el);if(stuck[bi].length>3)stuck[bi].shift().remove();last=`${d.nick}(${bi+1}번): ${d.label} (+${d.pts})`;window.dartBoard(d.top);};
+})();

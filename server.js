@@ -144,7 +144,15 @@ const dirty=new Set();const r2=v=>Math.round(v*100)/100;
 setInterval(()=>{if(!dirty.size)return;const a=[];for(const id of dirty){const p=players[id];if(p&&!p.gone)a.push(id,r2(p.pos[0]),r2(p.pos[1]),r2(p.pos[2]),r2(p.rot),p.dance|0);}dirty.clear();if(a.length)io.volatile.emit('m',a);},100).unref();
 const bans=[];const BAN_MS=+process.env.BAN_MS||600000;const ipOf=so=>String(so.handshake.headers['x-forwarded-for']||so.handshake.address||'').split(',')[0].trim();
 const banned=(cid,ip,nick)=>{const n=Date.now();for(let i=bans.length-1;i>=0;i--)if(bans[i].until<n)bans.splice(i,1);return bans.find(b=>b.cid===cid||b.nick===nick||(process.env.BAN_IP==='1'&&ip&&b.ip===ip));};
+/* 🎯 다트: 서버가 결과를 정해 모두에게 똑같이 보냄 */
+const darts={},dartTop=()=>Object.entries(darts).map(([n,v])=>({nick:n,total:v.total,throws:v.n})).sort((a,b)=>b.total-a.total).slice(0,5);
+function dartRoll(){const a=Math.random()*Math.PI*2,r=Math.min(1.05,Math.abs((Math.random()+Math.random()+Math.random())/3-.5)*2.4);const x=Math.cos(a)*r,y=Math.sin(a)*r;
+ const ord=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];let deg=(90-Math.atan2(y,x)*180/Math.PI+9+360)%360;const n=ord[Math.floor(deg/18)%20];
+ let pts,label;if(r<.05){pts=50;label='BULL!';}else if(r<.11){pts=25;label='25';}else if(r>1){pts=0;label='빗나감';}else if(r>.92){pts=n*2;label='더블 '+n;}else if(r>.55&&r<.62){pts=n*3;label='트리플 '+n;}else{pts=n;label=String(n);}
+ return {x,y,pts,label};}
 io.on('connection',s=>{
+ s.emit('dartTop',dartTop());
+ s.on('dart',bn=>{const b=Math.max(0,Math.min(2,(bn|0)));const pl=players[s.id];if(!pl)return;const now=Date.now();if(now-(pl.dartT||0)<1500)return;pl.dartT=now;const r=dartRoll();const d=darts[pl.nick]||(darts[pl.nick]={total:0,n:0});d.total+=r.pts;d.n++;io.emit('dart',{...r,b,nick:pl.nick,top:dartTop()});});
  s.on('adminKick',(q,ack)=>{if(typeof ack!=='function')ack=()=>{};q=q||{};if(!isAdmin(q.token))return ack({ok:false,error:'관리자만 가능'});const id=String(q.id||'');if(id===s.id)return ack({ok:false,error:'자기 자신은 강퇴할 수 없어요'});
   const pl=players[id];if(!pl)return ack({ok:false,error:'이미 나간 사람이에요'});const so=io.sockets.sockets.get(id);
   bans.push({cid:pl.cid,ip:so?ipOf(so):pl.ip,nick:pl.nick,until:Date.now()+BAN_MS});clearTimeout(pl.timer);delete players[id];dirty.delete(id);

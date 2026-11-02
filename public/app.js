@@ -260,6 +260,7 @@ function actions(){const A=[];if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.pu
  if(inBarZone()){A.push(['🍸 바텐더 서빙:',null,'lbl'],['🥃 위스키',()=>serve('whiskey'),'s-whiskey'],['🍸 칵테일',()=>serve('cocktail'),'s-cocktail']);return A;}
  if(!mySeat&&((window.WAITERS||[]).some(w=>w.near)||(window.ALBA&&near(window.ALBA,2))))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
  const nt=nearTable();if(myCarry&&nt)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);
+ {const DB=(window.DARTS||[]).findIndex(d=>near(d,1.2));if(DB>=0)A.push([`🎯 다트 던지기 (${DB+1}번)`,()=>{if(Date.now()-(window._dartT||0)<1500)return;window._dartT=Date.now();socket.emit('dart',DB);},'dart'+DB]);}
  if(near(window.FRIDGE,1.6))for(const k of ['soju','beer'])A.push([ITEM_NAME[k]+' 꺼내기',()=>socket.emit('pickup',k),'p-'+k]);
  if(near(window.COOK,2.2))for(const k of ['dakbal','kkom','fish','squid'])A.push([ITEM_NAME[k],()=>socket.emit('pickup',k),'p-'+k]);
  if(near({x:-11.6,z:20.5},2.2))A.push(['🍗 통닭 가져가기',()=>socket.emit('pickup','chicken'),'p-chicken']);if(near({x:-11.6,z:15},2.2))A.push(['🐟 모듬회 가져가기',()=>socket.emit('pickup','hoe'),'p-hoe']);
@@ -397,6 +398,7 @@ function setClubDoor(open,announce){const was=window.CLUB_OPEN;window.CLUB_OPEN=
 function ejectFromClub(){if(mySeat){const s=mySeat;mySeat=null;socket.emit('seat',null);camGoal=null;}route=[];goal=null;goalSeat=null;marker.setAttribute('visible',false);
  const D=window.DOOR;rig.object3D.position.set(D.x+(Math.random()-.5)*3,0,14+Math.random()*1.5);myYaw=0;updateWhere();}
 window.ejectFromClub=ejectFromClub;
+socket.on('dart',d=>{window.dartHit&&window.dartHit(d);addMsg(`<span class="sys">🎯 ${esc(d.nick)} → ${esc(d.label)} (+${d.pts})</span>`);});socket.on('dartTop',t=>window.dartBoard&&window.dartBoard(t));
 socket.on('clubDoor',d=>setClubDoor(!!(d&&d.open),!!(d&&d.by)));
 $('clubDoorBtn').onclick=()=>{if(!adminToken)return;const open=!window.CLUB_OPEN;if(!open&&!confirm('나이트 문을 닫을까요? 안에 있는 사람은 모두 야장 포차로 나가요.'))return;socket.emit('setClubDoor',{token:adminToken,open},r=>{if(!(r&&r.ok))sys('실패: '+((r&&r.err)||'?'));});};
 $('cleanBtn').onclick=()=>{if(!adminToken)return;socket.emit('adminCleanup',adminToken,r=>{if(r&&r.ok)sys(`🔄 유령 정리 완료: ${r.removed}명 제거`);else{sys('정리 실패: '+((r&&r.error)||'오류'));}});};
