@@ -85,3 +85,15 @@ body.pfs{height:100dvh;overflow:hidden;overscroll-behavior:none}
 #subsMob small{font-size:10px}#subsMob.sel{background:#ff3cac}#subsMob:disabled{opacity:.5;filter:grayscale(1)}
 @media (max-width:700px),(pointer:coarse){body.thseat #jumpBtn{display:none!important}body.thseat #subsMob{display:block}body.thseat #subsBtn{display:none!important}#subsMob{right:calc(12px + env(safe-area-inset-right))}}
 @media (orientation:landscape) and (max-height:500px){#subsMob{bottom:calc(14px + env(safe-area-inset-bottom));width:56px;height:56px;font-size:19px;padding-top:4px}}
+
+#orderMenu{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30;background:rgba(30,10,40,.94);border:2px solid #ff8a00;border-radius:14px;padding:10px;min-width:240px;max-width:92vw;color:#fff;font-size:14px;box-shadow:0 0 18px #ff8a0088}
+#orderMenu.hidden{display:none}#orderMenu .ohead{display:flex;justify-content:space-between;align-items:center;font-weight:bold;margin-bottom:8px}
+#orderMenu .ohead button{background:none;border:0;color:#fff;font-size:16px;cursor:pointer}
+#orderMenu .otabs{display:flex;gap:6px;margin-bottom:8px}#orderMenu .otab{flex:1;padding:7px;border-radius:9px;border:1px solid #ff8a00;background:transparent;color:#fff;cursor:pointer}
+#orderMenu .otab.on{background:#ff8a00;color:#1a0a20;font-weight:bold}#orderMenu .olist{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#orderMenu .olist button{padding:9px 6px;border-radius:9px;border:1px solid #fff3;background:#3a1650;color:#fff;cursor:pointer;font-size:14px}
+
+#presetBox{width:100%;margin-top:6px}#presetBox .pbtns{display:flex;gap:6px;flex-wrap:wrap}#presetBox .pbtns button{flex:1}
+#presetBox .presetEdit{margin-top:6px;display:flex;flex-direction:column;gap:4px}#presetBox .prow{display:flex;gap:4px}#presetBox .pn{width:28%}#presetBox .pu{flex:1;min-width:0}
+#presetBox input{background:#1a0a22;color:#fff;border:1px solid #fff4;border-radius:6px;padding:4px 6px;font-size:12px}
+@media (pointer:coarse){#presetBox .presetEdit{display:none}}

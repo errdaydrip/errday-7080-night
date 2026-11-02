@@ -761,3 +761,22 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  E('a-entity',{position:`${D.x} ${D.h+.5} ${z-.05}`,rotation:'0 180 0',ktext:'value:EXIT · 🎬 극장 앞 포차 →;color:#fff3c0;glow:#ff8a00;size:70;width:2.2'});
  E('a-entity',{position:`${D.x} 1.6 ${z-.06}`,rotation:'0 180 0',ktext:'value:THEATER;color:#ffd060;glow:#ff2a6a;size:60;width:1.1'});
  E('a-entity',{position:`${D.x} ${D.h} ${z-.6}`,light:'type:point;color:#ffb070;intensity:.6;distance:3'});})();
+// ---------- 야장 알바: 주문 들어오면 냉장고/주방에서 집어 테이블로 ----------
+(async function alba(){const holder=E('a-entity',{position:'0.2 0 18.4'});const h=await makeHuman(holder,{...LOOKS.resolve({gender:'f',style:'aerobic',top:'#ff8c00',bottom:'#24306e',hair:'f2'}),gender:'f',style:'aerobic',skin:'#f6d2b0'});HUMANS.add(h);
+ E('a-entity',{position:'0 1.85 0',billboard:'',ktext:'value:알바 민지 · 야장;color:#fff;glow:#ff8a00;size:36;width:1.4'},holder);
+ const A=window.ALBA={x:.2,z:18.4,job:null,holder,h};holder.object3D.rotation.y=-Math.PI/2;
+ const lerp=(a,b,k)=>[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k];
+ AFRAME.registerComponent('alba-walk',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const J=window.ALBA_JOB,o=holder.object3D;let p=[A.x,A.z],face=null,anim='Idle_Loop';
+  if(J){const e=Date.now()+(window.SERVER_OFFSET||0)-J.t0,t1=J.leg1,t2=t1+J.pick,t3=t2+J.leg2,t4=t3+J.place,t5=t4+J.leg3;
+   if(e<t1){p=lerp(J.home,J.src,Math.max(0,e/t1));face=[J.src,J.home];anim='Walk_Loop';if(A.carry){A.carry=null;h.carry&&h.carry(null);}}
+   else if(e<t2){p=J.src;anim='Idle_Loop';if(A.carry!==J.kind&&e>t1+J.pick/2){A.carry=J.kind;h.carry&&h.carry(J.kind);}}
+   else if(e<t3){p=lerp(J.src,J.to,(e-t2)/J.leg2);face=[J.to,J.src];anim='Walk_Loop';if(A.carry!==J.kind){A.carry=J.kind;h.carry&&h.carry(J.kind);}}
+   else if(e<t4){p=J.to;face=[J.c,J.to];if(e>t3+J.place/2&&A.carry){A.carry=null;h.carry&&h.carry(null);}h.root.rotation.x=Math.sin(Math.min(1,(e-t3)/J.place)*Math.PI)*.4;}
+   else if(e<t5){p=lerp(J.to,J.home,(e-t4)/J.leg3);face=[J.home,J.to];anim='Walk_Loop';h.root.rotation.x=0;if(A.carry){A.carry=null;h.carry&&h.carry(null);}}
+   else{p=J.home;h.root.rotation.x=0;}}
+  /* 손님과 겹치면 옆으로 살짝 비켜 감 (뚫고 지나가지 않게) */
+  const rig=document.getElementById('rig'),pp=rig&&rig.object3D.position;let ox=0,oz=0;if(pp&&anim==='Walk_Loop'){const dx=p[0]-pp.x,dz=p[1]-pp.z,d=Math.hypot(dx,dz);if(d<.75&&d>1e-3){ox=dx/d*(.75-d);oz=dz/d*(.75-d);}}
+  A.sx=(A.sx||0)+(ox-(A.sx||0))*Math.min(1,dt*6);A.sz=(A.sz||0)+(oz-(A.sz||0))*Math.min(1,dt*6);A.x=p[0];A.z=p[1];o.position.set(p[0]+A.sx,0,p[1]+A.sz);
+  if(face){const y=Math.atan2(face[0][0]-face[1][0],face[0][1]-face[1][1]);let dy=y-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*8);}
+  h.play(anim);}});
+ document.querySelector('a-scene').setAttribute('alba-walk','');})();

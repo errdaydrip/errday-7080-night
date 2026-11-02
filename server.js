@@ -19,6 +19,22 @@ async function ytPlaylist(list){const r=await fetch('https://www.youtube.com/pla
  while((m=re.exec(html))){if(!seen.has(m[1])){seen.add(m[1]);out.push({id:m[1],title:JSON.parse('"'+m[2]+'"')});}}
  if(!out.length){const re2=/"videoId":"([\w-]{11})"/g;while((m=re2.exec(html)))if(!seen.has(m[1])){seen.add(m[1]);out.push({id:m[1],title:null});}}
  return out.slice(0,200);}
+// 재생목록 전체(제목+길이): YOUTUBE_API_KEY 있으면 공식 API, 없으면 페이지 파싱(최대 ~100곡). 테스트는 YT_MOCK_FILE
+const isoDur=d=>{const m=/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(d||'');return m?(+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0):0;};
+async function ytPlaylistFull(list){
+ if(process.env.YT_MOCK_FILE){const j=JSON.parse(fs.readFileSync(process.env.YT_MOCK_FILE,'utf8'));if(!j[list])throw new Error('not found');return j[list];}
+ const K=process.env.YOUTUBE_API_KEY;
+ if(K){const out=[];let page='';do{const r=await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${encodeURIComponent(list)}&key=${K}${page?'&pageToken='+page:''}`);const j=await r.json();if(!r.ok)throw new Error((j.error&&j.error.message)||r.status);
+   for(const it of j.items||[]){const id=it.snippet&&it.snippet.resourceId&&it.snippet.resourceId.videoId;if(id&&!/^(Deleted|Private) video$/.test(it.snippet.title))out.push({id,title:it.snippet.title});}page=j.nextPageToken;}while(page&&out.length<200);
+  for(let i=0;i<out.length;i+=50){try{const r=await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${out.slice(i,i+50).map(o=>o.id).join(',')}&key=${K}`);const j=await r.json();for(const v of j.items||[]){const o=out.find(x=>x.id===v.id);if(o)o.dur=isoDur(v.contentDetails.duration);}}catch(e){}}
+  return out;}
+ const r=await fetch('https://www.youtube.com/playlist?list='+encodeURIComponent(list)+'&hl=ko',{headers:{'User-Agent':'Mozilla/5.0','Accept-Language':'ko'}});const html=await r.text();
+ const parts=html.split('"playlistVideoRenderer":{').slice(1),out=[],seen=new Set();
+ for(const c of parts){const id=(/^"videoId":"([\w-]{11})"/.exec(c)||[])[1];if(!id||seen.has(id))continue;seen.add(id);const t=/"title":\{"runs":\[\{"text":"((?:[^"\\]|\\.)*)"/.exec(c),l=/"lengthSeconds":"(\d+)"/.exec(c);
+  out.push({id,title:t?JSON.parse('"'+t[1]+'"'):null,dur:l?+l[1]:0});}
+ if(!out.length)for(const o of await ytPlaylist(list))out.push(o);return out.slice(0,200);}
+const PRESET_DEF=[{name:'7080mix',url:'https://www.youtube.com/playlist?list=PL1cIIyrjZ9L3YEUl8DAz_R6uTf2-80wWY'},{name:'뮤직비디오',url:'https://www.youtube.com/playlist?list=PLFHMiSLBhKxo'},{name:'탑골나이트',url:'https://www.youtube.com/playlist?list=PLak-Kzc3H_lQ'}];
+let presets=PRESET_DEF.map(p=>({...p}));
 const links=require('./links');
 async function addLink(req,res){if(!isAdmin(req.get('x-admin-token')))return res.status(403).json({error:'관리자만 추가 가능'});
  const url=String(req.body.url||'').slice(0,2000);const r=await links.resolve(url).catch(e=>({error:'링크 확인 실패: '+e.message}));
@@ -58,8 +74,8 @@ app.post('/upload',(req,res,next)=>isAdmin(req.get('x-admin-token'))?next():res.
  music.playlist.push(t); if(music.index<0){music.index=music.playlist.length-1;music.playing=true;music.startedAt=Date.now();}
  broadcastMusic(); res.json(t);
 }));
-function save(){try{fs.mkdirSync(path.dirname(STATE),{recursive:true});fs.writeFileSync(STATE,JSON.stringify({music,durations,played:[...played]}));}catch(e){}}
-function load(){try{const j=JSON.parse(fs.readFileSync(STATE,'utf8'));Object.assign(music,j.music);Object.assign(durations,j.durations||{});played=new Set(j.played||[]);
+function save(){try{fs.mkdirSync(path.dirname(STATE),{recursive:true});fs.writeFileSync(STATE,JSON.stringify({music,durations,played:[...played],presets}));}catch(e){}}
+function load(){try{const j=JSON.parse(fs.readFileSync(STATE,'utf8'));Object.assign(music,j.music);Object.assign(durations,j.durations||{});played=new Set(j.played||[]);if(Array.isArray(j.presets)&&j.presets.length===3)presets=j.presets;
  music.playlist=music.playlist.filter(t=>t.type!=='mp3'||fs.existsSync(path.join(UP,t.id)));if(music.index>=music.playlist.length)music.index=music.playlist.length?0:-1;}catch(e){}}
 load();
 const DEFAULT_LIST='PL1cIIyrjZ9L3YEUl8DAz_R6uTf2-80wWY';let defLoading=false;
@@ -99,6 +115,19 @@ function waiterTick(){const n=Date.now();for(let w=0;w<waiterJobs.length;w++){if
   const job={w,table:tb,t0:n,walk:W_WALK,place:W_PLACE};waiterJobs[w]=job;io.emit('waiterJob',job);
   setTimeout(()=>{const t=tables[tb];t.items=wRefill(t.items,USES);t.t=Date.now();io.emit('tableUses',usesPub());io.emit('table',tablePub());},W_WALK+W_PLACE/2).unref();
   setTimeout(()=>{waiterJobs[w]=null;},W_WALK*2+W_PLACE+200).unref();}}
+// 야장 알바: 포차 테이블에 앉은 손님 주문 → 가져와서 테이블에 놓음 (서버 시계 기준, 한 명이 순서대로)
+const ALBA_HOME=[0.2,18.4],ALBA_SP=+process.env.ALBA_SPEED||1.6,ALBA_PICK=+process.env.ALBA_PICK_MS||800,ALBA_PLACE=+process.env.ALBA_PLACE_MS||1000;
+const ORDER_ANJU=['dakbal','kkom','fish','squid','chicken','hoe'],ORDER_DRINK=['soju','beer'];
+const ALBA_SRC=k=>k==='soju'||k==='beer'?[-0.7,20.7]:k==='chicken'?[-10.5,20.5]:k==='hoe'?[-10.5,15]:[0.8,16.9];
+let albaQ=[],albaJob=null,albaSeq=0;
+function albaPending(tb){return albaQ.filter(o=>o.table===tb).length+(albaJob&&albaJob.table===tb&&!albaJob.done?1:0);}
+function albaNext(){if(albaJob||!albaQ.length)return;const o=albaQ.shift(),n=Date.now(),src=ALBA_SRC(o.kind),c=TABLES[o.table];
+ const dx=src[0]-c[0],dz=src[1]-c[1],l=Math.hypot(dx,dz)||1,to=[+(c[0]+dx/l*1.0).toFixed(2),+(c[1]+dz/l*1.0).toFixed(2)];
+ const ms=(a,b)=>Math.round(Math.hypot(a[0]-b[0],a[1]-b[1])/ALBA_SP*1000);
+ const j={...o,t0:n,home:ALBA_HOME,src,to,c:[c[0],c[1]],leg1:ms(ALBA_HOME,src),pick:ALBA_PICK,leg2:ms(src,to),place:ALBA_PLACE,leg3:ms(to,ALBA_HOME)};albaJob=j;io.emit('albaJob',j);
+ setTimeout(()=>{const t=tables[j.table],i=t.items.indexOf(null);j.done=true;if(i>=0){t.items[i]={k:j.kind,u:USES};t.t=Date.now();io.emit('tableUses',usesPub());io.emit('table',tablePub());}
+  io.emit('albaDone',{id:j.id,by:j.by,ok:i>=0,kind:j.kind,table:j.table});},j.leg1+j.pick+j.leg2+j.place/2).unref();
+ setTimeout(()=>{albaJob=null;albaNext();},j.leg1+j.pick+j.leg2+j.place).unref();} // 복귀 걸음은 화면에서만 (다음 주문은 바로 시작)
 if(!process.env.WAITER_OFF)setInterval(waiterTick,+process.env.WAITER_TICK_MS||4000).unref();
 const pochaTable=seat=>{const m=/^([YT]\d)-/.exec(seat||'');return m&&tables[m[1]]?m[1]:null;};
 function canDrink(seat,type){if(BAR_Z[seat]!==undefined)return !!glasses[seat]&&(glasses[seat].type||'whiskey')===type;if(type==='whiskey'||type==='cocktail')return false;const tb=pochaTable(seat);if(tb)return tables[tb].items.some(i=>i&&i.k===type);return false;}
@@ -143,10 +172,25 @@ io.on('connection',s=>{
  s.on('move',m=>{const pl=players[s.id];if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.emit('glasses',glassPub());
- s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));
+ s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));if(albaJob)s.emit('albaJob',albaJob);
  s.on('drink',type=>{const pl=players[s.id];if(!pl||!pl.seat||!DRINKS.includes(type))return;if(!canDrink(pl.seat,type))return;const n=Date.now();if(n-(pl.lastDrink||0)<2000)return;pl.lastDrink=n;
   pl.drinks=(pl.drinks||[]).filter(x=>n-x<1800000).concat(n).slice(-20);
   if(BAR_Z[pl.seat]!==undefined){delete glasses[pl.seat];io.emit('glasses',glassPub());}const tb=pochaTable(pl.seat);if(tb)useItem(tb,type);io.emit('drink',{id:s.id,type});});
+ s.emit('presets',presets);
+ s.on('setPresets',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token)||!Array.isArray(d.list)||d.list.length!==3)return ack({ok:false,err:'관리자만'});
+  const L=d.list.map(p=>({name:String(p&&p.name||'').trim().slice(0,20),url:String(p&&p.url||'').trim().slice(0,300)}));if(L.some(p=>!p.name||!parseYT(p.url).list))return ack({ok:false,err:'이름과 유튜브 재생목록 주소(list=)를 확인해 주세요'});
+  presets=L;save();io.emit('presets',presets);ack({ok:true});});
+ s.on('loadPreset',async(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token)||!presets[d.i])return ack({ok:false,err:'관리자만'});const P=presets[d.i],list=parseYT(P.url).list;
+  let items=[];try{items=await ytPlaylistFull(list);}catch(e){return ack({ok:false,err:'재생목록을 읽지 못했어요: '+e.message});}if(!items.length)return ack({ok:false,err:'재생목록이 비었거나 비공개예요'});
+  for(const t of music.playlist)if(t.type==='mp3')fs.unlink(path.join(UP,t.id),()=>{});const stamp=Date.now();
+  music.playlist=items.map((it,i)=>{if(it.dur)durations[it.id]=it.dur;return {type:'yt',id:'yt_'+it.id+'_'+stamp+'_'+i,videoId:it.id,title:String(it.title||'YouTube').slice(0,200),by:'🎛 '+P.name,...(it.dur?{dur:it.dur}:{})};});
+  Object.assign(music,{index:0,playing:true,startedAt:Date.now(),pausedAt:0,isDefault:false,cleared:false,shuffle:false});played=new Set();
+  io.emit('chat',{sys:true,text:`🎛 재생목록을 '${P.name}' (${items.length}곡)으로 바꿨어요`});broadcastMusic();ack({ok:true,count:items.length});
+  if(items.some(it=>!it.title))(async()=>{for(const t of music.playlist){if(t.title==='YouTube'){t.title=await ytTitle(t.videoId);}}broadcastMusic();})();});
+ s.on('order',(kind,ack)=>{ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];if(!pl)return ack({ok:false,err:'입장 먼저'});if(!ORDER_ANJU.includes(kind)&&!ORDER_DRINK.includes(kind))return ack({ok:false,err:'없는 메뉴'});
+  const tb=pochaTable(pl.seat);if(!tb||tb[0]!=='Y')return ack({ok:false,err:'포차 테이블에 앉아야 주문할 수 있어요'});const n=Date.now();if(n-(pl.lastOrder||0)<700)return ack({ok:false,err:'천천히 주문해 주세요'});
+  if(albaQ.filter(o=>o.by===s.id).length+(albaJob&&!albaJob.done&&albaJob.by===s.id?1:0)>=3)return ack({ok:false,err:'주문은 3개까지 기다릴 수 있어요'});
+  if(tables[tb].items.filter(i=>!i).length<=albaPending(tb))return ack({ok:false,err:'테이블이 꽉 찼어요'});pl.lastOrder=n;const o={id:++albaSeq,by:s.id,nick:pl.nick,table:tb,kind};albaQ.push(o);ack({ok:true,id:o.id,queue:albaQ.length+(albaJob?1:0)});io.emit('albaQueue',albaQ.length);albaNext();});
  s.on('eat',kind=>{const pl=players[s.id];if(!pl||!FOODS.includes(kind))return;const tb=pochaTable(pl.seat);if(!tb||!tables[tb].items.some(i=>i&&i.k===kind))return;const n=Date.now();if(n-(pl.lastEat||0)<2000)return;pl.lastEat=n;useItem(tb,kind);io.emit('eat',{id:s.id,kind});});
  s.on('serve',q=>{const pl=players[s.id];if(!pl||pl.seat)return;const kind=q&&q.kind==='cocktail'?'cocktail':'whiskey';const x=+(q&&q.x),z=+(q&&q.z);if(!(x>=BZ.x0-.2&&x<=BZ.x1+.2&&z>=BZ.z0-.2&&z<=BZ.z1+.2))return;
   const n=Date.now();if(n-(pl.lastServe||0)<3000)return;pl.lastServe=n;s.broadcast.emit('pour',{id:s.id,kind});

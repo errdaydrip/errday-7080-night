@@ -251,7 +251,7 @@ function serve(kind){if(!inBarZone())return;const n=Date.now();if(n-(window._las
  const p=rig.object3D.position;socket.emit('serve',{x:p.x,z:p.z,kind});}
 window.serve=serve;window.drink=drink;
 function actions(){const A=[];if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.push([GLASSES[mySeat]==='cocktail'?'🍸 칵테일':'🥃 위스키',()=>drink(GLASSES[mySeat]),'d-'+GLASSES[mySeat]]);}
-  else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);}
+  else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);if(t&&t[0]==='Y'){A.push(['🛎 주문하기',()=>openOrder(),'order']);if(MY_ORDERS.length)A.push(['⏳ 주문: '+MY_ORDERS.map(o=>ITEM_NAME[o.kind]).join(', ')+' · 알바가 준비 중',null,'lbl']);}}
   return A;}
  if(inBarZone()){A.push(['🍸 바텐더 서빙:',null,'lbl'],['🥃 위스키',()=>serve('whiskey'),'s-whiskey'],['🍸 칵테일',()=>serve('cocktail'),'s-cocktail']);return A;}
  if(!mySeat&&(window.WAITERS||[]).some(w=>w.near))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
@@ -434,3 +434,22 @@ function hideWalls(tx,ty,tz,cx,cy,cz){const n=performance.now();if(!WALLS||(n-_w
 let _fovNow=0;function theaterFov(cx,cy,cz){const o=scene.camera;if(!o||!o.isPerspectiveCamera)return;const base=window.BASE_FOV||70;let want=base;
  if(inThSeat()){const S=THEATER.T.screen;want=THEATER.fitFov(Math.hypot(S.x-cx,S.y-cy,S.z-cz),o.aspect||innerWidth/innerHeight,base)*thZoom;want=Math.max(25,Math.min(125,want));}
  if(Math.abs(want-o.fov)>.05){o.fov+= (want-o.fov)*.2;o.updateProjectionMatrix();}}
+
+// ---------- 야장 주문 (포차 테이블에 앉으면 🛎 주문하기 → 알바가 가져다 줌) ----------
+const ORDER_MENU={anju:['dakbal','kkom','fish','squid','chicken','hoe'],drink:['soju','beer']};var MY_ORDERS=[];let orderTab='anju';window.ALBA_JOB=null;
+function renderOrder(){const m=$('orderMenu');m.querySelectorAll('.otab').forEach(b=>b.classList.toggle('on',b.dataset.tab===orderTab));const L=m.querySelector('.olist');L.innerHTML='';
+ for(const k of ORDER_MENU[orderTab]){const b=document.createElement('button');b.textContent=ITEM_NAME[k];b.dataset.k=k;b.onclick=e=>{e.stopPropagation();placeOrder(k);};L.appendChild(b);}}
+function openOrder(){const m=$('orderMenu');if(!m.classList.contains('hidden')){m.classList.add('hidden');return;}renderOrder();m.classList.remove('hidden');}
+function placeOrder(k){socket.emit('order',k,r=>{if(r&&r.ok){MY_ORDERS.push({id:r.id,kind:k});sys(`🛎 ${ITEM_NAME[k]} 주문했어요${r.queue>1?` (대기 ${r.queue-1}건)`:''}`);$('orderMenu').classList.add('hidden');refreshAct(true);}else sys('주문 실패: '+((r&&r.err)||'?'));});}
+document.querySelectorAll('#orderMenu .otab').forEach(b=>b.onclick=e=>{e.stopPropagation();orderTab=b.dataset.tab;renderOrder();});$('orderClose').onclick=e=>{e.stopPropagation();$('orderMenu').classList.add('hidden');};
+socket.on('albaJob',j=>{window.ALBA_JOB=j;});
+socket.on('albaDone',d=>{const i=MY_ORDERS.findIndex(o=>o.id===d.id);if(i>=0){MY_ORDERS.splice(i,1);sys(d.ok?`🙋 알바: "${ITEM_NAME[d.kind]} 나왔습니다~"`:'🙋 알바: "자리가 꽉 차서 못 놨어요 ㅠ"');refreshAct(true);}});
+setInterval(()=>{const t=mySeat&&myTable();if(!(t&&t[0]==='Y'))$('orderMenu').classList.add('hidden');},300);
+
+// ---------- 재생목록 프리셋 3개 (관리자) : 모바일=버튼만, PC=버튼+이름/주소 편집 ----------
+let PRESETS=[];
+function renderPresets(){const B=document.querySelector('#presetBox .pbtns'),E=document.querySelector('#presetBox .presetEdit');if(!B)return;B.innerHTML='';
+ PRESETS.forEach((p,i)=>{const b=document.createElement('button');b.type='button';b.textContent='🎛 '+p.name;b.title='재생목록을 이 목록으로 교체';b.onclick=e=>{e.stopPropagation();if(!adminToken)return;if(!confirm(`지금 재생목록을 '${p.name}'으로 통째로 바꿀까요?`))return;b.disabled=true;sys(`🎛 '${p.name}' 불러오는 중…`);socket.emit('loadPreset',{token:adminToken,i},r=>{b.disabled=false;if(!(r&&r.ok))sys('불러오기 실패: '+((r&&r.err)||'?'));});};B.appendChild(b);});
+ if(E.contains(document.activeElement))return;E.innerHTML=PRESETS.map((p,i)=>`<div class="prow"><input class="pn" maxlength="20" value="${esc(p.name)}" placeholder="이름"><input class="pu" maxlength="300" value="${esc(p.url)}" placeholder="유튜브 재생목록 주소"></div>`).join('')+'<button type="button" id="presetSave">💾 버튼 저장</button>';
+ $('presetSave').onclick=e=>{e.stopPropagation();const list=[...E.querySelectorAll('.prow')].map(r=>({name:r.querySelector('.pn').value,url:r.querySelector('.pu').value}));socket.emit('setPresets',{token:adminToken,list},r=>sys(r&&r.ok?'💾 프리셋 저장됨 (모두에게 반영)':'저장 실패: '+((r&&r.err)||'?')));};}
+socket.on('presets',p=>{PRESETS=p||[];renderPresets();});
