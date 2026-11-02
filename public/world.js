@@ -537,6 +537,9 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  E('a-box',{position:`${DOOR.x} ${DOOR.h+.9} 12.15`,width:3.4,height:.9,depth:.12,color:'#120208'});
  E('a-entity',{position:`${DOOR.x} ${DOOR.h+.9} 12.23`,ktext:'value:ERRDAY;color:#fff0f8;glow:#ff3cac;size:110;width:3;font:Georgia,serif'});
  E('a-entity',{position:`${DOOR.x} ${DOOR.h+.9} 12.8`,light:`type:point;color:#ff3cac;intensity:.8;distance:5`});
+ E('a-box',{position:`${C2.x} ${C2.h+.9} 12.15`,width:3.4,height:.9,depth:.12,color:'#120208'});
+ E('a-entity',{position:`${C2.x} ${C2.h+.9} 12.23`,ktext:'value:NIGHTCLUB;color:#fff0f8;glow:#ff3cac;size:110;width:3;font:Georgia,serif'});
+ E('a-entity',{position:`${C2.x} ${C2.h+.9} 12.8`,light:`type:point;color:#ff3cac;intensity:.8;distance:5`});
  // 바닥(아스팔트) + 하늘 + 주변 건물
  texMesh(E('a-plane',{rotation:'-90 0 0',position:'0 0 19.05',width:26,height:14.1,material:'roughness:1'}),TEX.asphalt());
  E('a-sky',{color:'#070b1c',radius:120});
@@ -632,9 +635,10 @@ window.WAITERS=[];
     else if(e<2*wk+pl){if(J.carry===1){J.carry=2;w.h.carry&&w.h.carry(null);}const k=(e-wk-pl)/wk;w.x=J.to[0]+(J.from[0]-J.to[0])*k;w.z=J.to[1]+(J.from[1]-J.to[1])*k;face=Math.atan2(J.from[0]-J.to[0],J.from[1]-J.to[1]);w.h.root.rotation.x=0;}
     else{w.job=null;w.h.root.rotation.x=0;continue;}
     w.near=false;o.position.set(w.x,0,w.z);let dy=face-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*8);w.h.play(anim);continue;}
-   /* 할 일 없으면 대기 자리에 서 있음 (돌아다니지 않음). 빈 테이블 채우러 갈 때만 걸음 */
-   w.x=w.route[0][0];w.z=w.route[0][1];const o=w.holder.object3D;o.position.set(w.x,0,w.z);const yaw=Math.atan2(-w.x,-w.z);let dy=yaw-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*6);
-   w.h.play('Idle_Loop');w.h.root.rotation.x=0;}}});
+   /* 할 일 없으면 테이블 사이 순찰 경로를 걸으며 확인 (빈 테이블 생기면 위 job 으로 채우러 감) */
+   const d=(((now-(w.paused||0))*w.sp+w.ph)%w.L+w.L)%w.L;const sg=w.segs.find(q=>d>=q.s&&d<q.s+q.l)||w.segs[0];const k=(d-sg.s)/sg.l;w.x=sg.a[0]+(sg.b[0]-sg.a[0])*k;w.z=sg.a[1]+(sg.b[1]-sg.a[1])*k;
+   const o=w.holder.object3D;o.position.set(w.x,0,w.z);const yaw=Math.atan2(sg.b[0]-sg.a[0],sg.b[1]-sg.a[1]);let dy=yaw-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*6);
+   w.h.play('Walk_Loop');w.h.root.rotation.x=0;}}});
  document.querySelector('a-scene').setAttribute('waiter-walk','');})();
 
 // ---------- 80년대 거리 보강: 낮은 상가 + 주차된 자동차 ----------
@@ -843,14 +847,14 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  [[0,.6,11.5,.06],[0,-.6,11.5,.06],[-5.72,0,.06,1.26],[5.72,0,.06,1.26]].forEach(([px,py,w,h])=>E('a-box',{position:`${px} ${py} 0`,width:w,height:h,depth:.05,material:'color:#ff3cac;emissive:#ff3cac;emissiveIntensity:1.4'},board));
  const pl=E('a-plane',{position:'0 0 .005',width:11,height:11*H/W*1.4},board);pl.addEventListener('loaded',()=>{const m=pl.getObject3D('mesh');m.material=new THREE.MeshBasicMaterial({map:tex,toneMapped:false});});
  /* 일반 LED 전광판: 관리자가 넣은 글자가 LED 점(도트) 모양으로 흐르며 번쩍번쩍. 글자 없으면 기본 문구 */
- const FONT='"Malgun Gothic","Noto Sans KR",sans-serif',DEF='★ ERRDAY 7080 NIGHT ★ 오늘 밤도 신나게! ★';let text=DEF,tw=1,off=W-60,last=0;
+ const FONT='"Malgun Gothic","Noto Sans KR",sans-serif',DEF='★ ERRDAY 7080 NIGHT ★ 오늘 밤도 신나게! ★';let text=DEF,tw=1,off=0,last=0;
  const src=document.createElement('canvas');src.width=W;src.height=H;const sx=src.getContext('2d');
  const DOT=8,COLS=W/DOT,ROWS=H/DOT;const COLORS=['#ff3cac','#ffd23c','#3cd8ff','#7cff5c','#ff7a30'];
- const build=()=>{sx.font=`bold 100px ${FONT}`;tw=sx.measureText(text).width+260;};
- window.setTickerIdle=t=>{window.TICKER_IDLE=t||'';text=window.TICKER_IDLE||DEF;build();off=W-60;};build();window.setDonations=()=>{};
+ const build=()=>{sx.font=`bold 100px ${FONT}`;tw=sx.measureText(text).width;};
+ window.setTickerIdle=t=>{window.TICKER_IDLE=t||'';text=window.TICKER_IDLE||DEF;build();off=0;};build();window.setDonations=()=>{};
  window.TICKER_STATE=()=>({text});
- AFRAME.registerComponent('don-ticker',{tick(t){if(t-last<40)return;last=t;off=(off+6)%tw;
-  sx.fillStyle='#000';sx.fillRect(0,0,W,H);sx.font=`bold 100px ${FONT}`;sx.textBaseline='middle';sx.fillStyle='#fff';const px=W-off;sx.fillText(text,px,H/2+6);sx.fillText(text,px+tw,H/2+6);
+ AFRAME.registerComponent('don-ticker',{tick(t){if(t-last<40)return;last=t;off+=6;if(W-off<-tw-DOT)off=0; /* 마지막 글자까지 왼쪽으로 완전히 나간 뒤 오른쪽 끝에서 다시 시작 */
+  sx.fillStyle='#000';sx.fillRect(0,0,W,H);sx.font=`bold 100px ${FONT}`;sx.textBaseline='middle';sx.fillStyle='#fff';const px=W-off;sx.fillText(text,px,H/2+6);
   const d=sx.getImageData(0,0,W,H).data;const k=Math.floor(t/500),flash=Math.floor(t/120)%9===0; /* 가끔 번쩍 */
   x.fillStyle='#0a0208';x.fillRect(0,0,W,H);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const i=((r*DOT+DOT/2)*W+(c*DOT+DOT/2))*4;const on=d[i]>110;
