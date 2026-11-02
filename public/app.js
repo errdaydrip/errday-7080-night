@@ -262,7 +262,7 @@ function actions(){const A=[];if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.pu
  if(!mySeat&&((window.WAITERS||[]).some(w=>w.near)||(window.ALBA&&near(window.ALBA,2))))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
  const nt=nearTable();if(myCarry&&nt)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);
  {const DB=(window.DARTS||[]).findIndex(d=>near(d,1.2));if(DB>=0){const g=(window.DART_G||[])[DB],me=g&&g.players.findIndex(p=>p.id===myId);
-  A.push([`🎯 조준해서 던지기 (${DB+1}번)`,()=>dartAim(DB),'dart'+DB]);if(g&&me<0&&!g.started&&g.players.length<4)A.push(['🙋 참가',()=>socket.emit('dartJoin',{b:DB},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dj']);
+  A.push([`🎯 조준해서 던지기 (${DB+1}번)`,()=>dartAim(DB),'dart'+DB]);if(g&&g.mode!=='high'&&me<0&&!g.started&&g.players.length<4)A.push(['🙋 참가',()=>socket.emit('dartJoin',{b:DB},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dj']);
   A.push(['하이스코어 새 게임',()=>socket.emit('dartNew',{b:DB,mode:'high'},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi'],['501 새 게임',()=>socket.emit('dartNew',{b:DB,mode:'501'},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'d501'],['크리켓 새 게임',()=>socket.emit('dartNew',{b:DB,mode:'cricket'},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dcr']);}}
  if(near(window.FRIDGE,1.6))for(const k of ['soju','beer'])A.push([ITEM_NAME[k]+' 꺼내기',()=>socket.emit('pickup',k),'p-'+k]);
  if(near(window.COOK,2.2))for(const k of ['dakbal','kkom','fish','squid'])A.push([ITEM_NAME[k],()=>socket.emit('pickup',k),'p-'+k]);
@@ -406,11 +406,11 @@ window.DART_G=[];socket.on('dartState',d=>{window.DART_G[d.b]=d.g;window.dartSta
 function dartAim(b){if(document.getElementById('dartAim'))return;const o=document.createElement('div');o.id='dartAim';o.innerHTML='<div class="dah">🎯 판 위를 누르고 끌어 조준 → 손 떼면 던지기</div><canvas width="320" height="320"></canvas><button type="button">닫기</button>';document.body.appendChild(o);
  const cv=o.querySelector('canvas'),c=cv.getContext('2d'),img=window.DART_IMG;let ax=0,ay=0,down=false,raf=0;const S=320,R=S/2*0.86; /* 판(더블 바깥선)=R */
  const pos=e=>{const r=cv.getBoundingClientRect();ax=((e.clientX-r.left)/r.width*S-S/2)/R;ay=-((e.clientY-r.top)/r.height*S-S/2)/R;};
- const draw=t=>{c.clearRect(0,0,S,S);if(img)c.drawImage(img,S/2-R/200*256,S/2-R/200*256,R/200*512,R/200*512);const w=down?.035:.0,wx=ax+Math.sin(t/170)*w,wy=ay+Math.cos(t/230)*w;o._w=[wx,wy];
+ const draw=t=>{c.clearRect(0,0,S,S);if(img)c.drawImage(img,S/2-R/200*256,S/2-R/200*256,R/200*512,R/200*512);o._sx=(o._sx??ax)+(ax-(o._sx??ax))*.12;o._sy=(o._sy??ay)+(ay-(o._sy??ay))*.12; /* 조준점이 손가락을 늦게 따라옴 */const w=down?.13:.07,wx=o._sx+(Math.sin(t/110)+Math.sin(t/47)*.5)*w,wy=o._sy+(Math.cos(t/150)+Math.cos(t/61)*.5)*w;o._w=[wx,wy];
   const px=S/2+wx*R,py=S/2-wy*R;c.strokeStyle='#00ffcc';c.lineWidth=2;c.beginPath();c.arc(px,py,9,0,7);c.moveTo(px-15,py);c.lineTo(px+15,py);c.moveTo(px,py-15);c.lineTo(px,py+15);c.stroke();raf=requestAnimationFrame(draw);};raf=requestAnimationFrame(draw);
  const close=()=>{cancelAnimationFrame(raf);o.remove();};o.querySelector('button').onclick=close;
  cv.addEventListener('pointerdown',e=>{e.preventDefault();down=true;cv.setPointerCapture(e.pointerId);pos(e);});cv.addEventListener('pointermove',e=>{if(down||e.pointerType==='mouse')pos(e);});
- cv.addEventListener('pointerup',e=>{if(!down)return;down=false;const [x,y]=o._w||[ax,ay];socket.emit('dart',{b,x,y},r=>{if(r&&!r.ok&&r.err)sys(`🎯 ${(r.err)}`);});});}
+ cv.addEventListener('pointerup',e=>{if(!down)return;down=false;const [x,y]=o._w||[ax,ay];socket.emit('dart',{b,x,y},r=>{if(r&&r.ok&&r.me)sys(r.done?`🏁 끝! 총 ${r.done.score}점`:`R${r.me.round} · ${r.me.thrown}/3발 · 합계 ${r.me.score}점 (+${r.hit.pts} ${r.hit.label})`);if(r&&!r.ok&&r.err)sys(`🎯 ${(r.err)}`);});});}
 window.dartAim=dartAim;
 socket.on('clubDoor',d=>setClubDoor(!!(d&&d.open),!!(d&&d.by)));
 $('clubDoorBtn').onclick=()=>{if(!adminToken)return;const open=!window.CLUB_OPEN;if(!open&&!confirm('나이트 문을 닫을까요? 안에 있는 사람은 모두 야장 포차로 나가요.'))return;socket.emit('setClubDoor',{token:adminToken,open},r=>{if(!(r&&r.ok))sys('실패: '+((r&&r.err)||'?'));});};

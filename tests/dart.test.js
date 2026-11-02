@@ -2,9 +2,8 @@
 const a=require('assert'),os=require('os'),path=require('path'),{spawn}=require('child_process');const {io}=require('socket.io-client');const W=ms=>new Promise(r=>setTimeout(r,ms));const DG=require('../dartgame');
 const P=(n,ring)=>{const i=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5].indexOf(n),ang=(90-i*18)*Math.PI/180,r={s:.4,t:.58,d:.96}[ring];return[Math.cos(ang)*r,Math.sin(ang)*r];};
 a.strictEqual(DG.score(0,0).pts,50);a.strictEqual(DG.score(0,.08).pts,25);a.strictEqual(DG.score(...P(20,'t')).pts,60);a.strictEqual(DG.score(...P(19,'d')).pts,38);a.strictEqual(DG.score(...P(6,'s')).pts,6);a.strictEqual(DG.score(0,1.1).pts,0);
-let g=DG.newGame();a.strictEqual(g.mode,'high');DG.addPlayer(g,'A','a');DG.addPlayer(g,'B','b');let last;
-for(let rd=0;rd<8;rd++){for(let i=0;i<3;i++)last=DG.throwDart(g,'A',...P(20,'t'));for(let i=0;i<3;i++)last=DG.throwDart(g,'B',...P(1,'s'));}
-a.strictEqual(g.players[0].score,1440);a.strictEqual(last.done.score,24);a.strictEqual(g.winner,'a');
+let g=DG.newGame();a.strictEqual(g.mode,'high');let last;for(let i=0;i<24;i++){last=DG.throwDart(g,'A',...P(20,'t'),'a');DG.throwDart(g,'B',...P(1,'s'),'b');}
+a.strictEqual(last.done.score,1440,'solo, no turns');a.ok(!g.players.find(p=>p.id==='A'),'track cleared after finish');
 g=DG.newGame('501');DG.addPlayer(g,'A','a');DG.addPlayer(g,'B','b');g.players[0].score=g.players[0].start=40;
 let r=DG.throwDart(g,'B',0,0);a.strictEqual(r.ok,false,'turn');r=DG.throwDart(g,'A',...P(20,'t'));a.ok(r.bust);a.strictEqual(g.players[0].score,40);a.strictEqual(g.turn,1);
 for(let i=0;i<3;i++)DG.throwDart(g,'B',0,1.2);DG.throwDart(g,'A',...P(20,'s'));a.strictEqual(g.players[0].score,20);r=DG.throwDart(g,'A',...P(20,'s'));a.ok(r.bust,'single-out not allowed');
@@ -13,7 +12,6 @@ g=DG.newGame('cricket');DG.addPlayer(g,'A','a');DG.addPlayer(g,'B','b');DG.throw
 (async()=>{const PORT=+(process.env.PORT||8080)+31,U='http://localhost:'+PORT;const srv=spawn('node',['server.js'],{cwd:path.join(__dirname,'..'),env:{...process.env,PORT,STATE_FILE:path.join(os.tmpdir(),'dart-state.json'),WAITER_OFF:'1',TICKER_OFF:'1'},stdio:'ignore'});await W(1500);
  try{const c=io(U,{forceNew:true}),o=io(U,{forceNew:true});const A=[],B=[];c.on('dartState',d=>A.push(d));o.on('dartState',d=>B.push(d));
  await new Promise(r=>c.emit('join',{nick:'다트왕',clientId:'d1'},r));await new Promise(r=>o.emit('join',{nick:'둘째',clientId:'d2'},r));await W(300);
- a.ok((await new Promise(r=>c.emit('dartNew',{b:1,mode:'high'},r))).ok);a.ok((await new Promise(r=>o.emit('dartJoin',{b:1},r))).ok);
- a.strictEqual((await new Promise(r=>o.emit('dart',{b:1,x:0,y:0},r))).ok,false,'not your turn');const h=await new Promise(r=>c.emit('dart',{b:1,x:0,y:0},r));a.ok(h.ok&&h.hit.pts>=25,'aimed bull area');
- await W(300);const la=A[A.length-1],lb=B[B.length-1];a.deepStrictEqual(la,lb,'synced');a.strictEqual(la.b,1);a.strictEqual(la.g.players[0].score,h.hit.pts);a.strictEqual(la.g.mode,'high');
+ const h=await new Promise(r=>c.emit('dart',{b:1,x:0,y:0},r));a.ok(h.ok&&h.me.thrown===1,'solo starts immediately');await W(750);a.ok((await new Promise(r=>o.emit('dart',{b:1,x:0,y:0},r))).ok,'other player throws without waiting');
+ await W(300);const la=A[A.length-1],lb=B[B.length-1];a.deepStrictEqual(la,lb,'synced');a.strictEqual(la.b,1);a.strictEqual(la.g.players[0].score,h.hit.pts);a.strictEqual(la.g.players.length,2);a.strictEqual(la.g.mode,'high');
  c.close();o.close();console.log('dart OK');srv.kill();process.exit(0);}catch(e){console.error(e);srv.kill();process.exit(1);}})();
