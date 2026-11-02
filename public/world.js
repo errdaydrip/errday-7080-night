@@ -854,7 +854,7 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  window.setTickerIdle=t=>{window.TICKER_IDLE=t||'';text=window.TICKER_IDLE||DEF;build();off=0;};build();window.setDonations=()=>{};
  window.TICKER_STATE=()=>({text});
  AFRAME.registerComponent('don-ticker',{tick(t){if(t-last<40)return;last=t;off+=6;const P=W+tw*.5;if(off>=P)off-=P; /* 글자 절반쯤 왼쪽으로 사라졌을 때 첫 글자가 오른쪽에서 다시 나옴 */
-  sx.fillStyle='#000';sx.fillRect(0,0,W,H);sx.font=`bold 100px ${FONT}`;sx.textBaseline='middle';sx.fillStyle='#fff';const px=W-off;for(let q=px;q<W;q+=W+tw*.5)sx.fillText(text,q,H/2+6);
+  sx.fillStyle='#000';sx.fillRect(0,0,W,H);sx.font=`bold 100px ${FONT}`;sx.textBaseline='middle';sx.fillStyle='#fff';const px=W-off;for(let q=px-(W+tw*.5);q<W;q+=W+tw*.5)if(q+tw>0)sx.fillText(text,q,H/2+6);
   const d=sx.getImageData(0,0,W,H).data;const k=Math.floor(t/500),flash=Math.floor(t/120)%9===0; /* 가끔 번쩍 */
   x.fillStyle='#0a0208';x.fillRect(0,0,W,H);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const i=((r*DOT+DOT/2)*W+(c*DOT+DOT/2))*4;const on=d[i]>110;
