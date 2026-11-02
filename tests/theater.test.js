@@ -35,6 +35,6 @@ a.strictEqual(TH.pickTrack([{language:'ja'},{language:'ko-KR'}],'language').lang
 // 나이트→극장 문: 포차 출구와 안 겹치고, 클럽 안에서 닿을 수 있고, 도착지는 극장 안 빈자리
 {const CD=TH.CLUB_DOOR,PD={x:-3.3,w:2};a(CD.x-CD.w/2>PD.x+PD.w/2+.5,'not overlapping pocha exit');
  a(TH.clubDoorHit(CD.x,11.55),'reachable (club wall pad stops at 11.6)');a(!TH.clubDoorHit(CD.x,11),'not in middle of club');a(!TH.clubDoorHit(PD.x,11.55),'pocha door untouched');
- const A=TH.ARRIVE;a(TH.inside(A.x,A.z),'arrive inside theater');a(!hit(A.x,A.z),'arrive free');a(TH.floorAt(A.x,A.z)===0);
+ const A=TH.ARRIVE;a(!TH.inside(A.x,A.z),'arrive outside (street)');a(A.z>12&&A.x<=13.4,'on pocha street');a(!hit(A.x,A.z),'arrive free');a(Math.abs(A.z-(T.door.z0+T.door.z1)/2)<.5&&T.x0-A.x<1.5,'in front of theater door');
  a(TH.seats.every(s=>Math.hypot(s.x-A.x,s.z-A.z)>.8),'not on a seat');}
 console.log('theater OK');

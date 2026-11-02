@@ -169,7 +169,7 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
   {const ss=mySeat&&SEATS.find(q=>q.id===mySeat);const hy=mySeat?(ss.y||0):heightAt(p.x,p.z);if(mySeat)jumpV=null;else if(jumpV===null&&p.y-hy>.25)jumpV=0;if(jumpV!==null){jumpV-=14*dt;p.y+=jumpV*dt;if(p.y<=hy&&jumpV<0){p.y=hy;jumpV=null;}}else p.y+=(hy-p.y)*Math.min(1,dt*14);}if(!mySeat)$('prompt').classList.add('hidden');}
  if(!mySeat&&!moving&&!goal&&joined){idleT+=dt;if(idleT>3&&!myDance)myDance=1+Math.floor(Math.random()*3);}else{idleT=0;myDance=0;}
  myAv.object3D.rotation.y=myYaw;if(myAv._h)myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
-if(!mySeat&&!window.OUTSIDE&&THEATER.clubDoorHit(p.x,p.z)&&performance.now()-(window._tdT||0)>1500){window._tdT=performance.now();const A=THEATER.ARRIVE;p.set(A.x,0,A.z);myYaw=A.yaw;camYaw=A.yaw+Math.PI;goal=null;goalSeat=null;route=[];marker.setAttribute('visible',false);sys('🎬 극장 입구로 들어왔어요');}
+if(!mySeat&&!window.OUTSIDE&&THEATER.clubDoorHit(p.x,p.z)&&performance.now()-(window._tdT||0)>1500){window._tdT=performance.now();const A=THEATER.ARRIVE;p.set(A.x,0,A.z);myYaw=A.yaw;camYaw=A.yaw+Math.PI;goal=null;goalSeat=null;route=[];marker.setAttribute('visible',false);sys('🎬 극장 앞 포차 거리로 나왔어요');}
  {const out=isOut(p.z);ROOM=out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();applySubs();}}
  const tx=p.x,ty=p.y+(mySeat?.95:1.1)+(mySeat&&mySeat.startsWith('TH-')?THEATER.CAM_LIFT:0),tz=p.z;let d=camDist;
  if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));const k=1-Math.exp(-dt*5);camYaw+=d*k;camPitch+=(camGoal.pitch-camPitch)*k;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
@@ -276,7 +276,7 @@ socket.on('music',setMusic);
 function curDur(){const c=music.playlist[music.index];return c&&(c.dur||(music.durations||{})[c.type==='yt'?c.videoId:c.id]);}
 function reportDur(sec){const c=music.playlist[music.index];if(c&&sec>1&&!curDur())socket.emit('duration',{index:music.index,sec});}
 function curPos(){return music.playing?(Date.now()+offset-music.startedAt)/1000:(music.pausedAt||0)/1000;}
-const ICON={yt:'📺 ',sc:'☁️ ',vimeo:'🎬 ',url:'🔗 '};function renderMusic(){const cur=music.playlist[music.index];window.theaterScreen&&window.theaterScreen(cur,!!music.playing);typeof applySubs==='function'&&applySubs();$('shufBtn').textContent=music.shuffle?'🔀 랜덤 켬':'🔀 랜덤 끔';$('shufBtn').classList.toggle('sel',!!music.shuffle);$('now').textContent=cur?(music.shuffle?'🔀 ':'')+(music.playing?'▶ ':'⏸ ')+(ICON[cur.type]||'')+(cur.live?'📻 ':'')+cur.title:'재생 중인 곡 없음';
+const ICON={yt:'📺 ',sc:'☁️ ',vimeo:'🎬 ',url:'🔗 '};function renderMusic(){const cur=music.playlist[music.index];window.theaterScreen&&window.theaterScreen(cur,!!music.playing);typeof applySubs==='function'&&applySubs();$('shufBtn').textContent=music.shuffle?'🔀 랜덤 켬':'🔀 랜덤 끔';$('shufBtn').classList.toggle('sel',!!music.shuffle);$('now').textContent=cur?(music.shuffle?'🔀 ':'')+(music.playing?'▶ ':'⏸ ')+(ICON[cur.type]||'')+(cur.live?'📻 ':'')+cur.title:'재생목록이 비었어요 · 관리자가 곡을 추가하면 재생돼요';
  $('pl').classList.toggle('hidden',!adminToken);$('pl').innerHTML=!adminToken?'':music.playlist.map((t,i)=>`<li class="${i===music.index?'cur':''}">${ICON[t.type]||''}${esc(t.title)} <small>(${esc(t.by)})</small>${adminToken?` <button data-sel="${i}">▶</button><button data-del="${i}">🗑</button>`:''}</li>`).join('');
  $('adminCtl').classList.toggle('hidden',!adminToken);const fold=localStorage.getItem('admFold')==='1';$('admFold').classList.toggle('hidden',!adminToken);$('music').classList.toggle('fold',!!adminToken&&fold);$('admFold').textContent=fold?'⚙ 관리자 ▼':'⚙ 관리자 ▲';$('adminBtn').textContent=adminToken?'🔑ON':'🔑';$('muteBtn').textContent=muted?'🔇':'🔊';}
 function applyVolume(){const v=window.OUTSIDE&&!window.IN_THEATER?volume*.5:volume;audio.volume=v/100;audio.muted=muted;extVol();if(ytReady){yt.setVolume(v);muted?yt.mute():yt.unMute();}}
@@ -337,7 +337,8 @@ $('adminBtn').onclick=async()=>{if(adminToken){if(confirm('관리자 로그아�
  const pw=await askPw();if(!pw)return;const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
  const j=await r.json();if(j.token){adminToken=j.token;sessionStorage.setItem('adminToken',j.token);sys('관리자 로그인 완료');renderMusic();}else alert(j.error);};
 const cmd=(type,extra)=>socket.emit('music',{type,token:adminToken,...extra});
-document.querySelectorAll('#adminCtl > button').forEach(b=>b.onclick=()=>cmd(b.dataset.c));
+document.querySelectorAll('#adminCtl > button[data-c]').forEach(b=>b.onclick=()=>cmd(b.dataset.c));
+$('clearAllBtn').onclick=()=>{if(!music.playlist.length){sys('재생목록이 이미 비어 있어요');return;}if(confirm(`재생목록 ${music.playlist.length}곡을 모두 삭제할까요? (되돌릴 수 없어요)`))cmd('clearAll');};
 $('pl').onclick=e=>{const b=e.target;if(b.dataset.sel)cmd('select',{index:+b.dataset.sel});if(b.dataset.del&&confirm('이 곡을 삭제할까요?'))cmd('delete',{index:+b.dataset.del});};
 function adminFail(r){if(r.status===403){adminToken=null;sessionStorage.removeItem('adminToken');renderMusic();}}
 $('file').onchange=async()=>{const f=$('file').files[0];if(!f)return;if(f.size>30*1024*1024){$('upMsg').textContent='30MB 초과';return;}

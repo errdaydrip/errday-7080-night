@@ -301,16 +301,19 @@ function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';if(o.hair&&!o.dj)retu
 }
 // 고른 헤어스타일 (남 3 / 여 3)
 function hairPick(head,M,H,k){const cap=()=>head.add(mesh(new THREE.SphereGeometry(.335,36,22,0,Math.PI*2,0,Math.PI*.42),H,[0,.33,0],[1.04,.97,1.02]));const back=()=>head.add(mesh(new THREE.SphereGeometry(.33,32,24,Math.PI,Math.PI),H,[0,.26,-.005],[1.05,.97,1]));
- if(k==='m1'){cap();head.add(mesh(new THREE.SphereGeometry(.33,32,24,Math.PI,Math.PI),H,[0,.3,-.01],[1.03,.85,1]));[-1,1].forEach(s=>head.add(mesh(G.box(.04,.1,.12),H,[s*.31,.36,.02])));return;} // 스포츠 머리
- if(k==='m2'){cap();back();const q=new THREE.Group();q.position.set(0,.6,.16);head.add(q); // 엘비스 퀴프: 앞머리를 높게 말아 올리고 뒤로 넘김 + 구레나룻
+ const band=(t0,tl,gap,r=.345,y=.3)=>head.add(mesh(new THREE.SphereGeometry(r,36,18,Math.PI/2+gap,Math.PI*2-gap*2,Math.PI*t0,Math.PI*tl),H,[0,y,0])); // 옆·뒤 머리 띠 (얼굴 앞만 비움)
+ if(k==='m1'){cap();back();band(.25,.3,.95);for(let i=0;i<16;i++){const a=i/16*Math.PI*2,rr=i%2?.17:.25,x=Math.sin(a)*rr,z=Math.cos(a)*rr*.9-.02;head.add(mesh(new THREE.ConeGeometry(.07,.2,8),H,[x,.6,z],null,[Math.cos(a)*.5*rr/.25,0,-Math.sin(a)*.5*rr/.25]));}
+  [[0,.66,0],[.08,.68,.12],[-.08,.68,.12],[0,.66,-.12]].forEach(q=>head.add(mesh(new THREE.ConeGeometry(.075,.24,8),H,q)));return;} // 스포츠: 위로 뾰족뾰족 세운 머리
+ if(k==='m2'){cap();back();band(.22,.36,.85);const q=new THREE.Group();q.position.set(0,.6,.16);head.add(q); // 엘비스 퀴프 + 끊김 없는 구레나룻
   q.add(mesh(G.sph(.2),H,[0,.02,-.05],[1.1,.8,1.3]));q.add(mesh(new THREE.TorusGeometry(.12,.075,12,24,Math.PI*1.3),H,[0,.08,.12],null,[0,Math.PI/2,.2]));q.add(mesh(G.sph(.1),H,[.03,.14,.22],[1.2,.9,1]));
-  head.add(mesh(G.sph(.22),H,[0,.42,-.25],[1.2,.9,1]));[-1,1].forEach(s=>head.add(mesh(G.box(.05,.22,.08),H,[s*.315,.2,.07])));return;}
+  head.add(mesh(G.sph(.22),H,[0,.42,-.25],[1.2,.9,1]));[-1,1].forEach(s=>head.add(mesh(G.box(.06,.36,.1),H,[s*.315,.25,.08])));return;}
  if(k==='m3'){cap();back();const pts=[];for(let i=0;i<26;i++){const a=i/26*Math.PI*2;const y=.05+((i*7)%5)*.07;if(Math.cos(a)>.55)continue;pts.push([Math.sin(a)*.36,y,Math.cos(a)*.3-.05]);}
   for(let i=0;i<9;i++)pts.push([(i-4)*.08,-.12+(i%2)*.04,-.28]);pts.push([0,.55,0,1.3],[-.18,.52,.15],[.18,.52,.15],[0,.5,.22]);curls(head,H,pts,.11);return;} // 장발 파마 (뽀글뽀글 어깨까지)
- if(k==='f1'){cap();back();head.add(mesh(new THREE.CylinderGeometry(.37,.4,.36,32,1,true,Math.PI*.28,Math.PI*1.44),H,[0,.17,-.02]));head.add(mesh(G.box(.5,.1,.08),H,[0,.5,.27],null,[-.25,0,0]));return;} // 단발 + 앞머리
+ if(k==='f1'){cap();back();band(.2,.45,.6,.36);head.add(mesh(new THREE.CylinderGeometry(.37,.4,.36,32,1,true,Math.PI*.28,Math.PI*1.44),H,[0,.17,-.02]));head.add(mesh(G.box(.6,.13,.1),H,[0,.5,.26],null,[-.25,0,0]));[-1,1].forEach(s=>head.add(mesh(G.sph(.1),H,[s*.27,.45,.2],[1,1.3,1])));return;} // 단발 + 앞머리
  if(k==='f2'){cap();back();head.add(mesh(G.sph(.08),M.T('#ff3cac'),[0,.5,-.3]));head.add(mesh(G.cap(.1,.35),H,[0,.3,-.48],null,[.5,0,0]));head.add(mesh(G.sph(.12),H,[0,.08,-.55]));head.add(mesh(G.sph(.15),H,[.08,.5,.24],[1.7,.5,.8]));return;} // 포니테일 + 리본
- if(k==='f3'){cap();back();const pts=[];for(let r=0;r<4;r++)for(let i=0;i<11;i++){const a=(i/10-.5)*Math.PI*1.3+Math.PI;pts.push([Math.sin(a)*(.36+r*.02),.3-r*.17,Math.cos(a)*.3-.04,1-r*.05]);}
-  [-1,1].forEach(s=>{for(let r=0;r<4;r++)pts.push([s*.36,.25-r*.16,.06]);});pts.push([-.15,.5,.2],[.15,.52,.2],[0,.58,.05,1.2]);curls(head,H,pts,.12);return;} // 긴 파마 (굵은 웨이브)
+ if(k==='f3'){cap();back();band(.2,.45,.6,.36); // 긴 생머리: 매끈하게 어깨 아래까지
+  head.add(mesh(new THREE.CylinderGeometry(.37,.4,.9,32,1,true,Math.PI*.3,Math.PI*1.4),H,[0,-.05,-.02]));head.add(mesh(G.box(.66,.9,.12),H,[0,-.07,-.32]));
+  [-1,1].forEach(s=>head.add(mesh(G.box(.1,.85,.16),H,[s*.32,-.05,.1])));head.add(mesh(G.sph(.16),H,[-.1,.5,.24],[1.8,.5,.8]));return;}
 }
 // 액세서리: 안경 / 선글라스
 function accessory(head,a){if(!a||a==='none')return;const g=new THREE.Group();g.position.set(0,.275,.33);head.add(g);
@@ -563,7 +566,7 @@ window.WAITERS=[];
   const segs=[];let L=0;for(let i=0;i<d.route.length;i++){const a=d.route[i],b=d.route[(i+1)%d.route.length],l=Math.hypot(b[0]-a[0],b[1]-a[1]);segs.push({a,b,l,s:L});L+=l;}
   WAITERS.push({...d,holder,h,segs,L,hold:0,x:d.route[0][0],z:d.route[0][1]});}
  AFRAME.registerComponent('waiter-walk',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const now=(Date.now()+(window.SERVER_OFFSET||0))/1000,rig=document.getElementById('rig');const pp=rig&&rig.object3D.position;
-  for(const w of WAITERS){const pj=(window.WAITER_JOBS||{})[WAITERS.indexOf(w)];if(pj&&pj.t0!==w.lastT0){w.lastT0=pj.t0;w.job={...pj};}const near=pp&&Math.hypot(pp.x-w.x,pp.z-w.z)<2;if(near)w.hold+=dt;else w.hold=Math.max(0,w.hold-dt*.5);w.near=near;
+  for(const w of WAITERS){const pj=(window.WAITER_JOBS||{})[WAITERS.indexOf(w)];if(pj&&pj.t0!==w.lastT0){w.lastT0=pj.t0;w.job={...pj};}w.near=!!(pp&&Math.hypot(pp.x-w.x,pp.z-w.z)<2);/* 손님 근처여도 멈추거나 쳐다보지 않음 (자기 일만) */
    if(w.job){const J=w.job,e=now-J.t0/1000,wk=J.walk/1000,pl=J.place/1000;if(!J.from){J.from=[w.x,w.z];const c=(window.POCHA_TABLES||{})[J.table]||[0,0];const dx=w.x-c[0],dz=w.z-c[1];const ax=Math.abs(dx)>Math.abs(dz);J.to=[c[0]+(ax?Math.sign(dx)*1.15:0),c[1]+(ax?0:Math.sign(dz||1)*1.15)];J.c=c;}
     w.paused=(w.paused||0)+dt;const o=w.holder.object3D;let tx,tz,face,anim='Walk_Loop';
     if(e<wk){const k=Math.max(0,e/wk);w.x=J.from[0]+(J.to[0]-J.from[0])*k;w.z=J.from[1]+(J.to[1]-J.from[1])*k;face=Math.atan2(J.to[0]-J.from[0],J.to[1]-J.from[1]);if(!J.carry){J.carry=1;w.h.carry&&w.h.carry('beer');}}
@@ -571,9 +574,9 @@ window.WAITERS=[];
     else if(e<2*wk+pl){if(J.carry===1){J.carry=2;w.h.carry&&w.h.carry(null);}const k=(e-wk-pl)/wk;w.x=J.to[0]+(J.from[0]-J.to[0])*k;w.z=J.to[1]+(J.from[1]-J.to[1])*k;face=Math.atan2(J.from[0]-J.to[0],J.from[1]-J.to[1]);w.h.root.rotation.x=0;}
     else{w.job=null;w.h.root.rotation.x=0;continue;}
     w.near=false;o.position.set(w.x,0,w.z);let dy=face-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*8);w.h.play(anim);continue;}
-   const d=(((now-w.hold-(w.paused||0))*w.sp+w.ph)%w.L+w.L)%w.L;const sg=w.segs.find(q=>d>=q.s&&d<q.s+q.l)||w.segs[0];const k=(d-sg.s)/sg.l;w.x=sg.a[0]+(sg.b[0]-sg.a[0])*k;w.z=sg.a[1]+(sg.b[1]-sg.a[1])*k;
-   const o=w.holder.object3D;o.position.set(w.x,0,w.z);const yaw=near?Math.atan2(pp.x-w.x,pp.z-w.z):Math.atan2(sg.b[0]-sg.a[0],sg.b[1]-sg.a[1]);let dy=yaw-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*6);
-   w.h.play(near?'Idle_Loop':'Walk_Loop');w.h.root.rotation.x=near&&w.hold<1.2?Math.sin(w.hold/1.2*Math.PI)*.35:0;}}});
+   const d=(((now-(w.paused||0))*w.sp+w.ph)%w.L+w.L)%w.L;const sg=w.segs.find(q=>d>=q.s&&d<q.s+q.l)||w.segs[0];const k=(d-sg.s)/sg.l;w.x=sg.a[0]+(sg.b[0]-sg.a[0])*k;w.z=sg.a[1]+(sg.b[1]-sg.a[1])*k;
+   const o=w.holder.object3D;o.position.set(w.x,0,w.z);const yaw=Math.atan2(sg.b[0]-sg.a[0],sg.b[1]-sg.a[1]);let dy=yaw-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*6);
+   w.h.play('Walk_Loop');w.h.root.rotation.x=0;}}});
  document.querySelector('a-scene').setAttribute('waiter-walk','');})();
 
 // ---------- 80년대 거리 보강: 낮은 상가 + 주차된 자동차 ----------
@@ -755,6 +758,6 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  [-1,1].forEach(s=>E('a-box',{position:`${D.x+s*(D.w/2+.06)} ${D.h/2} ${z-.02}`,width:.12,height:D.h,depth:.08,material:'color:#c8a040;metalness:.6;roughness:.3'}));
  E('a-box',{position:`${D.x} ${D.h+.06} ${z-.02}`,width:D.w+.24,height:.12,depth:.08,material:'color:#c8a040;metalness:.6;roughness:.3'});
  [-1,1].forEach(s=>E('a-sphere',{position:`${D.x+s*.12} 1.2 ${z-.05}`,radius:.04,material:'color:#ffd060;metalness:.8'}));
- E('a-entity',{position:`${D.x} ${D.h+.5} ${z-.05}`,rotation:'0 180 0',ktext:'value:EXIT · 🎬 극장 →;color:#fff3c0;glow:#ff8a00;size:70;width:1.7'});
+ E('a-entity',{position:`${D.x} ${D.h+.5} ${z-.05}`,rotation:'0 180 0',ktext:'value:EXIT · 🎬 극장 앞 포차 →;color:#fff3c0;glow:#ff8a00;size:70;width:2.2'});
  E('a-entity',{position:`${D.x} 1.6 ${z-.06}`,rotation:'0 180 0',ktext:'value:THEATER;color:#ffd060;glow:#ff2a6a;size:60;width:1.1'});
  E('a-entity',{position:`${D.x} ${D.h} ${z-.6}`,light:'type:point;color:#ffb070;intensity:.6;distance:3'});})();

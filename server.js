@@ -29,7 +29,7 @@ async function addLink(req,res){if(!isAdmin(req.get('x-admin-token')))return res
   for(const it of items){if(!it.title)it.title=await ytTitle(it.id);}
   items=items.map(it=>({type:'yt',videoId:it.id,title:it.title}));}
  else items=r.items;
- if(music.isDefault){music.playlist=[];music.index=-1;music.isDefault=false;music.shuffle=false;played=new Set();}
+ music.cleared=false;if(music.isDefault){music.playlist=[];music.index=-1;music.isDefault=false;music.shuffle=false;played=new Set();}
  const stamp=Date.now();items.forEach((it,i)=>{it.title=String(it.title||'?').slice(0,200);music.playlist.push({...it,id:it.type+'_'+(it.videoId||'')+'_'+stamp+'_'+i,by});});
  if(music.index<0){music.index=music.playlist.length-items.length;music.playing=true;music.startedAt=Date.now();music.pausedAt=0;}
  broadcastMusic();res.json({added:items.length,service:r.service,title:items.length===1?items[0].title:undefined});}
@@ -54,7 +54,7 @@ app.post('/upload',(req,res,next)=>isAdmin(req.get('x-admin-token'))?next():res.
  if(!req.file) return res.status(400).json({error:'mp3 파일만 가능'});
  const name=Buffer.from(req.file.originalname,'latin1').toString('utf8');
  const t={type:'mp3',id:req.file.filename,title:name.replace(/\.mp3$/i,''),url:'/uploads/'+req.file.filename,by:req.body.by||'?'};
- if(music.isDefault){music.playlist=[];music.index=-1;music.isDefault=false;music.shuffle=false;played=new Set();}
+ music.cleared=false;if(music.isDefault){music.playlist=[];music.index=-1;music.isDefault=false;music.shuffle=false;played=new Set();}
  music.playlist.push(t); if(music.index<0){music.index=music.playlist.length-1;music.playing=true;music.startedAt=Date.now();}
  broadcastMusic(); res.json(t);
 }));
@@ -63,7 +63,7 @@ function load(){try{const j=JSON.parse(fs.readFileSync(STATE,'utf8'));Object.ass
  music.playlist=music.playlist.filter(t=>t.type!=='mp3'||fs.existsSync(path.join(UP,t.id)));if(music.index>=music.playlist.length)music.index=music.playlist.length?0:-1;}catch(e){}}
 load();
 const DEFAULT_LIST='PL1cIIyrjZ9L3YEUl8DAz_R6uTf2-80wWY';let defLoading=false;
-async function ensureDefault(){if(music.playlist.length||defLoading)return;defLoading=true;try{const items=await ytPlaylist(DEFAULT_LIST);
+async function ensureDefault(){if(music.playlist.length||defLoading||music.cleared)return; /* 관리자가 전체삭제했으면 기본목록 다시 안 채움 */defLoading=true;try{const items=await ytPlaylist(DEFAULT_LIST);
   if(items.length&&!music.playlist.length){music.playlist=items.map(it=>({type:'yt',id:'yt_'+it.id+'_def',videoId:it.id,title:it.title||'YouTube',by:'기본 재생목록'}));
    music.isDefault=true;music.shuffle=true;played=new Set();music.index=Math.floor(Math.random()*items.length);music.playing=true;music.startedAt=Date.now();music.pausedAt=0;broadcastMusic();fillTitles();}}
  catch(e){console.log('default playlist fail',e.message);}finally{defLoading=false;}}
@@ -172,6 +172,7 @@ io.on('connection',s=>{
   else if(cmd.type==='shuffleToggle'){music.shuffle=!music.shuffle;played=new Set();}
   else if(cmd.type==='shuffleNow'&&music.playlist.length>1){const cur=music.playlist[music.index];const rest=music.playlist.filter(t=>t!==cur);
    for(let i=rest.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}music.playlist=cur?[cur,...rest]:rest;music.index=cur?0:music.index;}
+  else if(cmd.type==='clearAll'){for(const t of music.playlist)if(t.type==='mp3')fs.unlink(path.join(UP,t.id),()=>{});music.playlist=[];music.index=-1;music.playing=false;music.startedAt=0;music.pausedAt=0;music.isDefault=false;music.cleared=true;played=new Set();io.emit('chat',{sys:true,text:'🗑 관리자가 재생목록을 모두 비웠어요'});}
   else if(cmd.type==='delete'&&music.playlist[cmd.index]){const [t]=music.playlist.splice(cmd.index,1);if(t.type==='mp3')fs.unlink(path.join(UP,t.id),()=>{});
    if(cmd.index<music.index)music.index--;else if(cmd.index===music.index){if(!music.playlist.length){music.index=-1;music.playing=false;}else{music.index%=music.playlist.length;music.startedAt=now;music.pausedAt=0;}}}
   broadcastMusic();});
