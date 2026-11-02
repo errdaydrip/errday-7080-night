@@ -729,10 +729,10 @@ window.WAITERS=[];
   const c=Math.cos(ry*Math.PI/180),sn=Math.sin(ry*Math.PI/180),hx=Math.abs(c)*W/2+Math.abs(sn)*L/2,hz=Math.abs(sn)*W/2+Math.abs(c)*L/2;OBSTACLES.push({x0:x-hx,x1:x+hx,z0:z-hz,z1:z+hz});};
  car(1.6,24.1,90,'#2f5fa8',true);car(6.6,24.1,90,'#f08a24','taxi'); /* 트럭과 자리 바꿈, 뒤 차는 택시 */
  {const TX=6.6,TZ=24.1;window.TAXI={x:TX,z:TZ};
-  const seatEl=E('a-box',{position:`${TX-.6} .75 ${TZ-.38}`,width:.7,height:.6,depth:.6,material:'opacity:0;transparent:true;depthWrite:false'});seatEl.dataset.seat='TAXI';seatEl.classList.add('seat');
-  SEATS.push({id:'TAXI',table:'TAXI',x:TX-.6,z:TZ-.38,y:.22,yaw:Math.PI/2,el:seatEl,stand:[TX-.6,TZ-1.6]});
+  /* 손님 3명: 조수석 + 뒷좌석 2 */[['TAXI-1',TX+.35,TZ+.38],['TAXI-2',TX-.6,TZ-.38],['TAXI-3',TX-.6,TZ+.38]].forEach(([id,x,z])=>{const seatEl=E('a-box',{position:`${x} .75 ${z}`,width:.6,height:.6,depth:.6,material:'opacity:0;transparent:true;depthWrite:false'});seatEl.dataset.seat=id;seatEl.classList.add('seat');
+   SEATS.push({id,table:'TAXI',x,z,y:.22,yaw:Math.PI/2,el:seatEl,stand:[x,TZ-1.6]});});
   E('a-entity',{position:`${TX-.6} 2.35 ${TZ-.9}`,billboard:'',ktext:'value:🚕 택시 타기;color:#fff;glow:#ffb020;size:34;width:.9'});
-  (async()=>{const holder=E('a-entity',{position:`${TX+.35} .22 ${TZ+.38}`});const h=await makeHuman(holder,{...LOOKS.resolve({gender:'m',style:'suit',top:'#3a5a8a',bottom:'#2a2a2a',hair:'m2'}),gender:'m',style:'suit',skin:'#e8b890'});HUMANS.add(h);holder.object3D.rotation.y=Math.PI/2;h.play('Sitting_Idle_Loop');
+  (async()=>{/* 기사: 왼쪽 앞자리 + 핸들 */E('a-torus',{position:`${TX+.72} .98 ${TZ-.38}`,rotation:'0 90 -25',radius:.17,'radius-tubular':.022,color:'#222'});E('a-cylinder',{position:`${TX+.8} .9 ${TZ-.38}`,rotation:'0 0 65',radius:.025,height:.25,color:'#333'});const holder=E('a-entity',{position:`${TX+.35} .22 ${TZ-.38}`});const h=await makeHuman(holder,{...LOOKS.resolve({gender:'m',style:'suit',top:'#3a5a8a',bottom:'#2a2a2a',hair:'m2'}),gender:'m',style:'suit',skin:'#e8b890'});HUMANS.add(h);holder.object3D.rotation.y=Math.PI/2;h.play('Sitting_Idle_Loop');
    E('a-entity',{position:'0 1.55 0',billboard:'',ktext:'value:택시 기사;color:#fff;glow:#ffb020;size:28;width:.5'},holder);})();}car(-4.6,24.1,90,'#8a1e1e');
 })();
 // ---------- 포차 이모 (조리대 뒤에서 볶는 중) ----------

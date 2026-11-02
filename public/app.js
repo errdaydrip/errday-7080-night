@@ -259,7 +259,7 @@ socket.on('pour',({id,kind})=>{const el=others[id]&&others[id].el;if(el&&el._h)e
 function serve(kind){if(!inBarZone())return;const n=Date.now();if(n-(window._lastServe||0)<3000)return;window._lastServe=n;const m=$('myAvatar');if(m._h)m._h.drink('pour');
  const p=rig.object3D.position;socket.emit('serve',{x:p.x,z:p.z,kind});}
 window.serve=serve;window.drink=drink;
-function actions(){const A=[];if(mySeat==='TAXI'){A.push(['🏠 집으로 돌아가기',()=>goHome(),'home'],['🚪 내리기',()=>stand(),'getoff']);return A;}if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.push([GLASSES[mySeat]==='cocktail'?'🍸 칵테일':'🥃 위스키',()=>drink(GLASSES[mySeat]),'d-'+GLASSES[mySeat]]);}
+function actions(){const A=[];if(mySeat&&mySeat.startsWith('TAXI')){A.push(['🏠 집으로 돌아가기',()=>goHome(),'home'],['🚪 내리기',()=>stand(),'getoff']);return A;}if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.push([GLASSES[mySeat]==='cocktail'?'🍸 칵테일':'🥃 위스키',()=>drink(GLASSES[mySeat]),'d-'+GLASSES[mySeat]]);}
   else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);if(t&&t[0]==='Y'){A.push(['🛎 주문하기',()=>openOrder(),'order']);if(ORDER_NOTE)A.push([ORDER_NOTE,null,'lbl']);if(MY_ORDERS.length)A.push(['⏳ 주문: '+MY_ORDERS.map(o=>ITEM_NAME[o.kind]).join(', ')+' · 알바가 준비 중',null,'lbl']);}}
   return A;}
  if(inBarZone()){A.push(['🍸 바텐더 서빙:',null,'lbl'],['🥃 위스키',()=>serve('whiskey'),'s-whiskey'],['🍸 칵테일',()=>serve('cocktail'),'s-cocktail']);return A;}
@@ -268,7 +268,7 @@ function actions(){const A=[];if(mySeat==='TAXI'){A.push(['🏠 집으로 돌아
  {const DB=(window.DARTS||[]).findIndex(d=>near(d,1.2));if(DB>=0){const g=(window.DART_G||[])[DB],me=g&&g.players.findIndex(p=>p.id===myId);
   A.push([`🎯 조준해서 던지기 (${DB+1}번)`,()=>dartAim(DB),'dart'+DB]);
   A.push(['하이스코어 (3R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:3},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi3'],['하이스코어 (8R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:8},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi8']);}}
- {const ts=SEATS.find(q=>q.id==='TAXI');if(ts&&near({x:ts.x,z:ts.z-.9},1.8)&&!seatTaken(ts))A.push(['🚕 택시 타기',()=>sit(ts),'taxi']);}
+ {const TS=SEATS.filter(q=>q.table==='TAXI');if(TS.length&&TS.some(q=>near({x:q.x,z:q.z-.9},1.9))){const f=TS.find(q=>!seatTaken(q));if(f)A.push(['🚕 택시 타기',()=>{const g=TS.find(q=>!seatTaken(q));g&&sit(g);},'taxi']);else A.push(['🚕 만석',null,'lbl']);}}
  if(near(window.FRIDGE,1.6))for(const k of ['soju','beer'])A.push([ITEM_NAME[k]+' 꺼내기',()=>socket.emit('pickup',k),'p-'+k]);
  if(near(window.COOK,2.2))for(const k of ['dakbal','kkom','fish','squid'])A.push([ITEM_NAME[k],()=>socket.emit('pickup',k),'p-'+k]);
  if(near({x:-11.6,z:20.5},2.2))A.push(['🍗 통닭 가져가기',()=>socket.emit('pickup','chicken'),'p-chicken']);if(near({x:-11.6,z:15},2.2))A.push(['🐟 모듬회 가져가기',()=>socket.emit('pickup','hoe'),'p-hoe']);
@@ -505,10 +505,11 @@ $('chatClear').addEventListener('click',e=>{e.stopPropagation();e.preventDefault
 socket.on('chatCleared',()=>{$('msgs').innerHTML='';sys('🧹 채팅 기록이 지워졌어요');});
 
 /* 🚕 택시 '집으로 돌아가기' = 게임 종료 (서버에서 바로 퇴장 처리, 유령 안 남음) */
-function goHome(){if(!confirm('집으로 돌아갈까요? (게임이 완전히 종료돼요)'))return;window.BYE=true;
+function goHome(){if(!confirm('집으로 돌아갈까요? (게임에서 나가요)'))return;window.BYE=true;
  /* 다음 접속 땐 처음부터 (이름·캐릭터 창). 외형(profile)은 창에 미리 채워지도록 유지 */
  try{['lastState','joinedAt'].forEach(k=>{localStorage.removeItem(k);sessionStorage.removeItem(k);});}catch(e){}
  try{audio.pause();yt&&yt.pauseVideo&&yt.pauseVideo();}catch(e){}
- const end=()=>{try{socket.disconnect();}catch(e){}try{window.close();}catch(e){}setTimeout(()=>{location.replace('about:blank');},250);};
+ const end=()=>{if(window._byeDone)return;window._byeDone=true;try{socket.disconnect();}catch(e){}
+  const d=document.createElement('div');d.id='byeScreen';d.innerHTML='<div class="bx"><div class="bt">🚕 안녕히 가세요!</div><div class="bs">오늘 밤도 즐거우셨나요? 또 놀러 오세요 ✨</div><button type="button">다시 들어가기</button></div>';document.body.appendChild(d);d.querySelector('button').onclick=()=>location.reload();};
  socket.timeout(1500).emit('bye',()=>end());setTimeout(end,1600);}
 window.goHome=goHome;
