@@ -328,7 +328,7 @@ function hairPick(head,M,H0,k){const H=H0.clone();H.side=THREE.DoubleSide;H.roug
   const end=f=>P*.5+P*.12*sstep(P*.5,P*.85,f),w=f=>sstep(P*.3,P*.5,f);
   add(hairShell(end,{t0:f=>end(f)-(P*.13+P*.06*sstep(P*.5,P*.85,f))*w(f)-.001,rx:.352,rz:.338,bump:(ph,th,f)=>.012-.9*(1-sstep(P*.3,P*.4,f))}));return;}
  if(k==='m4'){ // 짧은 퍼마: 둥글고 곱슬한 짧은 볼륨
-  add(hairShell(line3(P*.32,P*.44,P*.6),{bump:(ph,th)=>.06+.035*Math.sin(ph*11)*Math.sin(th*16)+.04*Math.max(0,1-th/(P*.45))}));return;}
+  add(hairShell(line3(P*.31,P*.46,P*.63),{bump:(ph,th)=>{const c=Math.sin(ph*13)*Math.sin(th*18),c2=Math.sin(ph*7+1.3)*Math.sin(th*11+.7);return .11+.045*c+.03*c2+.09*Math.max(0,1-th/(P*.5));}}));return;} /* 풍성한 짧은 파마 */
  if(k==='m0'){ // 남자 기본: 짧고 단정한 머리, 위쪽 살짝 볼륨
   add(hairShell(line3(P*.31,P*.42,P*.6),{bump:(ph,th)=>.018+.04*Math.max(0,1-th/(P*.4))}));return;}
  if(k==='m1'){ // 포마드: 위·뒤로 넘긴 높은 올림머리 + 옆·관자놀이는 쉐이브처럼 희미하게 짧게 친 페이드
@@ -844,19 +844,20 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  E('a-box',{position:'0 0 -.04',width:11.4,height:1.15,depth:.06,material:'color:#0a0210;roughness:.6'},board);
  [[0,.6,11.5,.06],[0,-.6,11.5,.06],[-5.72,0,.06,1.26],[5.72,0,.06,1.26]].forEach(([px,py,w,h])=>E('a-box',{position:`${px} ${py} 0`,width:w,height:h,depth:.05,material:'color:#ff3cac;emissive:#ff3cac;emissiveIntensity:1.4'},board));
  const pl=E('a-plane',{position:'0 0 .005',width:11,height:11*H/W*1.4},board);pl.addEventListener('loaded',()=>{const m=pl.getObject3D('mesh');m.material=new THREE.MeshBasicMaterial({map:tex,toneMapped:false});});
- /* 정지형 전광판: 새 후원이 올 때만 깜빡깜빡 → 글자 전체가 한 번에 바뀜. 그 전까지는 이전 목록 그대로 */
- const fmt=n=>(+n||0).toLocaleString('ko-KR'),FONT='"Malgun Gothic","Noto Sans KR",sans-serif';let L1='',L2='',lastT=null,blinkUntil=0,last=0,dirty=true;
- const line=d=>`★ ${d.name} ${fmt(d.amount)}원${d.msg?' · "'+d.msg+'"':''}`;
- const fit=(t,max,px)=>{let s=px;x.font=`bold ${s}px ${FONT}`;while(s>22&&x.measureText(t).width>W-80){s-=2;x.font=`bold ${s}px ${FONT}`;}if(x.measureText(t).width>W-80){while(t.length>1&&x.measureText(t+'…').width>W-80)t=t.slice(0,-1);t+='…';}return t;};
- const neon=(t,y,px,c)=>{x.font=`bold ${px}px ${FONT}`;x.textAlign='center';x.textBaseline='middle';for(const b of [22,0]){x.shadowColor=c;x.shadowBlur=b;x.fillStyle=b?c:'#fff3fb';x.fillText(t,W/2,y);}x.shadowBlur=0;};
- const draw=on=>{x.fillStyle='#0a0210';x.fillRect(0,0,W,H);if(on){if(L2){const s1=fitPx(L1,64);neon(fit(L1,0,s1),44,s1,'#ff3cac');const s2=fitPx(L2,34);neon(fit(L2,0,s2),104,s2,'#3cd8ff');}else{const s1=fitPx(L1,72);neon(fit(L1,0,s1),H/2+4,s1,'#ff3cac');}}tex.needsUpdate=true;};
- const fitPx=(t,px)=>{let s=px;x.font=`bold ${s}px ${FONT}`;while(s>22&&x.measureText(t).width>W-80){s-=2;x.font=`bold ${s}px ${FONT}`;}return s;};
- const build=l=>{if(l&&l.length){L1='💝 '+line(l[0]);L2=l.length>1?'이전 후원  '+l.slice(1).map(line).join('   '):'💝 후원 감사합니다!';}else if(window.TICKER_IDLE){L1=window.TICKER_IDLE;L2='';}else{L1='💝 ERRDAY 후원 전광판';L2='후원하면 여기에 이름이 떠요! · 웨이터·알바에게 💝 후원하기';}};
- window.setTickerIdle=t=>{window.TICKER_IDLE=t||'';build(window.DONATIONS||[]);dirty=true;};
- window.setDonations=l=>{l=l||[];const t=l[0]?l[0].t+'|'+l[0].name:'';const isNew=lastT!==null&&t&&t!==lastT;lastT=t;window.DONATIONS=l;build(l);if(isNew)blinkUntil=performance.now()+1800;dirty=true;};build([]);
- window.TICKER_STATE=()=>({L1,L2,blinking:performance.now()<blinkUntil});
- AFRAME.registerComponent('don-ticker',{tick(t){const now=performance.now();if(now<blinkUntil){const on=Math.floor((blinkUntil-now)/150)%2===0;if(on!==this._on||t-last>150){this._on=on;last=t;/* 깜빡이는 동안: 새 글자 전체가 켜졌다 꺼졌다 */draw(on);}dirty=true;return;}
-  if(dirty){dirty=false;draw(true);}}});
+ /* 일반 LED 전광판: 관리자가 넣은 글자가 LED 점(도트) 모양으로 흐르며 번쩍번쩍. 글자 없으면 기본 문구 */
+ const FONT='"Malgun Gothic","Noto Sans KR",sans-serif',DEF='★ ERRDAY 7080 NIGHT ★ 오늘 밤도 신나게! ★';let text=DEF,tw=1,off=W-60,last=0;
+ const src=document.createElement('canvas');src.width=W;src.height=H;const sx=src.getContext('2d');
+ const DOT=8,COLS=W/DOT,ROWS=H/DOT;const COLORS=['#ff3cac','#ffd23c','#3cd8ff','#7cff5c','#ff7a30'];
+ const build=()=>{sx.font=`bold 100px ${FONT}`;tw=sx.measureText(text).width+260;};
+ window.setTickerIdle=t=>{window.TICKER_IDLE=t||'';text=window.TICKER_IDLE||DEF;build();off=W-60;};build();window.setDonations=()=>{};
+ window.TICKER_STATE=()=>({text});
+ AFRAME.registerComponent('don-ticker',{tick(t){if(t-last<40)return;last=t;off=(off+6)%tw;
+  sx.fillStyle='#000';sx.fillRect(0,0,W,H);sx.font=`bold 100px ${FONT}`;sx.textBaseline='middle';sx.fillStyle='#fff';const px=W-off;sx.fillText(text,px,H/2+6);sx.fillText(text,px+tw,H/2+6);
+  const d=sx.getImageData(0,0,W,H).data;const k=Math.floor(t/500),flash=Math.floor(t/120)%9===0; /* 가끔 번쩍 */
+  x.fillStyle='#0a0208';x.fillRect(0,0,W,H);
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const i=((r*DOT+DOT/2)*W+(c*DOT+DOT/2))*4;const on=d[i]>110;
+   x.fillStyle=on?(flash?'#ffffff':COLORS[(k+Math.floor(c/40))%COLORS.length]):'#2a0c1c';x.beginPath();x.arc(c*DOT+DOT/2,r*DOT+DOT/2,on?3.4:2.4,0,6.283);x.fill();}
+  tex.needsUpdate=true;}});
  document.querySelector('a-scene').setAttribute('don-ticker','');})();
 (function rankingBoard(){const W=1024,H=1024,cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
  const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace||tex.colorSpace;const FONT='"Malgun Gothic","Noto Sans KR",sans-serif';

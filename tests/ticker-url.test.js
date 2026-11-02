@@ -6,13 +6,13 @@ const start=()=>spawn('node',['server.js'],{cwd:path.join(__dirname,'..'),env:{.
 const em=(c,ev,d)=>new Promise(r=>c.emit(ev,d,r));
 (async()=>{let srv=start();await W(1500);try{
  const tok=(await (await fetch(U+'/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:process.env.ADMIN_PASSWORD||'6651'})})).json()).token;
- const c=io(U,{forceNew:true});let dl=null;c.on('donations',l=>dl=l);await W(500);a.strictEqual(dl[0].name,'테스트','old donation list kept');
- a.strictEqual((await em(c,'getTicker','nope')).ok,false);a.strictEqual((await em(c,'setTicker',{token:'x',url:'https://toon.at/widget/donation_ticker/abcdefabcdefabcdef/101'})).ok,false,'admin only');
- a.strictEqual((await em(c,'setTicker',{token:tok,url:'https://example.com'})).ok,false,'bad url');
- const NU='https://toon.at/widget/donation_ticker/abcdefabcdefabcdef/101';a.strictEqual((await em(c,'setTicker',{token:tok,url:NU})).ok,true);
- a.strictEqual((await em(c,'getTicker',tok)).url,NU);let idle=null;c.on('tickerIdle',x=>idle=x);a.strictEqual((await em(c,'setTickerIdle',{token:'x',text:'a'})).ok,false);a.strictEqual((await em(c,'setTickerIdle',{token:tok,text:'  오늘도 즐밤!  '})).ok,true);await W(200);a.strictEqual(idle,'오늘도 즐밤!'); const RU='https://toon.at/widget/ranking/abcdefabcdefabcdef';a.strictEqual((await em(c,'setRank',{token:tok,url:'https://toon.at/widget/donation_ticker/abcdefabcdefabcdef'})).ok,false);a.strictEqual((await em(c,'setRank',{token:tok,url:RU})).ok,true);
+ const c=io(U,{forceNew:true});let dl=null;c.on('donations',l=>dl=l);await W(500);a.strictEqual(dl,null,'no donation feed any more');
+ a.strictEqual((await em(c,'getTicker','nope')).ok,false);
+
+
+ let idle=null;c.on('tickerIdle',x=>idle=x);a.strictEqual((await em(c,'setTickerIdle',{token:'x',text:'a'})).ok,false);a.strictEqual((await em(c,'setTickerIdle',{token:tok,text:'  오늘도 즐밤!  '})).ok,true);await W(200);a.strictEqual(idle,'오늘도 즐밤!'); const RU='https://toon.at/widget/ranking/abcdefabcdefabcdef';a.strictEqual((await em(c,'setRank',{token:tok,url:'https://toon.at/widget/donation_ticker/abcdefabcdefabcdef'})).ok,false);a.strictEqual((await em(c,'setRank',{token:tok,url:RU})).ok,true);a.strictEqual((await em(c,'setTickerIdle',{token:tok,text:''})).ok,true);await W(200);a.strictEqual(idle,'','cleared');a.strictEqual((await em(c,'setTickerIdle',{token:tok,text:'오늘도 즐밤!'})).ok,true);
  let bd=null;c.on('boards',b=>bd=b);a.strictEqual((await em(c,'setBoards',{token:'x',rank:false})).ok,false);a.strictEqual((await em(c,'setBoards',{token:tok,rank:false})).ok,true);await W(200);a.deepStrictEqual([bd.ticker,bd.rank],[true,false]);
  c.close();srv.kill();await W(500);srv=start();await W(1500);
  const tok2=(await (await fetch(U+'/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:process.env.ADMIN_PASSWORD||'6651'})})).json()).token;
- const c2=io(U,{forceNew:true});let idle2=null,bd2=null;c2.on('tickerIdle',x=>idle2=x);c2.on('boards',b=>bd2=b);await W(400);a.strictEqual(idle2,'오늘도 즐밤!','idle persisted');a.strictEqual((await em(c2,'getTicker',tok2)).url,NU,'ticker url persisted');a.strictEqual((await em(c2,'getTicker',tok2)).rankUrl,RU,'rank url persisted');a.strictEqual(bd2.rank,false,'board toggle persisted');c2.close();
+ const c2=io(U,{forceNew:true});let idle2=null,bd2=null;c2.on('tickerIdle',x=>idle2=x);c2.on('boards',b=>bd2=b);await W(400);a.strictEqual(idle2,'오늘도 즐밤!','idle persisted');a.strictEqual((await em(c2,'getTicker',tok2)).rankUrl,RU,'rank url persisted');a.strictEqual(bd2.rank,false,'board toggle persisted');c2.close();
  console.log('ticker-url OK');srv.kill();process.exit(0);}catch(e){console.error(e);srv.kill();process.exit(1);}})();
