@@ -118,3 +118,12 @@ body.pfs{height:100dvh;overflow:hidden;overscroll-behavior:none}
  body.typing #hud #chatIn{font-size:16px;padding:10px}
 }
 @media (orientation:landscape) and (max-height:500px){body.typing #hud #msgs{height:30vh!important}}
+
+#dartAim{position:fixed;inset:0;z-index:60;background:rgba(10,2,16,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;touch-action:none}
+#dartAim canvas{width:min(80vw,60vh,420px);height:min(80vw,60vh,420px);touch-action:none;cursor:crosshair}
+#dartAim .dah{color:#ffd23c;font-weight:bold;font-size:15px;text-align:center}
+#dartAim button{padding:8px 22px;border-radius:18px;border:1px solid #ff3cac;background:#2a0c1c;color:#fff}
+
+#toast{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:55;display:flex;flex-direction:column;gap:4px;align-items:center;pointer-events:none}
+#toast div{background:rgba(20,5,28,.85);border:1px solid #ff3cac;color:#fff;padding:5px 12px;border-radius:14px;font-size:13px;animation:tfade 2.8s forwards}
+@keyframes tfade{0%,80%{opacity:1}100%{opacity:0}}

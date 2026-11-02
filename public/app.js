@@ -199,7 +199,8 @@ function chatBottom(force){const m=$('msgs');if(!m)return;if(chatHold&&force!==t
 function addMsg(html,force){const m=$('msgs');const near=force||!chatHold;const d=document.createElement('div');d.innerHTML=html;m.appendChild(d);while(m.children.length>100)m.firstChild.remove();if(near)chatBottom();}
 window.addEventListener('resize',()=>chatBottom());
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function sys(t){addMsg(`<i style="color:#aaa">${esc(t)}</i>`);}
+/* 시스템/게임 알림은 채팅창에 쌓지 않고 화면 위쪽에 잠깐 떴다 사라짐 (채팅창은 사람 대화만) */
+function sys(t){let b=document.getElementById('toast');if(!b){b=document.createElement('div');b.id='toast';document.body.appendChild(b);}const d=document.createElement('div');d.textContent=t;b.appendChild(d);while(b.children.length>3)b.firstChild.remove();setTimeout(()=>d.remove(),2800);}
 $('chatIn').addEventListener('focus',()=>{for(const k in keys)keys[k]=false;});
 $('chatIn').addEventListener('keydown',e=>e.stopPropagation());
 /* 모바일 채팅 입력 중: 먹기/마시기/점프/조이스틱 숨기고 채팅창 크게 */
@@ -260,7 +261,9 @@ function actions(){const A=[];if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.pu
  if(inBarZone()){A.push(['🍸 바텐더 서빙:',null,'lbl'],['🥃 위스키',()=>serve('whiskey'),'s-whiskey'],['🍸 칵테일',()=>serve('cocktail'),'s-cocktail']);return A;}
  if(!mySeat&&((window.WAITERS||[]).some(w=>w.near)||(window.ALBA&&near(window.ALBA,2))))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
  const nt=nearTable();if(myCarry&&nt)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);
- {const DB=(window.DARTS||[]).findIndex(d=>near(d,1.2));if(DB>=0)A.push([`🎯 다트 던지기 (${DB+1}번)`,()=>{if(Date.now()-(window._dartT||0)<1500)return;window._dartT=Date.now();socket.emit('dart',DB);},'dart'+DB]);}
+ {const DB=(window.DARTS||[]).findIndex(d=>near(d,1.2));if(DB>=0){const g=(window.DART_G||[])[DB],me=g&&g.players.findIndex(p=>p.id===myId);
+  A.push([`🎯 조준해서 던지기 (${DB+1}번)`,()=>dartAim(DB),'dart'+DB]);if(g&&me<0&&!g.started&&g.players.length<4)A.push(['🙋 참가',()=>socket.emit('dartJoin',{b:DB},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dj']);
+  A.push(['하이스코어 새 게임',()=>socket.emit('dartNew',{b:DB,mode:'high'},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi'],['501 새 게임',()=>socket.emit('dartNew',{b:DB,mode:'501'},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'d501'],['크리켓 새 게임',()=>socket.emit('dartNew',{b:DB,mode:'cricket'},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dcr']);}}
  if(near(window.FRIDGE,1.6))for(const k of ['soju','beer'])A.push([ITEM_NAME[k]+' 꺼내기',()=>socket.emit('pickup',k),'p-'+k]);
  if(near(window.COOK,2.2))for(const k of ['dakbal','kkom','fish','squid'])A.push([ITEM_NAME[k],()=>socket.emit('pickup',k),'p-'+k]);
  if(near({x:-11.6,z:20.5},2.2))A.push(['🍗 통닭 가져가기',()=>socket.emit('pickup','chicken'),'p-chicken']);if(near({x:-11.6,z:15},2.2))A.push(['🐟 모듬회 가져가기',()=>socket.emit('pickup','hoe'),'p-hoe']);
@@ -398,7 +401,17 @@ function setClubDoor(open,announce){const was=window.CLUB_OPEN;window.CLUB_OPEN=
 function ejectFromClub(){if(mySeat){const s=mySeat;mySeat=null;socket.emit('seat',null);camGoal=null;}route=[];goal=null;goalSeat=null;marker.setAttribute('visible',false);
  const D=window.DOOR;rig.object3D.position.set(D.x+(Math.random()-.5)*3,0,14+Math.random()*1.5);myYaw=0;updateWhere();}
 window.ejectFromClub=ejectFromClub;
-socket.on('dart',d=>{window.dartHit&&window.dartHit(d);addMsg(`<span class="sys">🎯 ${esc(d.nick)} → ${esc(d.label)} (+${d.pts})</span>`);});socket.on('dartTop',t=>window.dartBoard&&window.dartBoard(t));
+window.DART_G=[];socket.on('dartState',d=>{window.DART_G[d.b]=d.g;window.dartState&&window.dartState(d);const h=d.hit;if(h)sys(`🎯 ${d.b+1}번 ${(h.nick)} → ${(h.label)}${h.bust?' (버스트!)':''}${h.win?' 🏆 승리!':''}`);});
+/* 조준: 판 위를 드래그(또는 마우스 이동)해서 위치를 정하고 손을 떼면 던짐. 조준점은 살짝 흔들림 */
+function dartAim(b){if(document.getElementById('dartAim'))return;const o=document.createElement('div');o.id='dartAim';o.innerHTML='<div class="dah">🎯 판 위를 누르고 끌어 조준 → 손 떼면 던지기</div><canvas width="320" height="320"></canvas><button type="button">닫기</button>';document.body.appendChild(o);
+ const cv=o.querySelector('canvas'),c=cv.getContext('2d'),img=window.DART_IMG;let ax=0,ay=0,down=false,raf=0;const S=320,R=S/2*0.86; /* 판(더블 바깥선)=R */
+ const pos=e=>{const r=cv.getBoundingClientRect();ax=((e.clientX-r.left)/r.width*S-S/2)/R;ay=-((e.clientY-r.top)/r.height*S-S/2)/R;};
+ const draw=t=>{c.clearRect(0,0,S,S);if(img)c.drawImage(img,S/2-R/200*256,S/2-R/200*256,R/200*512,R/200*512);const w=down?.035:.0,wx=ax+Math.sin(t/170)*w,wy=ay+Math.cos(t/230)*w;o._w=[wx,wy];
+  const px=S/2+wx*R,py=S/2-wy*R;c.strokeStyle='#00ffcc';c.lineWidth=2;c.beginPath();c.arc(px,py,9,0,7);c.moveTo(px-15,py);c.lineTo(px+15,py);c.moveTo(px,py-15);c.lineTo(px,py+15);c.stroke();raf=requestAnimationFrame(draw);};raf=requestAnimationFrame(draw);
+ const close=()=>{cancelAnimationFrame(raf);o.remove();};o.querySelector('button').onclick=close;
+ cv.addEventListener('pointerdown',e=>{e.preventDefault();down=true;cv.setPointerCapture(e.pointerId);pos(e);});cv.addEventListener('pointermove',e=>{if(down||e.pointerType==='mouse')pos(e);});
+ cv.addEventListener('pointerup',e=>{if(!down)return;down=false;const [x,y]=o._w||[ax,ay];socket.emit('dart',{b,x,y},r=>{if(r&&!r.ok&&r.err)sys(`🎯 ${(r.err)}`);});});}
+window.dartAim=dartAim;
 socket.on('clubDoor',d=>setClubDoor(!!(d&&d.open),!!(d&&d.by)));
 $('clubDoorBtn').onclick=()=>{if(!adminToken)return;const open=!window.CLUB_OPEN;if(!open&&!confirm('나이트 문을 닫을까요? 안에 있는 사람은 모두 야장 포차로 나가요.'))return;socket.emit('setClubDoor',{token:adminToken,open},r=>{if(!(r&&r.ok))sys('실패: '+((r&&r.err)||'?'));});};
 $('cleanBtn').onclick=()=>{if(!adminToken)return;socket.emit('adminCleanup',adminToken,r=>{if(r&&r.ok)sys(`🔄 유령 정리 완료: ${r.removed}명 제거`);else{sys('정리 실패: '+((r&&r.error)||'오류'));}});};
