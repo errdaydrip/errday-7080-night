@@ -10,7 +10,11 @@ const humanOpts=p=>({...LOOKS.resolve(p),outfit:p.outfit||null,skin:p.skin||'#f2
 const SKINS=['#f2c29a','#ffdcc0','#d9a074','#a8724a'];
 const STYLE_NAMES={m:{basic:'기본',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'},f:{basic:'기본',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'}};
 // 모바일 성능: 픽셀 비율 낮추기
-scene.addEventListener('loaded',()=>{if(IS_MOBILE&&scene.renderer)scene.renderer.setPixelRatio(Math.min(1.25,devicePixelRatio));});
+/* 모바일 화질: 예전엔 픽셀비율 1.25 고정 + 안티앨리어싱 꺼짐 → 깨져 보임. 이제 최대 2 로 시작하고 프레임이 떨어지면 자동으로 낮춤 */
+scene.addEventListener('loaded',()=>{const R=scene.renderer;if(!R||!IS_MOBILE)return;const MAXPR=Math.min(2,devicePixelRatio||1),STEPS=[MAXPR,1.75,1.5,1.25,1].filter((v,i,a)=>v<=MAXPR&&a.indexOf(v)===i);
+ let lvl=+(localStorage.getItem('prLvl')||0);if(!(lvl>=0&&lvl<STEPS.length))lvl=0;const apply=()=>{R.setPixelRatio(STEPS[lvl]);const s=scene.canvas;if(s)R.setSize(s.clientWidth,s.clientHeight,false);window.MOBILE_PR=STEPS[lvl];};apply();
+ let fr=0,t0=performance.now(),good=0;(function mon(){requestAnimationFrame(mon);if(document.hidden){t0=performance.now();fr=0;return;}fr++;const now=performance.now();if(now-t0<3000)return;const fps=fr*1000/(now-t0);fr=0;t0=now;
+  if(fps<38&&lvl<STEPS.length-1){lvl++;good=0;apply();localStorage.setItem('prLvl',lvl);}else if(fps>56){if(++good>=4&&lvl>0){lvl--;good=0;apply();localStorage.setItem('prLvl',lvl);}}else good=0;})();});
 // ---------- 입장 화면 ----------
 const palHtml=k=>LOOKS.PALETTE.map(([c,n])=>`<span class="swatch ${k}" data-v="${c}" title="${n}" style="background:${c}"></span>`).join('');$('swTop').innerHTML=palHtml('tp');$('swBot').innerHTML=palHtml('bt');
 $('accs').innerHTML=LOOKS.ACC.map(a=>`<button class="opt a" data-v="${a}">${LOOKS.ACC_NAME[a]}</button>`).join('');
@@ -198,6 +202,9 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 function sys(t){addMsg(`<i style="color:#aaa">${esc(t)}</i>`);}
 $('chatIn').addEventListener('focus',()=>{for(const k in keys)keys[k]=false;});
 $('chatIn').addEventListener('keydown',e=>e.stopPropagation());
+/* 모바일 채팅 입력 중: 먹기/마시기/점프/조이스틱 숨기고 채팅창 크게 */
+$('chatIn').addEventListener('focus',()=>{clearTimeout(window._typT);document.body.classList.add('typing');const m=$('msgs');setTimeout(()=>{m.scrollTop=m.scrollHeight;},50);});
+$('chatIn').addEventListener('blur',()=>{window._typT=setTimeout(()=>document.body.classList.remove('typing'),150);});
 {const jb=$('jumpBtn');if(jb)jb.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();jump();});}
 $('chatForm').onsubmit=e=>{e.preventDefault();const t=$('chatIn').value.trim();if(t)socket.emit('chat',t);$('chatIn').value='';};
 socket.on('chatHistory',h=>{$('msgs').innerHTML='';if(!h||!h.length)return;const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};for(const m of h)addMsg(`<span style="opacity:.55"><small style="color:#888">${hm(m.t)}</small> <b style="color:#ffd84a">${esc(m.nick)}</b>: ${esc(m.text)}</span>`);addMsg('<div style="text-align:center;color:#888;font-size:11px;opacity:.8">— 이전 채팅 —</div>');;chatBottom();});

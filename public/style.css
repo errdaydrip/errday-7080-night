@@ -109,3 +109,12 @@ body.pfs{height:100dvh;overflow:hidden;overscroll-behavior:none}
 @media (max-width:370px){.row .swatch{width:19px;height:19px;margin:0}.row>span{gap:2px}.row b{flex-basis:30px;width:30px}}
 @media (max-width:700px),(pointer:coarse){body.seated #jumpBtn{display:none!important}}
 @media (max-width:700px),(pointer:coarse){body:has(#entry:not(.hidden)) #mob,body:has(#entry:not(.hidden)) #jumpBtn,body:has(#entry:not(.hidden)) #subsMob{display:none!important}} /* 캐릭터 창 열리면 모바일 조이스틱·점프 숨김 */
+
+/* 모바일 채팅 입력 중: 안 쓰는 버튼 숨기고 채팅창 넓게 */
+@media (max-width:700px),(pointer:coarse){
+ body.typing #actBar,body.typing #mob,body.typing #jumpBtn,body.typing #subsMob,body.typing #hud #musicToggle{display:none!important}
+ body.typing #hud #chat{left:calc(6px + env(safe-area-inset-left))!important;right:calc(6px + env(safe-area-inset-right));bottom:6px!important;width:auto!important;max-width:none!important;box-sizing:border-box}
+ body.typing #hud #msgs{height:38vh!important;font-size:15px}
+ body.typing #hud #chatIn{font-size:16px;padding:10px}
+}
+@media (orientation:landscape) and (max-height:500px){body.typing #hud #msgs{height:30vh!important}}
