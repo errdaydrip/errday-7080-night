@@ -55,7 +55,7 @@ const STATE=process.env.STATE_FILE||path.join(__dirname,'data','state.json');
 const durations={}; // videoId 또는 mp3 id -> 초 (클라이언트가 알려줌)
 const durOf=t=>t&&(t.dur||durations[t.type==='yt'?t.videoId:t.id]);
 const {clean:cleanText,isBad}=require('./filter');
-const STYLES=['basic','suit','disco','hanbok','aerobic'],HEX=/^#[0-9a-fA-F]{6}$/;const LOOKS=require('./public/looks.js');const look=p=>{const r=LOOKS.resolve(p);return{gender:r.gender,style:r.style,outfit:HEX.test(p.outfit)?p.outfit:'',top:r.top,bottom:r.bottom,acc:r.acc,hair:r.hair,skin:HEX.test(p.skin)?p.skin:''};};
+const STYLES=['basic','suit','disco','hanbok','aerobic'],HEX=/^#[0-9a-fA-F]{6}$/;const LOOKS=require('./public/looks.js');const look=p=>{const r=LOOKS.resolve(p);return{gender:r.gender,style:r.style,outfit:HEX.test(p.outfit)?p.outfit:'',top:r.top,bottom:r.bottom,acc:r.acc,hair:r.hair,face:r.face,beard:r.beard,skin:HEX.test(p.skin)?p.skin:''};};
 const players={}; // id -> {nick,gender,outfit,skin,style,pos,rot,seat}
 const music={playlist:[],index:-1,playing:false,startedAt:0,pausedAt:0,shuffle:false};
 let played=new Set(); // 랜덤 재생: 이미 튼 곡 id

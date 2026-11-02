@@ -8,14 +8,14 @@ try{Object.assign(me,JSON.parse(localStorage.getItem('profile')||'{}'));}catch(e
 const others={};const scene=document.querySelector('a-scene');
 const humanOpts=p=>({...LOOKS.resolve(p),outfit:p.outfit||null,skin:p.skin||'#f2c29a',gender:p.gender==='f'?'f':'m',style:['basic','suit','disco','hanbok','aerobic'].includes(p.style)?p.style:'suit'});
 const SKINS=['#f2c29a','#ffdcc0','#d9a074','#a8724a'];
-const STYLE_NAMES={m:{basic:'&lt;기본&gt;',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'},f:{basic:'&lt;기본&gt;',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'}};
+const STYLE_NAMES={m:{basic:'기본',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'},f:{basic:'기본',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'}};
 // 모바일 성능: 픽셀 비율 낮추기
 scene.addEventListener('loaded',()=>{if(IS_MOBILE&&scene.renderer)scene.renderer.setPixelRatio(Math.min(1.25,devicePixelRatio));});
 // ---------- 입장 화면 ----------
 const palHtml=k=>LOOKS.PALETTE.map(([c,n])=>`<span class="swatch ${k}" data-v="${c}" title="${n}" style="background:${c}"></span>`).join('');$('swTop').innerHTML=palHtml('tp');$('swBot').innerHTML=palHtml('bt');
 $('accs').innerHTML=LOOKS.ACC.map(a=>`<button class="opt a" data-v="${a}">${LOOKS.ACC_NAME[a]}</button>`).join('');
 function renderHairs(){$('hairs').innerHTML=LOOKS.HAIR[me.gender==='f'?'f':'m'].map(([k,n])=>`<button class="opt h${(me.hair||'')===k?' sel':''}" data-v="${k}">${n}</button>`).join('');}
-function fillLook(){const r=LOOKS.resolve(me);me.top=r.top;me.bottom=r.bottom;me.acc=r.acc;me.hair=r.hair;}
+function fillLook(){const r=LOOKS.resolve(me);me.top=r.top;me.bottom=r.bottom;me.acc=r.acc;me.hair=r.hair;me.face=r.face;me.beard=r.beard;}
 $('skins').innerHTML=SKINS.map(c=>`<span class="swatch sk" data-v="${c}" style="background:${c}"></span>`).join('');
 function renderStyles(){$('styles').innerHTML=Object.entries(STYLE_NAMES[me.gender==='f'?'f':'m']).map(([k,v])=>`<button class="opt s${me.style===k?' sel':''}" data-v="${k}">${v}</button>`).join('');}
 // 미리보기 (작은 3D 캔버스)
@@ -28,7 +28,7 @@ function syncOpts(){fillLook();renderHairs();$('nick').value=me.nick;document.qu
  document.querySelectorAll('#skins .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.skin));updatePreview();}
 syncOpts();
 $('entry').addEventListener('click',e=>{const b=e.target;const resetCol=()=>{const d=LOOKS.DEF[me.gender==='f'?'f':'m'][me.style];me.top=d[0];me.bottom=d[1];delete me.outfit;};
- if(b.classList.contains('g')){me.gender=b.dataset.v;me.hair='';resetCol();}if(b.classList.contains('s')){me.style=b.dataset.v;resetCol();}
+ if(b.classList.contains('g')){const rb=()=>LOOKS.BEARDS[Math.floor(Math.random()*LOOKS.BEARDS.length)];if(me.gender===b.dataset.v){me.face=((+me.face||0)+1)%LOOKS.FACES;} /* 같은 성별 버튼 다시 누르면 다음 얼굴 */else{me.gender=b.dataset.v;me.hair='';me.face=0;resetCol();}me.beard=me.gender==='m'?rb():'';}if(b.classList.contains('s')){me.style=b.dataset.v;resetCol();}
  if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('tp')){me.top=b.dataset.v;delete me.outfit;}else if(b.classList.contains('bt')){me.bottom=b.dataset.v;delete me.outfit;}
  if(b.classList.contains('h'))me.hair=b.dataset.v;if(b.classList.contains('a'))me.acc=b.dataset.v;me.nick=$('nick').value;syncOpts();});
 $('enter').onclick=()=>{if(window.enterFullscreenMobile&&!window.AUTO_JOIN)enterFullscreenMobile();me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
@@ -81,7 +81,7 @@ async function buildAvatar(root,p,mine){if(root._h){HUMANS.delete(root._h);root.
  const h=await makeHuman(root,humanOpts(p));if(!h||root._tok!==token){if(h)h.dispose();return;}root._h=h;HUMANS.add(h);}
 function upsertOther(p){if(p.id===myId)return;let o=others[p.id];
  if(!o){const el=document.createElement('a-entity');$('others').appendChild(el);o=others[p.id]={el,target:new THREE.Vector3(...(p.pos||[0,0,4])),rot:p.rot||0};el.object3D.position.copy(o.target);}
- const key=[p.nick,p.gender,p.style,p.outfit,p.top,p.bottom,p.acc,p.hair,p.skin].join('|');if(o.key!==key){o.key=key;buildAvatar(o.el,p);}if(p.drinks&&o.el._h&&!(o.el._h.drinks||[]).length)o.el._h.drinks=p.drinks.slice();o.data=p;o.dance=p.dance||0;applySeatPose(o,p.seat);}
+ const key=[p.nick,p.gender,p.style,p.outfit,p.top,p.bottom,p.acc,p.hair,p.face,p.beard,p.skin].join('|');if(o.key!==key){o.key=key;buildAvatar(o.el,p);}if(p.drinks&&o.el._h&&!(o.el._h.drinks||[]).length)o.el._h.drinks=p.drinks.slice();o.data=p;o.dance=p.dance||0;applySeatPose(o,p.seat);}
 function applySeatPose(o,seat){o.seat=seat;const s=SEATS.find(x=>x.id===seat);if(s){o.target.set(s.x,s.y||0,s.z);o.rot=s.yaw;}}
 AFRAME.registerComponent('others-lerp',{tick(){for(const id in others){const o=others[id],p=o.el.object3D.position,d=p.distanceTo(o.target);p.lerp(o.target,.15);
  let r=o.rot-o.el.object3D.rotation.y;r=Math.atan2(Math.sin(r),Math.cos(r));o.el.object3D.rotation.y+=r*.2;
