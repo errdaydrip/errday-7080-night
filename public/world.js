@@ -860,7 +860,7 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  document.querySelector('a-scene').setAttribute('don-ticker','');})();
 (function rankingBoard(){const W=1024,H=1024,cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
  const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace||tex.colorSpace;const FONT='"Malgun Gothic","Noto Sans KR",sans-serif';
- const board=E('a-entity',{position:'-11.9 5.6 -4.2',rotation:'0 90 0'}); /* 클럽 왼쪽 벽 위쪽 */
+ const board=E('a-entity',{position:'0 5.9 11.88',rotation:'0 180 0'}); /* 출구 문 쪽 벽 가운데 위 (EXIT 간판보다 위) */
  E('a-box',{position:'0 0 -.04',width:3.3,height:3.3,depth:.06,material:'color:#0a0210;roughness:.6'},board);
  [[0,1.68,3.4,.06],[0,-1.68,3.4,.06],[-1.68,0,.06,3.42],[1.68,0,.06,3.42]].forEach(([px,py,w,h])=>E('a-box',{position:`${px} ${py} 0`,width:w,height:h,depth:.05,material:'color:#ffd23c;emissive:#ffd23c;emissiveIntensity:1.4'},board));
  const pl=E('a-plane',{position:'0 0 .005',width:3.2,height:3.2},board);pl.addEventListener('loaded',()=>{pl.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:tex,toneMapped:false});});
