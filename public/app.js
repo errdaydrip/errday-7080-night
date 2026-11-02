@@ -173,7 +173,7 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
   {const ss=mySeat&&SEATS.find(q=>q.id===mySeat);const hy=mySeat?(ss.y||0):heightAt(p.x,p.z);if(mySeat)jumpV=null;else if(jumpV===null&&p.y-hy>.25)jumpV=0;if(jumpV!==null){jumpV-=14*dt;p.y+=jumpV*dt;if(p.y<=hy&&jumpV<0){p.y=hy;jumpV=null;}}else p.y+=(hy-p.y)*Math.min(1,dt*14);}if(!mySeat)$('prompt').classList.add('hidden');}
  if(!mySeat&&!moving&&!goal&&joined){idleT+=dt;if(idleT>3&&!myDance)myDance=1+Math.floor(Math.random()*3);}else{idleT=0;myDance=0;}
  myAv.object3D.rotation.y=myYaw;if(myAv._h)myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
- {const out=isOut(p.z);ROOM=out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();applySubs();}}
+ {if(window.CLUB_OPEN===false&&joined&&!isOut(p.z)){ejectFromClub();} /* 문 닫힘: 클럽 안이면 밖으로 */const out=isOut(p.z);ROOM=out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();applySubs();}}
  const tx=p.x,ty=p.y+(mySeat?.95:1.1)+(mySeat&&mySeat.startsWith('TH-')?THEATER.CAM_LIFT:0),tz=p.z;let d=camDist;
  if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));const k=1-Math.exp(-dt*5);camYaw+=d*k;camPitch+=(camGoal.pitch-camPitch)*k;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
  const dir=new THREE.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
@@ -388,6 +388,17 @@ setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElemen
  document.addEventListener('fullscreenchange',later);const fsCls=()=>document.body.classList.toggle('fs',isFs()&&touch);document.addEventListener('fullscreenchange',fsCls);document.addEventListener('webkitfullscreenchange',fsCls);
 })();
 
+/* 나이트 입장 문: 관리자가 닫으면 클럽 안 사람 전부 야장 포차로 내보내고 새로 못 들어옴 */
+window.CLUB_OPEN=true;const DOOR_BLOCK=[];
+function setClubDoor(open,announce){const was=window.CLUB_OPEN;window.CLUB_OPEN=open;for(const b of DOOR_BLOCK){const i=OBSTACLES.indexOf(b);if(i>=0)OBSTACLES.splice(i,1);}DOOR_BLOCK.length=0;
+ if(!open){for(const D of [window.DOOR,THEATER.CLUB_DOOR]){const b={x0:D.x-D.w/2-.1,x1:D.x+D.w/2+.1,z0:11.7,z1:12.3};OBSTACLES.push(b);DOOR_BLOCK.push(b);}}
+ window.setClubDoorVis&&window.setClubDoorVis(open);const bt=$('clubDoorBtn');if(bt)bt.textContent='🚪 나이트 문: '+(open?'열림':'닫힘');
+ if(announce&&was!==open)sys(open?'🚪 나이트클럽 문이 열렸어요!':'🚪 나이트클럽 문이 닫혔어요. 밖 야장 포차로 안내합니다');}
+function ejectFromClub(){if(mySeat){const s=mySeat;mySeat=null;socket.emit('seat',null);camGoal=null;}route=[];goal=null;goalSeat=null;marker.setAttribute('visible',false);
+ const D=window.DOOR;rig.object3D.position.set(D.x+(Math.random()-.5)*3,0,14+Math.random()*1.5);myYaw=0;updateWhere();}
+window.ejectFromClub=ejectFromClub;
+socket.on('clubDoor',d=>setClubDoor(!!(d&&d.open),!!(d&&d.by)));
+$('clubDoorBtn').onclick=()=>{if(!adminToken)return;const open=!window.CLUB_OPEN;if(!open&&!confirm('나이트 문을 닫을까요? 안에 있는 사람은 모두 야장 포차로 나가요.'))return;socket.emit('setClubDoor',{token:adminToken,open},r=>{if(!(r&&r.ok))sys('실패: '+((r&&r.err)||'?'));});};
 $('cleanBtn').onclick=()=>{if(!adminToken)return;socket.emit('adminCleanup',adminToken,r=>{if(r&&r.ok)sys(`🔄 유령 정리 완료: ${r.removed}명 제거`);else{sys('정리 실패: '+((r&&r.error)||'오류'));}});};
 
 // 관리자 강퇴

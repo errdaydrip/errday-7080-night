@@ -556,9 +556,7 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  [[T.x0,T.z0],[T.x1,T.z0],[T.x0,T.z1],[T.x1,T.z1],[cx,T.z1]].forEach(([x,z])=>{E('a-cylinder',{position:`${x} ${T.e/2} ${z}`,radius:.04,height:T.e,'segments-radial':6,color:'#777'});OBSTACLES.push({x,z,r:.12});});
  // 앞 처마 차양 + 천막에 칠한 글씨
  [-1,1].forEach(s=>texMesh(E('a-plane',{position:`${cx} ${T.e-.35} ${T.z0+s*.01}`,rotation:`0 ${s>0?180:0} 0`,width:T.x1-T.x0,height:.7,material:'side:double;roughness:1'}),TEX.tarp()));
- [[cx-3.2,'포장마차',2.6,'#fff3d0'],[cx+2.6,'술, 안주는 셀프 입니다',4.2,'#fffbe0']].forEach(([x,t,w,c])=>{E('a-entity',{position:`${x} ${T.e-.35} ${T.z0-.03}`,rotation:'0 180 0',ktext:hand(t,{c,s:90,w})});E('a-entity',{position:`${x} ${T.e-.35} ${T.z0+.03}`,ktext:hand(t,{c,s:90,w})});});
- E('a-entity',{position:`${cx} ${T.e/2+1.2} ${T.z1+.03}`,ktext:hand('술, 안주는 셀프 입니다',{c:'#fffbe0',s:90,w:4.2})});
- E('a-entity',{position:`-.7 3.0 ${T.z1-.05}`,rotation:'0 180 0',ktext:hand('술, 안주는 셀프 입니다',{c:'#fffbe0',s:90,w:3.2})});
+ [[cx-3.2,'포장마차',2.6,'#fff3d0']].forEach(([x,t,w,c])=>{E('a-entity',{position:`${x} ${T.e-.35} ${T.z0-.03}`,rotation:'0 180 0',ktext:hand(t,{c,s:90,w})});E('a-entity',{position:`${x} ${T.e-.35} ${T.z0+.03}`,ktext:hand(t,{c,s:90,w})});});
  // 백열전구 줄 (비닐 전선)
  let bi=0;[[T.x0+.3,T.z0+2],[T.x0+.3,T.z1-2.2]].forEach(([x0,z])=>{for(let x=x0;x<T.x1;x+=1.2){const y=T.e+.15-Math.sin((x-x0)/(T.x1-x0)*Math.PI)*.25;
   E('a-sphere',{position:`${x} ${y} ${z}`,radius:.09,'segments-width':8,'segments-height':6,material:'color:#ffe4a0;emissive:#ffb040;emissiveIntensity:1'});E('a-cylinder',{position:`${x} ${y+.12} ${z}`,radius:.005,height:.2,color:'#222'});bi++;}});
@@ -874,3 +872,9 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
   L.slice(0,5).forEach((r,i)=>{const y=290+i*160,c=['#ffd23c','#d8e4f0','#e09050'][r.rank-1]||'#3cd8ff';neon(r.rank+'등',60,y,76,c);let nm=r.name;x.font=`bold 62px ${FONT}`;while(nm.length>1&&x.measureText(nm).width>520)nm=nm.slice(0,-1);neon(nm,215,y-28,62,'#ff3cac');neon(fmt(r.cash)+'원',W-60,y+36,56,'#3cd8ff','right');});
   tex.needsUpdate=true;};
  window.setRanking=r=>{data=r;draw();};window.setRankVis=v=>board.setAttribute('visible',v);draw();})();
+/* 나이트 문 닫힘 표시: 두 출입문에 셔터 + CLOSED 네온 (관리자 토글) */
+(function clubDoorClosed(){const g=[];for(const D of [window.DOOR,THEATER.CLUB_DOOR]){
+  for(const z of [12.08]){const e=E('a-entity',{position:`${D.x} 0 ${z}`,visible:false});E('a-box',{position:`0 ${D.h/2} 0`,width:D.w+.1,height:D.h,depth:.06,material:'color:#4a4a52;metalness:.5;roughness:.5'},e);
+   for(let i=1;i<10;i++)E('a-box',{position:`0 ${i*D.h/10} ${z<12?-.035:.035}`,width:D.w+.1,height:.03,depth:.01,material:'color:#2a2a30'},e);
+   E('a-entity',{position:`0 ${D.h*.55} ${z<12?-.06:.06}`,rotation:z<12?'0 180 0':'0 0 0',ktext:'value:CLOSED;color:#ffe0e0;glow:#ff2040;size:60;width:1.6'},e);g.push(e);}}
+ window.setClubDoorVis=open=>g.forEach(e=>e.setAttribute('visible',!open));})();
