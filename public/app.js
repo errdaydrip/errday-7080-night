@@ -6,13 +6,16 @@ const JOINT={suit:'#1a1a1a',disco:'#ffd700',hanbok:'#ffffff',aerobic:'#ff2fa6'};
 let me={nick:'',gender:'m',style:'suit',outfit:'#2b3352',skin:'#f2c29a'},myId=null,joined=false,mySeat=null,adminToken=sessionStorage.getItem('adminToken');
 try{Object.assign(me,JSON.parse(localStorage.getItem('profile')||'{}'));}catch(e){}delete me.hat;if(!['suit','disco','hanbok','aerobic'].includes(me.style))me.style='suit';
 const others={};const scene=document.querySelector('a-scene');
-const humanOpts=p=>({outfit:p.outfit||null,skin:p.skin||'#f2c29a',gender:p.gender==='f'?'f':'m',style:['suit','disco','hanbok','aerobic'].includes(p.style)?p.style:'suit'});
+const humanOpts=p=>({...LOOKS.resolve(p),outfit:p.outfit||null,skin:p.skin||'#f2c29a',gender:p.gender==='f'?'f':'m',style:['suit','disco','hanbok','aerobic'].includes(p.style)?p.style:'suit'});
 const SKINS=['#f2c29a','#ffdcc0','#d9a074','#a8724a'];
 const STYLE_NAMES={m:{suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'},f:{suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'}};
 // 모바일 성능: 픽셀 비율 낮추기
 scene.addEventListener('loaded',()=>{if(IS_MOBILE&&scene.renderer)scene.renderer.setPixelRatio(Math.min(1.25,devicePixelRatio));});
 // ---------- 입장 화면 ----------
-$('sw').innerHTML=COLORS.map(c=>`<span class="swatch" data-v="${c}" style="background:${c}"></span>`).join('');
+const palHtml=k=>LOOKS.PALETTE.map(([c,n])=>`<span class="swatch ${k}" data-v="${c}" title="${n}" style="background:${c}"></span>`).join('');$('swTop').innerHTML=palHtml('tp');$('swBot').innerHTML=palHtml('bt');
+$('accs').innerHTML=LOOKS.ACC.map(a=>`<button class="opt a" data-v="${a}">${LOOKS.ACC_NAME[a]}</button>`).join('');
+function renderHairs(){$('hairs').innerHTML=LOOKS.HAIR[me.gender==='f'?'f':'m'].map(([k,n])=>`<button class="opt h${(me.hair||'')===k?' sel':''}" data-v="${k}">${n}</button>`).join('');}
+function fillLook(){const r=LOOKS.resolve(me);me.top=r.top;me.bottom=r.bottom;me.acc=r.acc;me.hair=r.hair;}
 $('skins').innerHTML=SKINS.map(c=>`<span class="swatch sk" data-v="${c}" style="background:${c}"></span>`).join('');
 function renderStyles(){$('styles').innerHTML=Object.entries(STYLE_NAMES[me.gender==='f'?'f':'m']).map(([k,v])=>`<button class="opt s${me.style===k?' sel':''}" data-v="${k}">${v}</button>`).join('');}
 // 미리보기 (작은 3D 캔버스)
@@ -21,11 +24,13 @@ let pv=null;function initPreview(){const cv=$('preview');const r=new THREE.WebGL
  const cm=new THREE.PerspectiveCamera(30,(cv.clientWidth||150)/(cv.clientHeight||162),.1,20);cm.position.set(0,.85,3.6);cm.lookAt(0,.75,0);pv={r,sc,cm,c:null,t:0};
  (function loop(){requestAnimationFrame(loop);if($('entry').classList.contains('hidden')||!pv.c)return;pv.t+=1/60;pv.c.root.rotation.y=Math.sin(pv.t*.8)*.6;animateChibi(pv.c,'idle',pv.t,{});r.render(sc,cm);})();}
 function updatePreview(){if(!pv)initPreview();if(pv.c)pv.sc.remove(pv.c.root);pv.c=makeChibi(humanOpts(me));pv.sc.add(pv.c.root);}
-function syncOpts(){$('nick').value=me.nick;document.querySelectorAll('.opt.g').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.gender));renderStyles();
- document.querySelectorAll('#sw .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.outfit));document.querySelectorAll('#skins .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.skin));updatePreview();}
+function syncOpts(){fillLook();renderHairs();$('nick').value=me.nick;document.querySelectorAll('#swTop .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.top));document.querySelectorAll('#swBot .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.bottom));document.querySelectorAll('.opt.a').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.acc));document.querySelectorAll('.opt.g').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.gender));renderStyles();
+ document.querySelectorAll('#skins .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.skin));updatePreview();}
 syncOpts();
-$('entry').addEventListener('click',e=>{const b=e.target;if(b.classList.contains('g')){me.gender=b.dataset.v;me.outfit=OUTFIT_DEFAULTS[me.gender][me.style];}if(b.classList.contains('s')){me.style=b.dataset.v;me.outfit=OUTFIT_DEFAULTS[me.gender==='f'?'f':'m'][me.style];}
- if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('swatch'))me.outfit=b.dataset.v;me.nick=$('nick').value;syncOpts();});
+$('entry').addEventListener('click',e=>{const b=e.target;const resetCol=()=>{const d=LOOKS.DEF[me.gender==='f'?'f':'m'][me.style];me.top=d[0];me.bottom=d[1];delete me.outfit;};
+ if(b.classList.contains('g')){me.gender=b.dataset.v;me.hair='';resetCol();}if(b.classList.contains('s')){me.style=b.dataset.v;resetCol();}
+ if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('tp')){me.top=b.dataset.v;delete me.outfit;}else if(b.classList.contains('bt')){me.bottom=b.dataset.v;delete me.outfit;}
+ if(b.classList.contains('h'))me.hair=b.dataset.v;if(b.classList.contains('a'))me.acc=b.dataset.v;me.nick=$('nick').value;syncOpts();});
 $('enter').onclick=()=>{if(window.enterFullscreenMobile&&!window.AUTO_JOIN)enterFullscreenMobile();me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
  $('entry').classList.add('hidden');$('hud').classList.remove('hidden');chatBottom();
  const ev=joined?'profile':'join';socket.emit(ev,{...me,clientId:CID,last:lastState()},r=>{if(r&&!r.ok){nickErr(r.error);return;}joined=true;localStorage.setItem('joinedAt',Date.now());enterOk();if(r&&r.resume)setTimeout(()=>resumeState(r.resume),50);});};
@@ -76,7 +81,7 @@ async function buildAvatar(root,p,mine){if(root._h){HUMANS.delete(root._h);root.
  const h=await makeHuman(root,humanOpts(p));if(!h||root._tok!==token){if(h)h.dispose();return;}root._h=h;HUMANS.add(h);}
 function upsertOther(p){if(p.id===myId)return;let o=others[p.id];
  if(!o){const el=document.createElement('a-entity');$('others').appendChild(el);o=others[p.id]={el,target:new THREE.Vector3(...(p.pos||[0,0,4])),rot:p.rot||0};el.object3D.position.copy(o.target);}
- const key=[p.nick,p.gender,p.style,p.outfit,p.skin].join('|');if(o.key!==key){o.key=key;buildAvatar(o.el,p);}if(p.drinks&&o.el._h&&!(o.el._h.drinks||[]).length)o.el._h.drinks=p.drinks.slice();o.data=p;o.dance=p.dance||0;applySeatPose(o,p.seat);}
+ const key=[p.nick,p.gender,p.style,p.outfit,p.top,p.bottom,p.acc,p.hair,p.skin].join('|');if(o.key!==key){o.key=key;buildAvatar(o.el,p);}if(p.drinks&&o.el._h&&!(o.el._h.drinks||[]).length)o.el._h.drinks=p.drinks.slice();o.data=p;o.dance=p.dance||0;applySeatPose(o,p.seat);}
 function applySeatPose(o,seat){o.seat=seat;const s=SEATS.find(x=>x.id===seat);if(s){o.target.set(s.x,s.y||0,s.z);o.rot=s.yaw;}}
 AFRAME.registerComponent('others-lerp',{tick(){for(const id in others){const o=others[id],p=o.el.object3D.position,d=p.distanceTo(o.target);p.lerp(o.target,.15);
  let r=o.rot-o.el.object3D.rotation.y;r=Math.atan2(Math.sin(r),Math.cos(r));o.el.object3D.rotation.y+=r*.2;
@@ -164,7 +169,8 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
   {const ss=mySeat&&SEATS.find(q=>q.id===mySeat);const hy=mySeat?(ss.y||0):heightAt(p.x,p.z);if(mySeat)jumpV=null;else if(jumpV===null&&p.y-hy>.25)jumpV=0;if(jumpV!==null){jumpV-=14*dt;p.y+=jumpV*dt;if(p.y<=hy&&jumpV<0){p.y=hy;jumpV=null;}}else p.y+=(hy-p.y)*Math.min(1,dt*14);}if(!mySeat)$('prompt').classList.add('hidden');}
  if(!mySeat&&!moving&&!goal&&joined){idleT+=dt;if(idleT>3&&!myDance)myDance=1+Math.floor(Math.random()*3);}else{idleT=0;myDance=0;}
  myAv.object3D.rotation.y=myYaw;if(myAv._h)myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
-{const out=isOut(p.z);ROOM=out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();applySubs();}}
+if(!mySeat&&!window.OUTSIDE&&THEATER.clubDoorHit(p.x,p.z)&&performance.now()-(window._tdT||0)>1500){window._tdT=performance.now();const A=THEATER.ARRIVE;p.set(A.x,0,A.z);myYaw=A.yaw;camYaw=A.yaw+Math.PI;goal=null;goalSeat=null;route=[];marker.setAttribute('visible',false);sys('🎬 극장 입구로 들어왔어요');}
+ {const out=isOut(p.z);ROOM=out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();applySubs();}}
  const tx=p.x,ty=p.y+(mySeat?.95:1.1)+(mySeat&&mySeat.startsWith('TH-')?THEATER.CAM_LIFT:0),tz=p.z;let d=camDist;
  if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));const k=1-Math.exp(-dt*5);camYaw+=d*k;camPitch+=(camGoal.pitch-camPitch)*k;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
  const dir=new THREE.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
@@ -418,7 +424,7 @@ function collectWalls(){const L=[];const sc=document.querySelector('a-scene').ob
  sc.traverse(o=>{if(!o.isMesh||!o.geometry)return;for(let p=o;p;p=p.parent){if(p.userData&&p.userData.human)return;if(p.el&&(p.el.id==='rig'||p.el.id==='cam'||p.el.classList&&p.el.classList.contains('seat')))return;}
   _bb.setFromObject(o);const sx=_bb.max.x-_bb.min.x,sy=_bb.max.y-_bb.min.y,sz=_bb.max.z-_bb.min.z;
   if(window.isWallBox&&window.isWallBox(sx,sy,sz))L.push({o,b:_bb.clone(),h:false});});return L;}
-window.isWallBox=(sx,sy,sz)=>sy>=1.9&&Math.min(sx,sz)<=3.2&&Math.max(sx,sz)>=1.4&&!(sx>3.2&&sz>3.2);
+window.isWallBox=(sx,sy,sz)=>sy>=1.9&&Math.min(sx,sz)<=3.2&&Math.max(sx,sz)>=1.2&&!(sx>3.2&&sz>3.2);
 function hideWalls(tx,ty,tz,cx,cy,cz){const n=performance.now();if(!WALLS||(n-_wallsAt>4000&&n<60000)){if(document.querySelector('a-scene').hasLoaded){WALLS=collectWalls();_wallsAt=n;}else return;}
  _ray.origin.set(tx,ty,tz);_hv.set(cx-tx,cy-ty,cz-tz);const len=_hv.length();if(len<1e-4)return;_ray.direction.copy(_hv).divideScalar(len);
  const TT=THEATER.T,inTh=!!window.IN_THEATER;for(const w of WALLS){if(inTh&&w.b.max.x>TT.x0-.6&&w.b.min.z<TT.z1+.2&&w.b.max.z>TT.z0-.2){if(w.h){w.h=false;w.o.visible=true;}continue;}const pt=_ray.intersectBox(w.b,_hv);const hit=!!pt&&_ray.origin.distanceTo(pt)<len+.3&&!w.b.containsPoint(_ray.origin);if(hit!==w.h){w.h=hit;w.o.visible=!hit;}}}

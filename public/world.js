@@ -217,18 +217,19 @@ function chibiMats(o){const T=(c,ex={})=>new THREE.MeshToonMaterial({color:c,gra
 const G={sph:(r,ws=28,hs=20)=>new THREE.SphereGeometry(r,ws,hs),cap:(r,l)=>new THREE.CapsuleGeometry(r,l,8,18),cyl:(a,b,h,s=28)=>new THREE.CylinderGeometry(a,b,h,s,1),box:(x,y,z)=>new THREE.BoxGeometry(x,y,z)};
 function mesh(g,m,p=[0,0,0],s=null,r=null){const o=new THREE.Mesh(g,m);o.position.set(...p);if(s)o.scale.set(...s);if(r)o.rotation.set(...r);return o;}
 function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit','disco','hanbok','aerobic'].includes(opts.style)?opts.style:'suit';
- const col=opts.outfit||OUTFIT_DEFAULTS[f?'f':'m'][st];
+ const LK=(window.LOOKS?LOOKS.resolve(opts):{top:opts.outfit,bottom:opts.outfit,acc:'none',hair:''});const npc=opts.dj||opts.waiter||!opts.top; // NPC 는 예전 한 가지 색 그대로
+ const col=npc?(opts.outfit||OUTFIT_DEFAULTS[f?'f':'m'][st]):LK.top,bcol=npc?col:LK.bottom;opts={...opts,top:col,bottom:bcol,acc:npc?'none':LK.acc,hair:npc?'':LK.hair};
  const root=new THREE.Group(),hips=new THREE.Group();hips.position.y=.42;root.add(hips);
  const torso=new THREE.Group();hips.add(torso);
  // 의상별 재질
  let top,sleeve,pants,shoe,cuff=null;
- if(!f&&st==='suit'){top=M.T(col,{map:PIN_BASE});sleeve=top;pants=top;shoe=M.T('#5b2a1a');}
- if(!f&&st==='disco'){top=M.shinyOf(SPARKLE,'#f4f4f8');sleeve=top;pants=M.shinyOf(IRIDESCENT,col);shoe=M.silver;}
- if(!f&&st==='hanbok'){top=M.T(col);sleeve=top;pants=M.T('#6b4128');shoe=M.black;}
+ if(!f&&st==='suit'){top=M.T(col,{map:PIN_BASE});sleeve=top;pants=M.T(bcol,{map:PIN_BASE});shoe=M.T('#5b2a1a');}
+ if(!f&&st==='disco'){top=M.shinyOf(SPARKLE,npc?'#f4f4f8':col);sleeve=top;pants=M.shinyOf(IRIDESCENT,npc?col:bcol);shoe=M.silver;}
+ if(!f&&st==='hanbok'){top=M.T(col);sleeve=top;pants=M.T(bcol);shoe=M.black;}
  if(f&&st==='suit'){top=M.T(col);sleeve=top;pants=M.skin;shoe=M.T('#1f2a4d');}
- if(f&&st==='disco'){top=M.T(col);sleeve=top;pants=M.T(col);shoe=M.silver;cuff=M.T('#8a5bd6');}
- if(f&&st==='hanbok'){top=M.T('#b9e08a');sleeve=M.T('#fff',{map:SAEKDONG});pants=M.skin;shoe=M.T('#fff');}
- if(st==='aerobic'){top=M.T('#fff',{map:RAINBOW});sleeve=M.skin;pants=new THREE.MeshStandardMaterial({color:col,metalness:.2,roughness:.28,emissive:new THREE.Color(col).multiplyScalar(.25)});shoe=f?M.T('#fbfbf7'):M.skin;cuff=M.T(aeroAccent(col));}
+ if(f&&st==='disco'){top=M.T(col);sleeve=top;pants=M.T(bcol);shoe=M.silver;cuff=M.T('#8a5bd6');}
+ if(f&&st==='hanbok'){top=M.T(npc?'#b9e08a':col);sleeve=M.T('#fff',{map:SAEKDONG});pants=M.skin;shoe=M.T('#fff');}
+ if(st==='aerobic'){top=M.T(col,{map:RAINBOW});sleeve=M.skin;pants=new THREE.MeshStandardMaterial({color:bcol,metalness:.2,roughness:.28,emissive:new THREE.Color(bcol).multiplyScalar(.25)});shoe=f?M.T('#fbfbf7'):M.skin;cuff=M.T(aeroAccent(bcol));}
  // 몸통 (짧고 둥근 원통)
  torso.add(mesh(G.cap(.17,.22),top,[0,.27,0],[1.12,1,.8]));
  torso.add(mesh(G.cyl(.07,.08,.08),M.skin,[0,.53,0]));
@@ -262,7 +263,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit',
   if(shoe===M.silver){l.add(mesh(G.box(.13,.07,.2),M.silver,[0,-.4,.03]));l.add(mesh(G.sph(.075),M.silver,[0,-.35,.04],[1,.6,1.3]));}
   else l.add(mesh(G.sph(.075),shoe,[0,-.37,.035],[1,.6,1.45]));
   return l;});
- outfit(torso,hips,M,{...opts,style:st,col});
+ outfit(torso,hips,M,{...opts,style:st,col,bcol});accessory(head,opts.acc);
  if(opts.waiter){torso.add(mesh(G.box(.16,.26,.02),M.white,[0,.3,.142]));torso.add(mesh(G.box(.05,.035,.03),M.T('#c8102e'),[0,.47,.15]));[-1,1].forEach(s=>torso.add(mesh(G.cone?G.cone:new THREE.ConeGeometry(.03,.06,8),M.T('#c8102e'),[s*.04,.47,.15],null,[0,0,s*Math.PI/2])));
   torso.add(mesh(G.box(.09,.03,.01),new THREE.MeshBasicMaterial({color:'#ffd84a'}),[.1,.38,.15]));
   const tr=new THREE.Group();tr.position.set(0,-.26,.12);tr.add(mesh(G.cyl(.17,.17,.015,24),M.silver,[0,0,0]));tr.add(mesh(G.cyl(.03,.025,.1,12),new THREE.MeshStandardMaterial({color:'#f2b632',transparent:true,opacity:.85}),[.05,.06,0]));tr.add(mesh(G.cyl(.02,.02,.06,10),new THREE.MeshStandardMaterial({color:'#2e9a4a'}),[-.06,.04,.03]));arms[1].children[0].add(tr);}
@@ -273,7 +274,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit',
  return {root,hips,torso,head,arms,legs,M};}
 function T2(M,c){return M.T(c);}
 function curls(head,H,pts,r){pts.forEach(([x,y,z,k=1])=>head.add(mesh(G.sph(r*k,18,14),H,[x,y,z])));}
-function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';
+function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';if(o.hair&&!o.dj)return hairPick(head,M,H,o.hair);
  if(o.dj||(!f&&st==='disco')){ // 큰 아프로
   head.add(mesh(G.sph(.45,32,24),H,[0,.47,-.17],[1.05,.92,.85]));head.add(mesh(new THREE.SphereGeometry(.335,32,24,0,Math.PI*2,0,Math.PI*.42),H,[0,.33,0]));return;}
  const cap=mesh(new THREE.SphereGeometry(.335,36,22,0,Math.PI*2,0,Math.PI*.42),H,[0,.33,0],[1.04,.97,1.02]);head.add(mesh(new THREE.SphereGeometry(.33,32,24,Math.PI,Math.PI),H,[0,.26,-.005],[1.05,.97,1]));head.add(cap);
@@ -290,7 +291,7 @@ function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';
  if(f&&st==='disco'){ // 곱슬곱슬 큰 머리
   const pts=[];for(let i=0;i<34;i++){const th=Math.random()*Math.PI*2,ph=Math.acos(1-Math.random()*1.25),r=.36;const x=r*Math.sin(ph)*Math.cos(th),y=r*Math.cos(ph),z=r*Math.sin(ph)*Math.sin(th);if(z>.18&&y<.25)continue;pts.push([x*1.15,.28+y,z*1.05-.04]);}
   [[-.36,.05,-.05],[.36,.05,-.05],[-.3,-.12,-.1],[.3,-.12,-.1],[0,.0,-.32]].forEach(p=>pts.push(p));curls(head,H,pts,.12);return;}
- if(st==='aerobic'){const B=T2(M,o.outfit||'#ff2fa6'),A=T2(M,aeroAccent(o.outfit||'#ff2fa6'));
+ if(st==='aerobic'&&!o.hair){const B=T2(M,o.bottom||o.outfit||'#ff2fa6'),A=T2(M,aeroAccent(o.bottom||o.outfit||'#ff2fa6'));
   if(f){head.add(mesh(G.sph(.14),H,[0,.55,-.22]));head.add(mesh(G.cap(.08,.22),H,[0,.4,-.4],null,[.5,0,0]));curls(head,H,[[-.3,.28,0],[.3,.28,0]],.1);}
   else curls(head,H,[[-.22,.5,.1],[0,.56,.1],[.22,.5,.1],[-.3,.35,-.05],[.3,.35,-.05],[0,.45,-.25,1.2]],.13);
   head.add(mesh(new THREE.TorusGeometry(.345,.035,10,40),B,[0,.43,0],[1.05,1,1.02],[Math.PI/2+.15,0,0]));head.add(mesh(new THREE.TorusGeometry(.347,.014,8,40),A,[0,.43,0],[1.06,1,1.03],[Math.PI/2+.15,0,0]));return;}
@@ -298,6 +299,26 @@ function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';
   head.add(mesh(G.sph(.12),H,[0,.1,-.33],[1.25,.85,.9]));
   const pin=T2(M,'#4f8f4a');head.add(mesh(G.cyl(.012,.012,.62,10),pin,[0,.1,-.36],null,[0,0,Math.PI/2]));head.add(mesh(G.sph(.03),pin,[-.32,.1,-.36]));return;}
 }
+// 고른 헤어스타일 (남 3 / 여 3)
+function hairPick(head,M,H,k){const cap=()=>head.add(mesh(new THREE.SphereGeometry(.335,36,22,0,Math.PI*2,0,Math.PI*.42),H,[0,.33,0],[1.04,.97,1.02]));const back=()=>head.add(mesh(new THREE.SphereGeometry(.33,32,24,Math.PI,Math.PI),H,[0,.26,-.005],[1.05,.97,1]));
+ if(k==='m1'){cap();head.add(mesh(new THREE.SphereGeometry(.33,32,24,Math.PI,Math.PI),H,[0,.3,-.01],[1.03,.85,1]));[-1,1].forEach(s=>head.add(mesh(G.box(.04,.1,.12),H,[s*.31,.36,.02])));return;} // 스포츠 머리
+ if(k==='m2'){cap();back();const q=new THREE.Group();q.position.set(0,.6,.16);head.add(q); // 엘비스 퀴프: 앞머리를 높게 말아 올리고 뒤로 넘김 + 구레나룻
+  q.add(mesh(G.sph(.2),H,[0,.02,-.05],[1.1,.8,1.3]));q.add(mesh(new THREE.TorusGeometry(.12,.075,12,24,Math.PI*1.3),H,[0,.08,.12],null,[0,Math.PI/2,.2]));q.add(mesh(G.sph(.1),H,[.03,.14,.22],[1.2,.9,1]));
+  head.add(mesh(G.sph(.22),H,[0,.42,-.25],[1.2,.9,1]));[-1,1].forEach(s=>head.add(mesh(G.box(.05,.22,.08),H,[s*.315,.2,.07])));return;}
+ if(k==='m3'){cap();back();const pts=[];for(let i=0;i<26;i++){const a=i/26*Math.PI*2;const y=.05+((i*7)%5)*.07;if(Math.cos(a)>.55)continue;pts.push([Math.sin(a)*.36,y,Math.cos(a)*.3-.05]);}
+  for(let i=0;i<9;i++)pts.push([(i-4)*.08,-.12+(i%2)*.04,-.28]);pts.push([0,.55,0,1.3],[-.18,.52,.15],[.18,.52,.15],[0,.5,.22]);curls(head,H,pts,.11);return;} // 장발 파마 (뽀글뽀글 어깨까지)
+ if(k==='f1'){cap();back();head.add(mesh(new THREE.CylinderGeometry(.37,.4,.36,32,1,true,Math.PI*.28,Math.PI*1.44),H,[0,.17,-.02]));head.add(mesh(G.box(.5,.1,.08),H,[0,.5,.27],null,[-.25,0,0]));return;} // 단발 + 앞머리
+ if(k==='f2'){cap();back();head.add(mesh(G.sph(.08),M.T('#ff3cac'),[0,.5,-.3]));head.add(mesh(G.cap(.1,.35),H,[0,.3,-.48],null,[.5,0,0]));head.add(mesh(G.sph(.12),H,[0,.08,-.55]));head.add(mesh(G.sph(.15),H,[.08,.5,.24],[1.7,.5,.8]));return;} // 포니테일 + 리본
+ if(k==='f3'){cap();back();const pts=[];for(let r=0;r<4;r++)for(let i=0;i<11;i++){const a=(i/10-.5)*Math.PI*1.3+Math.PI;pts.push([Math.sin(a)*(.36+r*.02),.3-r*.17,Math.cos(a)*.3-.04,1-r*.05]);}
+  [-1,1].forEach(s=>{for(let r=0;r<4;r++)pts.push([s*.36,.25-r*.16,.06]);});pts.push([-.15,.5,.2],[.15,.52,.2],[0,.58,.05,1.2]);curls(head,H,pts,.12);return;} // 긴 파마 (굵은 웨이브)
+}
+// 액세서리: 안경 / 선글라스
+function accessory(head,a){if(!a||a==='none')return;const g=new THREE.Group();g.position.set(0,.275,.33);head.add(g);
+ const frame=new THREE.MeshStandardMaterial({color:a==='sunglasses'?'#111':'#3a2a1a',metalness:.5,roughness:.3});
+ [-1,1].forEach(s=>{g.add(mesh(new THREE.TorusGeometry(.07,.01,8,24),frame,[s*.115,0,0]));
+  g.add(mesh(new THREE.CircleGeometry(.068,24),a==='sunglasses'?new THREE.MeshStandardMaterial({color:'#0b0b14',metalness:.8,roughness:.1,transparent:true,opacity:.92}):new THREE.MeshStandardMaterial({color:'#dff2ff',transparent:true,opacity:.18,roughness:.05}),[s*.115,0,.002]));
+  g.add(mesh(G.box(.012,.012,.22),frame,[s*.19,.01,-.11]));});
+ g.add(mesh(G.box(.09,.012,.012),frame,[0,.02,0]));}
 function outfit(torso,hips,M,o){const f=o.gender==='f',st=o.style,col=o.col;
  if(st==='aerobic'){torso.add(mesh(G.cyl(.19,.19,.05,28),T2(M,'#22b6f0'),[0,.12,0],[1.12,1,.82]));hips.add(mesh(G.sph(.17),M.T('#fff',{map:RAINBOW}),[0,.03,0],[1.1,.55,.8]));
   [-1,1].forEach(s=>torso.add(mesh(G.box(.05,.1,.03),M.T('#fff',{map:RAINBOW}),[s*.1,.47,.02])));}
@@ -312,12 +333,12 @@ function outfit(torso,hips,M,o){const f=o.gender==='f',st=o.style,col=o.col;
  if(f&&st==='suit'){[-1,1].forEach(s=>torso.add(mesh(G.sph(.1),M.T(col),[s*.19,.44,0],[1.2,.6,1]))); // 어깨 뽕
   torso.add(mesh(G.box(.1,.16,.02),M.white,[0,.41,.15]));const lap=T2(M,new THREE.Color(col).multiplyScalar(.8));[-1,1].forEach(s=>torso.add(mesh(G.box(.05,.2,.02),lap,[s*.07,.4,.157],null,[0,0,s*.4])));
   [.2,.27].forEach(y=>torso.add(mesh(G.sph(.013),M.black,[.03,y,.165])));
-  hips.add(mesh(G.cyl(.19,.2,.26),M.T(col),[0,-.03,0],[1,1,.85]));}
+  hips.add(mesh(G.cyl(.19,.2,.26),M.T(o.bcol||col),[0,-.03,0],[1,1,.85]));}
  if(f&&st==='disco'){[-1,1].forEach(s=>torso.add(mesh(new THREE.ConeGeometry(.07,.15,3),M.T(col),[s*.08,.47,.13],[1,1,.25],[0,0,s*2.3])));
   torso.add(mesh(G.box(.012,.38,.012),M.silver,[0,.28,.155]));[-1,1].forEach(s=>torso.add(mesh(G.box(.06,.008,.01),M.silver,[s*.09,.18,.15],null,[0,0,s*.3])));}
  if(f&&st==='hanbok'){torso.add(mesh(G.box(.035,.18,.015),M.white,[-.03,.44,.15],null,[0,0,.65]));torso.add(mesh(G.box(.035,.14,.015),M.white,[.04,.43,.15],null,[0,0,-.65]));
   const gor=T2(M,'#7a2f8a');torso.add(mesh(G.box(.04,.34,.012),gor,[.03,.2,.21],null,[0,0,.1]));torso.add(mesh(G.box(.04,.28,.012),gor,[.07,.22,.208],null,[0,0,-.18]));torso.add(mesh(G.sph(.035),gor,[.04,.37,.2],[1.4,.8,.5]));
-  const chima=new THREE.Mesh(new THREE.CylinderGeometry(.2,.4,.7,36,1,true),T2(M,col));chima.material.side=THREE.DoubleSide;chima.position.y=-.05;hips.add(chima);
+  const chima=new THREE.Mesh(new THREE.CylinderGeometry(.2,.4,.7,36,1,true),T2(M,o.bcol||col));chima.material.side=THREE.DoubleSide;chima.position.y=-.05;hips.add(chima);
   hips.add(mesh(new THREE.CircleGeometry(.4,36),chima.material,[0,-.4,0],null,[Math.PI/2,0,0]));
   hips.add(mesh(G.cyl(.205,.205,.04),M.white,[0,.31,0]));}
 }
@@ -727,3 +748,13 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  TH.obstacles.forEach(o=>OBSTACLES.push(o));
  {const h0=window.heightAt;window.heightAt=(x,z)=>{const f=TH.floorAt(x,z);return f!==null?f:h0(x,z);};}
 })();
+
+// ---------- 나이트 → 극장 바로가기 문 ----------
+(function clubTheaterDoor(){const D=THEATER.CLUB_DOOR,z=D.z-.04;
+ E('a-box',{position:`${D.x} ${D.h/2} ${z}`,width:D.w,height:D.h,depth:.04,material:'color:#2a0a14;roughness:.5;emissive:#300010;emissiveIntensity:.4'});
+ [-1,1].forEach(s=>E('a-box',{position:`${D.x+s*(D.w/2+.06)} ${D.h/2} ${z-.02}`,width:.12,height:D.h,depth:.08,material:'color:#c8a040;metalness:.6;roughness:.3'}));
+ E('a-box',{position:`${D.x} ${D.h+.06} ${z-.02}`,width:D.w+.24,height:.12,depth:.08,material:'color:#c8a040;metalness:.6;roughness:.3'});
+ [-1,1].forEach(s=>E('a-sphere',{position:`${D.x+s*.12} 1.2 ${z-.05}`,radius:.04,material:'color:#ffd060;metalness:.8'}));
+ E('a-entity',{position:`${D.x} ${D.h+.5} ${z-.05}`,rotation:'0 180 0',ktext:'value:EXIT · 🎬 극장 →;color:#fff3c0;glow:#ff8a00;size:70;width:1.7'});
+ E('a-entity',{position:`${D.x} 1.6 ${z-.06}`,rotation:'0 180 0',ktext:'value:THEATER;color:#ffd060;glow:#ff2a6a;size:60;width:1.1'});
+ E('a-entity',{position:`${D.x} ${D.h} ${z-.6}`,light:'type:point;color:#ffb070;intensity:.6;distance:3'});})();

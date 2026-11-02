@@ -2,7 +2,7 @@ const p=require('puppeteer-core') /* npm i -D puppeteer-core socket.io-client */
 (async()=>{const other=io('http://localhost:8080');const got=[];other.on('chat',m=>{if(!m.sys)got.push(m.nick+':'+m.text)});
 const b=await p.launch({executablePath:process.env.CHROME||'/usr/bin/google-chrome',args:['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
 for(const [name,vp] of [['PC',{width:1280,height:720}],['MOB',{width:390,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true}]]){
- const pg=await b.newPage();await pg.emulate({viewport:vp,userAgent:name==='MOB'?'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148 Safari/604.1':'Mozilla/5.0 Chrome'});
+ const pg=await (await b.createBrowserContext()).newPage();await pg.emulate({viewport:vp,userAgent:name==='MOB'?'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148 Safari/604.1':'Mozilla/5.0 Chrome'});
  pg.on('dialog',d=>d.accept(d.type()==='prompt'?'6651':undefined));pg.on('pageerror',e=>console.log(name,'ERR',e.message));
  await pg.goto('http://localhost:8080',{waitUntil:'load'});await pg.waitForFunction(()=>!document.getElementById('enter').disabled,{timeout:90000});
  await pg.evaluate(n=>document.getElementById('nick').value=n,'관리자'+name);await pg.click('#enter');await W(800);

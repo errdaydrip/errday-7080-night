@@ -20,7 +20,10 @@
  <div class="pv"><canvas id="preview" width="240" height="260"></canvas></div>
  <div class="row"><b>성별</b><button class="opt g sel" data-v="m">👨 남</button><button class="opt g" data-v="f">👩 여</button></div>
  <div class="row"><b>의상</b><span id="styles"></span></div>
- <div class="row"><b>옷 색</b><span id="sw"></span></div>
+ <div class="row"><b>상의</b><span id="swTop"></span></div>
+ <div class="row"><b>하의</b><span id="swBot"></span></div>
+ <div class="row"><b>헤어</b><span id="hairs"></span></div>
+ <div class="row"><b>액세서리</b><span id="accs"></span></div>
  <div class="row"><b>피부</b><span id="skins"></span></div>
  <div id="adultNote" style="display:flex;gap:10px;align-items:center;margin:10px auto;max-width:340px;padding:8px 12px;border:1px solid #ff4d6d;border-radius:10px;background:rgba(255,40,80,.12);color:#ffd6de;font-size:13px;line-height:1.45;text-align:left"><span style="flex:none;width:34px;height:34px;border-radius:50%;background:#e01e3c;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff">19</span><span>이 공간은 성인 테마의 가상 나이트클럽입니다.<br>19세 미만은 이용을 자제해 주시기 바랍니다.</span></div>
  <button id="enter" class="big" disabled>입장하기 (소리 켜짐)</button>
@@ -45,6 +48,6 @@
 </div>
 <audio id="audio" preload="auto"></audio>
 <div id="ytWrap"><div id="yt"></div></div>
-<script src="theater.js"></script><script src="world.js"></script><script src="app.js"></script>
+<script src="looks.js"></script><script src="theater.js"></script><script src="world.js"></script><script src="app.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
 </body></html>

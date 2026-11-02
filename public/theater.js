@@ -36,6 +36,9 @@
  function pickTrack(list,key){if(!Array.isArray(list)||!list.length)return null;key=key||'languageCode';return list.find(t=>/^ko/i.test(t[key]||''))||list[0];}
  // 스크린(폭 w, 높이 h)을 거리 D에서 여백(margin) 두고 다 보이게 하는 세로 시야각(도). 가로가 좁은 세로폰이면 폭 기준으로 넓힘
  function fitFov(D,aspect,base,margin){margin=margin||1.2;const S=T.screen,r=Math.PI/180;const v1=2*Math.atan(S.h*margin/2/D)/r,v2=2*Math.atan(Math.tan(Math.atan(S.w*margin/2/D))/aspect)/r;return Math.max(base||0,v1,v2);}
- const api={fitFov,aim,subsUI,pickTrack,CAM_LIFT,T,seats,inside,floorAt,obstacles,camOcc,corners,quadMatrix};
+ // 나이트 → 극장 바로가기 문 (포차 출구 오른쪽, 클럽 앞벽 안쪽). 들어서면 극장 입구 안쪽으로 순간이동
+ const CLUB_DOOR={x:-.2,z:11.85,w:1.4,h:2.6},ARRIVE={x:14.9,z:18.1,yaw:Math.PI/2};
+ const clubDoorHit=(x,z)=>Math.abs(x-CLUB_DOOR.x)<CLUB_DOOR.w/2&&z>11.3&&z<12;
+ const api={CLUB_DOOR,ARRIVE,clubDoorHit,fitFov,aim,subsUI,pickTrack,CAM_LIFT,T,seats,inside,floorAt,obstacles,camOcc,corners,quadMatrix};
  if(typeof module!=='undefined')module.exports=api;else root.THEATER=api;
 })(typeof window!=='undefined'?window:this);
