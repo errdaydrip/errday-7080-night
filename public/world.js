@@ -730,9 +730,9 @@ window.WAITERS=[];
  car(1.6,24.1,90,'#2f5fa8',true);car(6.6,24.1,90,'#f08a24','taxi'); /* 트럭과 자리 바꿈, 뒤 차는 택시 */
  {const TX=6.6,TZ=24.1;window.TAXI={x:TX,z:TZ};
   const seatEl=E('a-box',{position:`${TX-.6} .75 ${TZ-.38}`,width:.7,height:.6,depth:.6,material:'opacity:0;transparent:true;depthWrite:false'});seatEl.dataset.seat='TAXI';seatEl.classList.add('seat');
-  SEATS.push({id:'TAXI',table:'TAXI',x:TX-.6,z:TZ-.38,y:.38,yaw:Math.PI/2,el:seatEl,stand:[TX-.6,TZ-1.6]});
+  SEATS.push({id:'TAXI',table:'TAXI',x:TX-.6,z:TZ-.38,y:.22,yaw:Math.PI/2,el:seatEl,stand:[TX-.6,TZ-1.6]});
   E('a-entity',{position:`${TX-.6} 2.35 ${TZ-.9}`,billboard:'',ktext:'value:🚕 택시 타기;color:#fff;glow:#ffb020;size:34;width:.9'});
-  (async()=>{const holder=E('a-entity',{position:`${TX+.35} .38 ${TZ+.38}`});const h=await makeHuman(holder,{...LOOKS.resolve({gender:'m',style:'suit',top:'#3a5a8a',bottom:'#2a2a2a',hair:'m2'}),gender:'m',style:'suit',skin:'#e8b890'});HUMANS.add(h);holder.object3D.rotation.y=Math.PI/2;h.play('Sitting_Idle_Loop');
+  (async()=>{const holder=E('a-entity',{position:`${TX+.35} .22 ${TZ+.38}`});const h=await makeHuman(holder,{...LOOKS.resolve({gender:'m',style:'suit',top:'#3a5a8a',bottom:'#2a2a2a',hair:'m2'}),gender:'m',style:'suit',skin:'#e8b890'});HUMANS.add(h);holder.object3D.rotation.y=Math.PI/2;h.play('Sitting_Idle_Loop');
    E('a-entity',{position:'0 1.55 0',billboard:'',ktext:'value:택시 기사;color:#fff;glow:#ffb020;size:28;width:.5'},holder);})();}car(-4.6,24.1,90,'#8a1e1e');
 })();
 // ---------- 포차 이모 (조리대 뒤에서 볶는 중) ----------
@@ -925,7 +925,7 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  /* 판마다 게임 상태판 (판 아래) */
  const ST=G.map(g=>{const c2=document.createElement('canvas');c2.width=1024;c2.height=600;c2.getContext('2d').scale(2,2);const tx=new THREE.CanvasTexture(c2);tx.colorSpace=THREE.SRGBColorSpace||tx.colorSpace;E('a-box',{position:'0 .97 -.03',width:1.32,height:.82,depth:.05,material:'color:#3cd8ff;emissive:#3cd8ff;emissiveIntensity:.6'},g);const pl=E('a-plane',{position:'0 .97 .002',width:1.24,height:.74},g); /* 다트판 바로 위 이 판 전용 점수판 */pl.addEventListener('loaded',()=>{pl.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:tx,toneMapped:false});});return{c:c2.getContext('2d'),tx};});
  window.dartState=d=>{const S=ST[d.b];if(!S)return;const c=S.c,g=d.g;c.fillStyle='#14051c';c.fillRect(0,0,512,300);c.strokeStyle='#3cd8ff';c.lineWidth=8;c.strokeRect(4,4,504,292);const F='"Malgun Gothic","Noto Sans KR",sans-serif';
-  c.textBaseline='middle';c.textAlign='center';c.fillStyle='#ffd23c';c.font=`bold 36px ${F}`;c.fillText(g.mode==='high'?`하이스코어 (${g.rounds||8}R)`:g.mode==='501'?'501 (더블 아웃)':'크리켓',256,36);
+  c.textBaseline='middle';c.textAlign='center';c.fillStyle='#ffd23c';c.font=`bold 36px ${F}`;c.fillText(true?`하이스코어 (${g.rounds||3}R)`:g.mode==='501'?'501 (더블 아웃)':'크리켓',256,36);
   if(!g.players.length){c.fillStyle='#aaa';c.font=`28px ${F}`;c.fillText('혼자서도 바로! 던지면 시작',256,150);}
   if(g.mode==='high'){/* 끝난 게임 기록만 (점수 높은 순). 진행 중은 아래 한 줄 */const R=(d.recs||[]).slice(0,5);c.font=`bold 26px ${F}`;
    if(!R.length){c.fillStyle='#aaa';c.fillText('아직 기록 없음 · 혼자서도 바로 시작',256,140);}

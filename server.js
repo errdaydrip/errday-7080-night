@@ -144,21 +144,20 @@ const dirty=new Set();const r2=v=>Math.round(v*100)/100;
 setInterval(()=>{if(!dirty.size)return;const a=[];for(const id of dirty){const p=players[id];if(p&&!p.gone)a.push(id,r2(p.pos[0]),r2(p.pos[1]),r2(p.pos[2]),r2(p.rot),p.dance|0);}dirty.clear();if(a.length)io.volatile.emit('m',a);},100).unref();
 const bans=[];const BAN_MS=+process.env.BAN_MS||600000;const ipOf=so=>String(so.handshake.headers['x-forwarded-for']||so.handshake.address||'').split(',')[0].trim();
 const banned=(cid,ip,nick)=>{const n=Date.now();for(let i=bans.length-1;i>=0;i--)if(bans[i].until<n)bans.splice(i,1);return bans.find(b=>b.cid===cid||b.nick===nick||(process.env.BAN_IP==='1'&&ip&&b.ip===ip));};
-/* 🎯 다트: 판마다 게임(501 더블아웃 / 크리켓), 조준 좌표 + 손떨림, 서버가 판정 */
-const DG=require('./dartgame');const dartGames=[0,1,2].map(()=>DG.newGame('high',3)),dartWins={},dartRecs=[[],[],[]]; /* 판마다 끝난 게임 기록만 */
+/* 🎯 다트: 판마다 하이스코어(3R/8R), 조준 좌표 + 손떨림, 서버가 판정 */
+const DG=require('./dartgame');const dartGames=[0,1,2].map(()=>DG.newGame(3)),dartWins={},dartRecs=[[],[],[]]; /* 판마다 끝난 게임 기록만 */
 const dartTop=()=>dartRecs.flat().sort((p,q)=>q.score-p.score||p.t-q.t).slice(0,6).map(r=>({nick:r.nick,total:r.score,rounds:r.rounds})); /* 오른쪽 하이스코어판: 3대 전체 끝난 게임 기록 하나하나 (합산 아님) 상위 6 */
 const dartEmit=(b,extra)=>io.emit('dartState',{b,g:DG.pub(dartGames[b]),recs:dartRecs[b],top:dartTop(),...(extra||{})});
 io.on('connection',s=>{
  [0,1,2].forEach(b=>s.emit('dartState',{b,g:DG.pub(dartGames[b]),recs:dartRecs[b],top:dartTop()}));
  const bOf=v=>Math.max(0,Math.min(2,v|0)),A=f=>typeof f==='function'?f:()=>{};
- s.on('dartNew',(d,ack)=>{ack=A(ack);const pl=players[s.id];if(!pl||!d)return ack({ok:false});const b=bOf(d.b),g=dartGames[b];const R=d.rounds===8?8:3;if(g.mode==='high'&&d.mode!=='501'&&d.mode!=='cricket'&&(g.rounds||8)===R){g.players=g.players.filter(p=>p.id!==s.id);g.players.push({id:s.id,nick:pl.nick,score:0,round:1,thrown:0});dartEmit(b);return ack({ok:true});} /* 혼자 하이스코어: 내 기록만 새로 */
-  const busy=g.mode==='high'?g.players.some(p=>p.id!==s.id):(g.started&&!g.winner&&!g.players.some(p=>p.id===s.id));if(busy&&Date.now()-g.t<180000)return ack({ok:false,err:'다른 사람이 이 판에서 게임 중이에요'});
-  dartGames[b]=DG.newGame(d.mode,R);DG.addPlayer(dartGames[b],s.id,pl.nick);dartEmit(b);ack({ok:true});});
- s.on('dartJoin',(d,ack)=>{ack=A(ack);const pl=players[s.id];if(!pl||!d)return ack({ok:false});const b=bOf(d.b);if(!DG.addPlayer(dartGames[b],s.id,pl.nick))return ack({ok:false,err:'이미 시작했거나 꽉 찼어요 (최대 4명)'});dartEmit(b);ack({ok:true});});
+ s.on('dartNew',(d,ack)=>{ack=A(ack);const pl=players[s.id];if(!pl||!d)return ack({ok:false});const b=bOf(d.b),g=dartGames[b],R=d.rounds===8?8:3;
+  if(g.rounds===R){g.players=g.players.filter(p=>p.id!==s.id);g.players.push({id:s.id,nick:pl.nick,score:0,round:1,thrown:0});dartEmit(b);return ack({ok:true});} /* 내 기록만 새로 */
+  if(g.players.some(p=>p.id!==s.id)&&Date.now()-g.t<180000)return ack({ok:false,err:'다른 사람이 이 판에서 게임 중이에요'});dartGames[b]=DG.newGame(R);dartGames[b].players.push({id:s.id,nick:pl.nick,score:0,round:1,thrown:0});dartEmit(b);ack({ok:true});});
  s.on('dart',(d,ack)=>{ack=A(ack);const pl=players[s.id];if(!pl||!d)return ack({ok:false});const now=Date.now();if(now-(pl.dartT||0)<700)return ack({ok:false,err:'천천히!'});pl.dartT=now;
-  const b=bOf(d.b);let g=dartGames[b];if(!g.players.length||(g.winner&&now-g.t>3000)){g=dartGames[b]=DG.newGame(g.mode,g.rounds);}if(!g.players.length&&g.mode!=='high')DG.addPlayer(g,s.id,pl.nick);
+  const b=bOf(d.b);const g=dartGames[b];
   let x=+d.x,y=+d.y;if(!Number.isFinite(x)||!Number.isFinite(y))return ack({ok:false});x=Math.max(-1.3,Math.min(1.3,x));y=Math.max(-1.3,Math.min(1.3,y));
-  const j=()=>(Math.random()+Math.random()+Math.random()-1.5)*.17; /* 손떨림 크게 */x+=j();y+=j();const r=DG.throwDart(g,s.id,x,y,pl.nick);if(!r.ok)return ack(r);
+  const j=()=>(Math.random()+Math.random()+Math.random()-1.5)*.17; /* 손떨림 크게 */x+=j();y+=j();const r=DG.throwDart(g,s.id,x,y,pl.nick);
   if(r.done){dartRecs[b].push({nick:r.done.nick,score:r.done.score,rounds:g.rounds,t:Date.now()});dartRecs[b].sort((p,q)=>q.score-p.score||p.t-q.t);dartRecs[b].length=Math.min(dartRecs[b].length,10);const k=`${r.done.nick} (${g.rounds}R)`;dartWins[k]=Math.max(dartWins[k]||0,r.done.score);} /* 랭킹 = 하이스코어(8라운드 합계) 최고점 */dartEmit(b,{hit:{x,y,...r.hit,id:s.id,nick:pl.nick,bust:!!r.bust,win:!!r.win}});ack({ok:true,hit:r.hit,me:r.me,done:r.done});});
  s.on('adminKick',(q,ack)=>{if(typeof ack!=='function')ack=()=>{};q=q||{};if(!isAdmin(q.token))return ack({ok:false,error:'관리자만 가능'});const id=String(q.id||'');if(id===s.id)return ack({ok:false,error:'자기 자신은 강퇴할 수 없어요'});
   const pl=players[id];if(!pl)return ack({ok:false,error:'이미 나간 사람이에요'});const so=io.sockets.sockets.get(id);

@@ -264,8 +264,8 @@ function actions(){const A=[];if(mySeat==='TAXI'){A.push(['🏠 집으로 돌아
  if(!mySeat&&((window.WAITERS||[]).some(w=>w.near)||(window.ALBA&&near(window.ALBA,2))))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
  const nt=nearTable();if(myCarry&&nt)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);
  {const DB=(window.DARTS||[]).findIndex(d=>near(d,1.2));if(DB>=0){const g=(window.DART_G||[])[DB],me=g&&g.players.findIndex(p=>p.id===myId);
-  A.push([`🎯 조준해서 던지기 (${DB+1}번)`,()=>dartAim(DB),'dart'+DB]);if(g&&g.mode!=='high'&&me<0&&!g.started&&g.players.length<4)A.push(['🙋 참가',()=>socket.emit('dartJoin',{b:DB},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dj']);
-  A.push(['하이스코어 (3R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:3},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi3'],['하이스코어 (8R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:8},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi8'],['501 새 게임',()=>socket.emit('dartNew',{b:DB,mode:'501'},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'d501'],['크리켓 새 게임',()=>socket.emit('dartNew',{b:DB,mode:'cricket'},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dcr']);}}
+  A.push([`🎯 조준해서 던지기 (${DB+1}번)`,()=>dartAim(DB),'dart'+DB]);
+  A.push(['하이스코어 (3R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:3},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi3'],['하이스코어 (8R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:8},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi8']);}}
  {const ts=SEATS.find(q=>q.id==='TAXI');if(ts&&near({x:ts.x,z:ts.z-.9},1.8)&&!seatTaken(ts))A.push(['🚕 택시 타기',()=>sit(ts),'taxi']);}
  if(near(window.FRIDGE,1.6))for(const k of ['soju','beer'])A.push([ITEM_NAME[k]+' 꺼내기',()=>socket.emit('pickup',k),'p-'+k]);
  if(near(window.COOK,2.2))for(const k of ['dakbal','kkom','fish','squid'])A.push([ITEM_NAME[k],()=>socket.emit('pickup',k),'p-'+k]);
