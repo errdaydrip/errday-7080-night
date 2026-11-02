@@ -230,7 +230,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit',
  if(f&&st==='disco'){top=M.T(col);sleeve=top;pants=M.T(bcol);shoe=M.silver;cuff=M.T('#8a5bd6');}
  if(f&&st==='hanbok'){top=M.T(npc?'#b9e08a':col);sleeve=M.T('#fff',{map:SAEKDONG});pants=M.skin;shoe=M.T('#fff');}
  if(st==='aerobic'){top=M.T(col,{map:RAINBOW});sleeve=M.skin;pants=new THREE.MeshStandardMaterial({color:bcol,metalness:.2,roughness:.28,emissive:new THREE.Color(bcol).multiplyScalar(.25)});shoe=f?M.T('#fbfbf7'):M.skin;cuff=M.T(aeroAccent(bcol));}
- if(opts.tee){top=M.T('#f5f5f5');sleeve=M.skin;pants=M.T('#2f5fa8');shoe=M.T('#fbfbf7');cuff=pants;} /* 알바: 흰 티 + 청바지 */
+ if(opts.tee){top=M.T('#f5f5f5');sleeve=M.skin;pants=M.T('#2f5fa8');shoe=M.T('#fbfbf7');cuff=null;} /* 알바: 흰 티 + 청바지 */
  // 몸통 (짧고 둥근 원통)
  torso.add(mesh(G.cap(.17,.22),top,[0,.27,0],[1.12,1,.8]));
  torso.add(mesh(G.cyl(.07,.08,.08),M.skin,[0,.53,0]));
@@ -252,7 +252,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit',
   const wide=st==='hanbok';
   const arm=new THREE.Group();arm.rotation.z=s*.55;a.add(arm);
   arm.add(wide?mesh(G.cyl(.065,.09,.2),sleeve,[0,-.1,0]):mesh(G.cap(.06,.13),sleeve,[0,-.09,0]));
-  if(cuff)arm.add(mesh(G.cyl(.065,.065,.035),cuff,[0,-.18,0]));
+  if(cuff)arm.add(mesh(G.cyl(.065,.065,.035),cuff,[0,-.18,0]));if(opts.tee)arm.add(mesh(G.cyl(.07,.072,.09),top,[0,-.03,0])); /* 반팔 */
   if(!f&&st==='suit')arm.add(mesh(G.cyl(.062,.062,.03),M.white,[0,-.18,0]));
   arm.add(mesh(G.sph(.07),M.skin,[0,-.24,0]));return a;});
  // 다리
@@ -260,7 +260,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit',
   if(!f&&st==='disco'||f&&st==='disco'){l.add(mesh(G.cyl(.07,.115,.34),f?M.shinyOf(SEQUIN_BLUE,'#c9d6ff'):pants,[0,-.17,0]));if(f)l.add(mesh(G.cyl(.07,.08,.14),pants,[0,-.06,0]));}
   else if(!f&&st==='hanbok'){l.add(mesh(G.sph(.12),pants,[0,-.15,0],[1,1.45,1]));l.add(mesh(G.cyl(.055,.055,.08),M.white,[0,-.33,0]));}
   else l.add(mesh(G.cap(.065,.18),pants,[0,-.17,0]));
-  if(st==='aerobic')l.add(mesh(G.cyl(.075,.075,.09),cuff,[0,-.2,0]));
+  if(st==='aerobic'&&cuff)l.add(mesh(G.cyl(.075,.075,.09),cuff,[0,-.2,0]));
   if(shoe===M.silver){l.add(mesh(G.box(.13,.07,.2),M.silver,[0,-.4,.03]));l.add(mesh(G.sph(.075),M.silver,[0,-.35,.04],[1,.6,1.3]));}
   else l.add(mesh(G.sph(.075),shoe,[0,-.37,.035],[1,.6,1.45]));
   return l;});
@@ -301,20 +301,48 @@ function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';if(o.hair&&!o.dj)retu
   const pin=T2(M,'#4f8f4a');head.add(mesh(G.cyl(.012,.012,.62,10),pin,[0,.1,-.36],null,[0,0,Math.PI/2]));head.add(mesh(G.sph(.03),pin,[-.32,.1,-.36]));return;}
 }
 // 고른 헤어스타일 (남 3 / 여 3)
-function hairPick(head,M,H,k){const cap=()=>head.add(mesh(new THREE.SphereGeometry(.335,36,22,0,Math.PI*2,0,Math.PI*.42),H,[0,.33,0],[1.04,.97,1.02]));const back=()=>head.add(mesh(new THREE.SphereGeometry(.33,32,24,Math.PI,Math.PI),H,[0,.26,-.005],[1.05,.97,1]));
- const band=(t0,tl,gap,r=.345,y=.3)=>head.add(mesh(new THREE.SphereGeometry(r,36,18,Math.PI/2+gap,Math.PI*2-gap*2,Math.PI*t0,Math.PI*tl),H,[0,y,0])); // 옆·뒤 머리 띠 (얼굴 앞만 비움)
- if(k==='m1'){cap();back();band(.25,.3,.95);for(let i=0;i<16;i++){const a=i/16*Math.PI*2,rr=i%2?.17:.25,x=Math.sin(a)*rr,z=Math.cos(a)*rr*.9-.02;head.add(mesh(new THREE.ConeGeometry(.07,.2,8),H,[x,.6,z],null,[Math.cos(a)*.5*rr/.25,0,-Math.sin(a)*.5*rr/.25]));}
-  [[0,.66,0],[.08,.68,.12],[-.08,.68,.12],[0,.66,-.12]].forEach(q=>head.add(mesh(new THREE.ConeGeometry(.075,.24,8),H,q)));return;} // 스포츠: 위로 뾰족뾰족 세운 머리
- if(k==='m2'){cap();back();band(.22,.36,.85);const q=new THREE.Group();q.position.set(0,.6,.16);head.add(q); // 엘비스 퀴프 + 끊김 없는 구레나룻
-  q.add(mesh(G.sph(.2),H,[0,.02,-.05],[1.1,.8,1.3]));q.add(mesh(new THREE.TorusGeometry(.12,.075,12,24,Math.PI*1.3),H,[0,.08,.12],null,[0,Math.PI/2,.2]));q.add(mesh(G.sph(.1),H,[.03,.14,.22],[1.2,.9,1]));
-  head.add(mesh(G.sph(.22),H,[0,.42,-.25],[1.2,.9,1]));[-1,1].forEach(s=>head.add(mesh(G.box(.06,.36,.1),H,[s*.315,.25,.08])));return;}
- if(k==='m3'){cap();back();const pts=[];for(let i=0;i<26;i++){const a=i/26*Math.PI*2;const y=.05+((i*7)%5)*.07;if(Math.cos(a)>.55)continue;pts.push([Math.sin(a)*.36,y,Math.cos(a)*.3-.05]);}
-  for(let i=0;i<9;i++)pts.push([(i-4)*.08,-.12+(i%2)*.04,-.28]);pts.push([0,.55,0,1.3],[-.18,.52,.15],[.18,.52,.15],[0,.5,.22]);curls(head,H,pts,.11);return;} // 장발 파마 (뽀글뽀글 어깨까지)
- if(k==='f1'){cap();back();band(.2,.45,.6,.36);head.add(mesh(new THREE.CylinderGeometry(.37,.4,.36,32,1,true,Math.PI*.28,Math.PI*1.44),H,[0,.17,-.02]));head.add(mesh(G.box(.6,.13,.1),H,[0,.5,.26],null,[-.25,0,0]));[-1,1].forEach(s=>head.add(mesh(G.sph(.1),H,[s*.27,.45,.2],[1,1.3,1])));return;} // 단발 + 앞머리
- if(k==='f2'){cap();back();head.add(mesh(G.sph(.08),M.T('#ff3cac'),[0,.5,-.3]));head.add(mesh(G.cap(.1,.35),H,[0,.3,-.48],null,[.5,0,0]));head.add(mesh(G.sph(.12),H,[0,.08,-.55]));head.add(mesh(G.sph(.15),H,[.08,.5,.24],[1.7,.5,.8]));return;} // 포니테일 + 리본
- if(k==='f3'){cap();back();band(.2,.45,.6,.36); // 긴 생머리: 매끈하게 어깨 아래까지
-  head.add(mesh(new THREE.CylinderGeometry(.37,.4,.9,32,1,true,Math.PI*.3,Math.PI*1.4),H,[0,-.05,-.02]));head.add(mesh(G.box(.66,.9,.12),H,[0,-.07,-.32]));
-  [-1,1].forEach(s=>head.add(mesh(G.box(.1,.85,.16),H,[s*.32,-.05,.1])));head.add(mesh(G.sph(.16),H,[-.1,.5,.24],[1.8,.5,.8]));return;}
+// 헤어 6종 (참고 이미지 스타일): 머리에 딱 붙는 하나로 이어진 매끈한 껍질 + 스타일별 볼륨. 틈/뜬 조각 없음
+const HC={rx:.355,ry:.325,rz:.34,cy:.27};
+function hairShell(tf,o={}){const U=72,V=30,pos=[],idx=[],rx=o.rx||HC.rx,ry=o.ry||HC.ry,rz=o.rz||HC.rz,cy=HC.cy,bump=o.bump||(()=>0),flare=o.flare||0,drop=o.drop||1;
+ for(let i=0;i<=U;i++){const ph=Math.PI+i/U*Math.PI*2,f=Math.abs(Math.atan2(Math.sin(ph),Math.cos(ph))),tm=tf(f);
+  for(let j=0;j<=V;j++){const th=j/V*tm,b=1+bump(ph,th,f);let x,y,z;
+   if(th<=Math.PI/2){const sn=Math.sin(th);x=rx*b*sn*Math.sin(ph);z=rz*b*sn*Math.cos(ph);y=cy+ry*b*Math.cos(th);}
+   else{const d=th-Math.PI/2,k=b*(1+flare*d);x=rx*k*Math.sin(ph);z=rz*k*Math.cos(ph);y=cy-ry*d*drop;}
+   pos.push(x,y,z);}}
+ for(let i=0;i<U;i++)for(let j=0;j<V;j++){const a=i*(V+1)+j,c=a+V+1;idx.push(a,a+1,c,a+1,c+1,c);}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g;}
+const sstep=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+// 앞(0)→옆(π/2)→뒤(π) 경계선 높이(θ, 정수리에서 각도)를 부드럽게
+const line3=(fr,sd,bk)=>f=>{const P=Math.PI;return f<P*.45?fr+(sd-fr)*sstep(P*.12,P*.36,f):sd+(bk-sd)*sstep(P*.56,P*.78,f);}; /* 옆은 귀 위로 수평, 뒤는 목덜미까지 */
+const partGroove=(ph,th)=>{const a=Math.atan2(Math.sin(ph),Math.cos(ph));return th<Math.PI*.4?-.035*Math.exp(-((a/.07)**2))*(1-th/(Math.PI*.4)):0;}; // 가운데 가르마
+function hairPick(head,M,H0,k){const H=H0.clone();H.side=THREE.DoubleSide;H.roughness=.55;H.metalness=.05;const P=Math.PI;const add=(g,p,sc,r)=>head.add(mesh(g,H,p||[0,0,0],sc,r));
+ if(k==='m1'){ // 스포츠: 짧게 붙은 옆뒤 + 위로 뾰족한 결
+  add(hairShell(line3(P*.3,P*.43,P*.6),{bump:(ph,th)=>.03*Math.max(0,1-th/1.1)}));
+  const sp=[];for(let r=0;r<3;r++){const n=[1,6,9][r],rad=[0,.11,.2][r];for(let i=0;i<n;i++){const a=i/n*P*2+r*.4;sp.push([Math.sin(a)*rad,Math.cos(a)*rad*.95+.03,r]);}}
+  sp.forEach(([x,z,r])=>{const tilt=[0,.35,.6][r],a=Math.atan2(x,z);const y=HC.cy+HC.ry*Math.cos(Math.asin(Math.min(.95,Math.hypot(x/HC.rx,z/HC.rz))))-.02;
+   add(new THREE.ConeGeometry(.085,.2-.03*r,5),[x,y+.06,z],null,[Math.cos(a)*tilt+(z>0?.25:0),0,-Math.sin(a)*tilt]);});return;}
+ if(k==='m2'){ // 엘비스: 볼륨 퀴프 + 구레나룻이 옆머리와 한 덩어리
+  const sb=f=>P*.18*Math.exp(-(((f-P*.43)/(P*.035))**2));
+  add(hairShell(f=>line3(P*.3,P*.42,P*.6)(f)+sb(f),{bump:(ph,th,f)=>.05*Math.max(0,1-th/1.2)+(f<P*.3&&th<P*.3?.08*(1-f/(P*.3))*(1-th/(P*.3)):0)}));
+  add(G.sph(.2,32,24),[0,.6,.12],[1.15,.8,1.25]);add(G.sph(.15,28,20),[0,.66,.24],[1.2,.8,1]);add(G.sph(.2,28,20),[0,.52,-.12],[1.25,.75,1.1]); // 위로 쓸어올린 볼륨
+  add(new THREE.TorusGeometry(.07,.035,12,24,P*1.5),[.07,.5,.33],null,[0,.2,-.6]); // 이마로 떨어지는 앞머리 한 가닥(컬)
+  return;}
+ if(k==='m3'){ // 펌: 가운데 가르마 + 귀 덮는 중간 길이 웨이브
+  add(hairShell(line3(P*.33,P*.56,P*.62),{rx:.37,rz:.355,bump:(ph,th,f)=>.06+.05*Math.sin(ph*11)*Math.sin(th*9)*Math.min(1,th*3)+partGroove(ph,th)}));
+  return;}
+ if(k==='f1'){ // 단발: 턱선 길이, 앞 얼굴만 열린 닫힌 형태
+  add(hairShell(f=>f<P*.27?P*.31+P*.06*f/(P*.27):f<P*.42?P*.37+(P*.86-P*.37)*sstep(P*.27,P*.42,f):P*.86,{rx:.375,rz:.36,flare:.18,drop:.95,bump:(ph,th)=>.05*Math.min(1,th*2)+(Math.atan2(Math.sin(ph),Math.cos(ph))>0&&th<P*.3?.015:0)}));
+  return;}
+ if(k==='f2'){ // 포니테일: 뒤로 당겨 묶음, 얼굴 깨끗
+  add(hairShell(line3(P*.3,P*.43,P*.62),{bump:(ph,th)=>.02}));
+  add(G.sph(.075,16,12),[0,.47,-.33],[1,1,.8]);head.add(mesh(new THREE.TorusGeometry(.06,.02,8,20),M.T('#ff3cac'),[0,.47,-.37],null,[.4,0,0]));
+  const c=new THREE.CatmullRomCurve3([[0,.47,-.36],[.02,.6,-.46],[.1,.62,-.56],[.18,.48,-.62],[.24,.28,-.58],[.3,.16,-.5]].map(q=>new THREE.Vector3(...q)));
+  const tg=new THREE.TubeGeometry(c,40,1,14,false),pa=tg.attributes.position,v=new THREE.Vector3();for(let i=0;i<=40;i++){const t=i/40,q=c.getPoint(t),r=.08*(t<.1?.75+t*2.5:1-(t-.1)*.75);for(let j=0;j<=14;j++){const n=i*15+j;v.fromBufferAttribute(pa,n).sub(q).multiplyScalar(r).add(q);pa.setXYZ(n,v.x,v.y,v.z);}}
+  tg.computeVertexNormals();add(tg);add(G.sph(.034,12,10),[.3,.16,-.5]);
+  return;}
+ if(k==='f3'){ // 긴머리: 가운데 가르마, 어깨 아래까지 곧게
+  add(hairShell(f=>f<P*.25?P*.32+P*.06*f/(P*.25):f<P*.4?P*.38+(P*1.55-P*.38)*sstep(P*.25,P*.4,f):P*1.55,{rx:.375,rz:.36,flare:.05,drop:1,bump:(ph,th)=>.045*Math.min(1,th*2)+partGroove(ph,th)}));
+  return;}
 }
 // 액세서리: 안경 / 선글라스
 function accessory(head,a){if(!a||a==='none')return;const g=new THREE.Group();g.position.set(0,.275,.33);head.add(g);
@@ -324,7 +352,8 @@ function accessory(head,a){if(!a||a==='none')return;const g=new THREE.Group();g.
   g.add(mesh(G.box(.012,.012,.22),frame,[s*.19,.01,-.11]));});
  g.add(mesh(G.box(.09,.012,.012),frame,[0,.02,0]));}
 function outfit(torso,hips,M,o){const f=o.gender==='f',st=o.style,col=o.col;
- if(st==='aerobic'){torso.add(mesh(G.cyl(.19,.19,.05,28),T2(M,'#22b6f0'),[0,.12,0],[1.12,1,.82]));hips.add(mesh(G.sph(.17),M.T('#fff',{map:RAINBOW}),[0,.03,0],[1.1,.55,.8]));
+ if(o.tee)hips.add(mesh(G.sph(.17),M.T('#2f5fa8'),[0,.03,0],[1.1,.6,.8])); /* 청바지 허리 */
+ if(st==='aerobic'&&!o.tee){torso.add(mesh(G.cyl(.19,.19,.05,28),T2(M,'#22b6f0'),[0,.12,0],[1.12,1,.82]));hips.add(mesh(G.sph(.17),M.T('#fff',{map:RAINBOW}),[0,.03,0],[1.1,.55,.8]));
   [-1,1].forEach(s=>torso.add(mesh(G.box(.05,.1,.03),M.T('#fff',{map:RAINBOW}),[s*.1,.47,.02])));}
  if(!f&&st==='suit'){torso.add(mesh(G.box(.11,.2,.02),M.white,[0,.38,.15]));torso.add(mesh(G.box(.045,.2,.02),T2(M,'#7a1424'),[0,.34,.162]));torso.add(mesh(G.box(.06,.04,.025),T2(M,'#7a1424'),[0,.44,.163]));
   const lap=T2(M,new THREE.Color(col).multiplyScalar(.7));[-1,1].forEach(s=>torso.add(mesh(G.box(.05,.22,.02),lap,[s*.07,.37,.155],null,[0,0,s*.4])));
@@ -762,7 +791,7 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  E('a-entity',{position:`${D.x} ${D.h+.5} 11.9`,rotation:'0 180 0',ktext:'value:EXIT · 🎬 극장 →;color:#d6ffe0;glow:#00ff66;size:70;width:1.9'});})();
 // ---------- 야장 알바: 주문 들어오면 냉장고/주방에서 집어 테이블로 ----------
 (async function alba(){const holder=E('a-entity',{position:'0.2 0 18.4'});const h=await makeHuman(holder,{...LOOKS.resolve({gender:'f',style:'aerobic',top:'#f5f5f5',bottom:'#2f5fa8',hair:'f2'}),gender:'f',style:'aerobic',tee:true,skin:'#f6d2b0'});HUMANS.add(h);
- E('a-entity',{position:'0 1.85 0',billboard:'',ktext:'value:알바;color:#fff;glow:#ff8a00;size:36;width:1.4'},holder);
+ E('a-entity',{position:'0 1.85 0',billboard:'',ktext:'value:알바;color:#fff;glow:#ff8a00;size:30;width:.5'},holder);
  const A=window.ALBA={x:.2,z:18.4,job:null,holder,h};holder.object3D.rotation.y=-Math.PI/2;
  const lerp=(a,b,k)=>[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k];
  AFRAME.registerComponent('alba-walk',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const J=window.ALBA_JOB,o=holder.object3D;let p=[A.x,A.z],face=null,anim='Idle_Loop';
