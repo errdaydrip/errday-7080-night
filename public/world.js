@@ -553,10 +553,9 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  const tarp=()=>TEX.tarp();
  [-1,1].forEach(s=>texMesh(E('a-plane',{position:`${cx} ${(T.e+T.r)/2} ${cz+s*hw/2}`,rotation:`${-90+s*-ang*0+ (s<0?ang:-ang)} 0 0`,width:T.x1-T.x0+.4,height:sl+.2,material:'side:double;roughness:1'}),tarp()));
  texMesh(E('a-plane',{position:`${cx} ${T.e/2+.4} ${T.z1}`,rotation:'0 180 0',width:T.x1-T.x0,height:T.e-.8,material:'side:double;roughness:1;opacity:.92;transparent:true'}),tarp());
- [[T.x0,T.z0],[T.x1,T.z0],[T.x0,T.z1],[T.x1,T.z1],[cx,T.z1]].forEach(([x,z])=>{E('a-cylinder',{position:`${x} ${T.e/2} ${z}`,radius:.04,height:T.e,'segments-radial':6,color:'#777'});OBSTACLES.push({x,z,r:.12});});
+ [[T.x0,T.z1],[T.x1,T.z1],[cx,T.z1]].forEach(([x,z])=>{E('a-cylinder',{position:`${x} ${T.e/2} ${z}`,radius:.04,height:T.e,'segments-radial':6,color:'#777'});OBSTACLES.push({x,z,r:.12});});
  // 앞 처마 차양 + 천막에 칠한 글씨
- [-1,1].forEach(s=>texMesh(E('a-plane',{position:`${cx} ${T.e-.35} ${T.z0+s*.01}`,rotation:`0 ${s>0?180:0} 0`,width:T.x1-T.x0,height:.7,material:'side:double;roughness:1'}),TEX.tarp()));
- [[cx-3.2,'포장마차',2.6,'#fff3d0']].forEach(([x,t,w,c])=>{E('a-entity',{position:`${x} ${T.e-.35} ${T.z0-.03}`,rotation:'0 180 0',ktext:hand(t,{c,s:90,w})});E('a-entity',{position:`${x} ${T.e-.35} ${T.z0+.03}`,ktext:hand(t,{c,s:90,w})});});
+ /* 앞 처마 차양·'포장마차' 글씨·앞 기둥 제거 (사용자 요청) */
  // 백열전구 줄 (비닐 전선)
  let bi=0;[[T.x0+.3,T.z0+2],[T.x0+.3,T.z1-2.2]].forEach(([x0,z])=>{for(let x=x0;x<T.x1;x+=1.2){const y=T.e+.15-Math.sin((x-x0)/(T.x1-x0)*Math.PI)*.25;
   E('a-sphere',{position:`${x} ${y} ${z}`,radius:.09,'segments-width':8,'segments-height':6,material:'color:#ffe4a0;emissive:#ffb040;emissiveIntensity:1'});E('a-cylinder',{position:`${x} ${y+.12} ${z}`,radius:.005,height:.2,color:'#222'});bi++;}});
@@ -633,9 +632,9 @@ window.WAITERS=[];
     else if(e<2*wk+pl){if(J.carry===1){J.carry=2;w.h.carry&&w.h.carry(null);}const k=(e-wk-pl)/wk;w.x=J.to[0]+(J.from[0]-J.to[0])*k;w.z=J.to[1]+(J.from[1]-J.to[1])*k;face=Math.atan2(J.from[0]-J.to[0],J.from[1]-J.to[1]);w.h.root.rotation.x=0;}
     else{w.job=null;w.h.root.rotation.x=0;continue;}
     w.near=false;o.position.set(w.x,0,w.z);let dy=face-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*8);w.h.play(anim);continue;}
-   const d=(((now-(w.paused||0))*w.sp+w.ph)%w.L+w.L)%w.L;const sg=w.segs.find(q=>d>=q.s&&d<q.s+q.l)||w.segs[0];const k=(d-sg.s)/sg.l;w.x=sg.a[0]+(sg.b[0]-sg.a[0])*k;w.z=sg.a[1]+(sg.b[1]-sg.a[1])*k;
-   const o=w.holder.object3D;o.position.set(w.x,0,w.z);const yaw=Math.atan2(sg.b[0]-sg.a[0],sg.b[1]-sg.a[1]);let dy=yaw-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*6);
-   w.h.play('Walk_Loop');w.h.root.rotation.x=0;}}});
+   /* 할 일 없으면 대기 자리에 서 있음 (돌아다니지 않음). 빈 테이블 채우러 갈 때만 걸음 */
+   w.x=w.route[0][0];w.z=w.route[0][1];const o=w.holder.object3D;o.position.set(w.x,0,w.z);const yaw=Math.atan2(-w.x,-w.z);let dy=yaw-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*6);
+   w.h.play('Idle_Loop');w.h.root.rotation.x=0;}}});
  document.querySelector('a-scene').setAttribute('waiter-walk','');})();
 
 // ---------- 80년대 거리 보강: 낮은 상가 + 주차된 자동차 ----------

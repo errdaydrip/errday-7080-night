@@ -111,7 +111,7 @@ const DRINKS=['soju','beer','whiskey','cocktail'];
 const TABLES={Y1:[-7.6,16.4],Y2:[-3,16.4],Y3:[-7.6,20.2],Y4:[-3,20.2],Y5:[2.2,19.6],T1:[-7,-4,2.4],T2:[-7,2,2.4],T3:[-7,7.5,2.4],T4:[4.5,6,2.4],T5:[0,8.5,2.4],T6:[-2.5,3.5,2.4]};const tables={};for(const k in TABLES)tables[k]={items:[null,null,null,null],t:0};
 const PICK={soju:{x:-0.7,z:21.5,r:1.8},beer:{x:-0.7,z:21.5,r:1.8}};for(const f of ['dakbal','kkom','fish','squid'])PICK[f]={x:0.8,z:16.0,r:2.4};PICK.chicken={x:-11.6,z:20.5,r:2.4};PICK.hoe={x:-11.6,z:15,r:2.4};
 const usesPub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.u:0);return o;};const tablePub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.k:null);return o;};
-const FOODS=['dakbal','kkom','fish','squid','chicken','hoe','fruit'],MAX_ITEMS=4,USES=4;
+const FOODS=['dakbal','kkom','fish','squid','chicken','hoe','fruit'],MAX_ITEMS=4,USES=6; /* 음식·술 한 개당 6번 */
 function useItem(tb,kind){const t=tables[tb],i=t.items.findIndex(x=>x&&x.k===kind);if(i<0)return false;if(--t.items[i].u<=0)t.items[i]=null;t.t=Date.now();(io.emit('tableUses',usesPub()),io.emit('table',tablePub()));return true;}
 // 웨이터 리필: 서버가 일을 정하고 모두에게 같은 시각으로 알림 → 모든 화면에서 같은 웨이터가 같은 테이블로 감
 const {refill:wRefill,needs:wNeeds}=require('./waiter');const W_WALK=+process.env.WAITER_WALK_MS||5000,W_PLACE=+process.env.WAITER_PLACE_MS||1500,W_DELAY=process.env.REFILL_DELAY_MS!==undefined?+process.env.REFILL_DELAY_MS:20000;

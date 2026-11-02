@@ -10,8 +10,8 @@ const srv=spawn('node',['server.js'],{cwd:path.join(__dirname,'..'),env:{...proc
  for(const k of ['T1','T2','T3','T4','T5','T6'])a.deepStrictEqual(tb[k],['beer','beer','beer','fruit'],'filled '+k);
  for(const k of ['Y1','Y2','Y3','Y4','Y5'])a.deepStrictEqual(tb[k],[null,null,null,null],'pocha untouched '+k);
  a(jobs.every(j=>/^T\d$/.test(j.table)&&j.walk===300&&typeof j.t0==='number'&&(j.w===0||j.w===1)),'jobs broadcast');
- // 맥주 4번 마셔서 한 칸 비우면 → 그 칸만 맥주로
- c.emit('seat','T1-0');for(let i=0;i<4;i++){c.emit('drink','beer');await W(2100);}
+ // 맥주 6번 마셔서 한 칸 비우면 → 그 칸만 맥주로
+ c.emit('seat','T1-0');for(let i=0;i<6;i++){c.emit('drink','beer');await W(2100);}
  await W(2500);a.deepStrictEqual(tb.T1,['beer','beer','beer','fruit'],'refilled');a(jobs.some(j=>j.table==='T1'&&j.walk===300),'T1 job broadcast');
  let eats=0;c.on('eat',()=>eats++);c.emit('eat','fruit');await W(400);a.strictEqual(eats,1,'fruit edible');
  console.log('waiter OK');srv.kill();process.exit(0);})().catch(e=>{console.error(e);srv.kill();process.exit(1);});

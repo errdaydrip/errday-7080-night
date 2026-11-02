@@ -245,7 +245,7 @@ socket.on('glasses',g=>{GLASSES=g||{};for(const k in GLASS_EL)if(GLASSES[k]!==GL
  for(const k in GLASSES)if(!GLASS_EL[k]){const s=SEATS.find(q=>q.id===k);if(!s)continue;const g3=(GLASSES[k]==='cocktail'?cocktailGlass:rockGlass)(new THREE.Group());g3.kind=GLASSES[k];g3.position.set(9.68,1.3,s.z);g3.scale.setScalar(1.6);scene.object3D.add(g3);GLASS_EL[k]=g3;}refreshAct(true);});
 const SLOT=[[-.22,-.22],[.22,-.22],[-.22,.22],[.22,.22],[0,-.28],[0,.28],[-.28,0],[.28,0]];
 let TABLE_USES={};socket.on('tableUses',u=>{TABLE_USES=u||{};});
-function usesTxt(k){const t=myTable();const it=TABLE_ITEMS[t]||[],i=it.indexOf(k);const n=i<0?0:((TABLE_USES[t]||[])[i]||4);return n;}
+function usesTxt(k){const t=myTable();const it=TABLE_ITEMS[t]||[],i=it.indexOf(k);const n=i<0?0:((TABLE_USES[t]||[])[i]||6);return n;}
 socket.on('table',t=>{TABLE_ITEMS=t||{};for(const k in TABLE_ITEMS){if(TABLE_EL[k])TABLE_EL[k].parent.remove(TABLE_EL[k]);const g=new THREE.Group(),c=(window.POCHA_TABLES||{})[k];if(!c)continue;g.position.set(c[0],c[2]||.7,c[1]);
  TABLE_ITEMS[k].forEach((it,i)=>{if(!it||!SLOT[i])return;const m=makeItem(it);m.position.set(SLOT[i][0],0,SLOT[i][1]);g.add(m);});scene.object3D.add(g);TABLE_EL[k]=g;}refreshAct(true);});
 socket.on('carry',({id,kind})=>{if(id===myId){myCarry=kind;const m=$('myAvatar');if(m._h)m._h.carry(kind);refreshAct(true);return;}const el=others[id]&&others[id].el;if(el&&el._h)el._h.carry(kind);});
@@ -266,7 +266,7 @@ function actions(){const A=[];if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.pu
  if(myCarry&&!A.length)A.push(['들고 있음: '+ITEM_NAME[myCarry],null,'lbl']);
  return A;}
 let actKey='';function refreshAct(force){const A=actions().sort((a,b)=>(a[2]==='place')-(b[2]==='place')),k=A.map(a=>a[2]+a[0]+(a[3]||'')).join('|')+myCarry;if(!force&&k===actKey)return;actKey=k;const bar=$('actBar');bar.innerHTML='';bar.classList.toggle('hidden',!A.length);
- for(const [t,f,id,n] of A){const b=document.createElement(f?'button':'span');b.textContent=t;if(n){const c=n>=3?'#3ee05a':n===2?'#ffd23a':'#ff3b3b';b.classList.add('uses');b.style.background=`linear-gradient(rgba(30,10,40,.9),rgba(30,10,40,.9)) padding-box,conic-gradient(${c} 0 ${n*25}%,#3a3a3a 0) border-box`;b.title=n+'/4';}b.dataset.act=id;if(f)b.addEventListener('click',e=>{e.stopPropagation();f();});else b.className='lbl';bar.appendChild(b);}}
+ for(const [t,f,id,n] of A){const b=document.createElement(f?'button':'span');b.textContent=t;if(n){const c=n>=4?'#3ee05a':n>=2?'#ffd23a':'#ff3b3b';b.classList.add('uses');b.style.background=`linear-gradient(rgba(30,10,40,.9),rgba(30,10,40,.9)) padding-box,conic-gradient(${c} 0 ${n*100/6}%,#3a3a3a 0) border-box`;b.title=n+'/6';}b.dataset.act=id;if(f)b.addEventListener('click',e=>{e.stopPropagation();f();});else b.className='lbl';bar.appendChild(b);}}
 setInterval(()=>refreshAct(),200);
 // ---------- 공유 음악 (MP3 업로드 + 유튜브) ----------
 let music={playlist:[],index:-1,playing:false},offset=0,userGesture=false;const audio=$('audio');

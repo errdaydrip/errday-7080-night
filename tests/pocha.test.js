@@ -10,18 +10,18 @@ const U='http://localhost:'+(process.env.PORT||8080);
  a.emit('move',{pos:[-3,0,17.5],rot:0});await W(600);a.emit('place');await W(300);assert.deepStrictEqual(tb.Y2,['soju',null,null,null]);
  a.emit('move',{pos:[0.8,0,14.6],rot:0});await W(600);a.emit('pickup','squid');await W(600);a.emit('move',{pos:[-3,0,17.5],rot:0});await W(100);a.emit('place');await W(300);assert.deepStrictEqual(tb.Y2,['soju','squid',null,null]);
  b.emit('drink','beer');await W(300);assert(!dr.length,'no beer on table');
- for(let i=0;i<4;i++){b.emit('drink','soju');await W(2100);}assert.strictEqual(dr.length,4);assert.deepStrictEqual(tb.Y2,[null,'squid',null,null],'soju gone in place, squid keeps slot');
+ for(let i=0;i<6;i++){b.emit('drink','soju');await W(2100);}assert.strictEqual(dr.length,6);assert.deepStrictEqual(tb.Y2,[null,'squid',null,null],'soju gone in place, squid keeps slot');
  let eats=[];b.on('eat',e=>eats.push(e));b.emit('eat','dakbal');await W(300);assert(!eats.length,'no dakbal');
  b.emit('eat','squid');b.emit('eat','squid');await W(300);assert.strictEqual(eats.length,1,'rate limit');
- for(let i=0;i<3;i++){await W(2100);b.emit('eat','squid');}await W(300);assert.strictEqual(eats.length,4);assert.deepStrictEqual(tb.Y2,[null,null,null,null],'squid gone');
+ for(let i=0;i<5;i++){await W(2100);b.emit('eat','squid');}await W(300);assert.strictEqual(eats.length,6);assert.deepStrictEqual(tb.Y2,[null,null,null,null],'squid gone');
  // 통닭/모듬회
  a.emit('move',{pos:[0.8,0,14.6],rot:0});await W(600);a.emit('pickup','chicken');await W(300);const nc=carry.length;
  a.emit('move',{pos:[-11.6,0,20.5],rot:0});await W(600);a.emit('pickup','chicken');await W(600);assert.strictEqual(carry.length,nc+1,'chicken pickup');assert.strictEqual(carry[carry.length-1].kind,'chicken');
  a.emit('move',{pos:[-3,0,17.5],rot:0});await W(600);a.emit('place');await W(300);
  a.emit('move',{pos:[-11.6,0,15],rot:0});await W(600);a.emit('pickup','hoe');await W(600);a.emit('move',{pos:[-3,0,17.5],rot:0});await W(600);a.emit('place');await W(300);
  assert.deepStrictEqual(tb.Y2,['chicken','hoe',null,null]);
- for(let i=0;i<4;i++){await W(2100);b.emit('eat','chicken');}await W(300);assert.deepStrictEqual(tb.Y2,[null,'hoe',null,null],'chicken gone in place');
- for(let i=0;i<4;i++){await W(2100);b.emit('eat','hoe');}await W(300);assert.deepStrictEqual(tb.Y2,[null,null,null,null]);
+ for(let i=0;i<6;i++){await W(2100);b.emit('eat','chicken');}await W(300);assert.deepStrictEqual(tb.Y2,[null,'hoe',null,null],'chicken gone in place');
+ for(let i=0;i<6;i++){await W(2100);b.emit('eat','hoe');}await W(300);assert.deepStrictEqual(tb.Y2,[null,null,null,null]);
  // max 4
  for(let i=0;i<5;i++){a.emit('move',{pos:[-.7,0,20.8],rot:0});await W(100);a.emit('pickup','beer');await W(600);a.emit('move',{pos:[-3,0,17.5],rot:0});await W(100);a.emit('place');await W(600);}
  assert.strictEqual(tb.Y2.filter(Boolean).length,4,'max 4');
