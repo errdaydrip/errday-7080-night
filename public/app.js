@@ -151,7 +151,7 @@ function sit(s){if(!s||seatTaken(s))return;mySeat=s.id;goal=null;goalSeat=null;m
  socket.emit('seat',s.id);socket.emit('move',{pos:[s.x,s.y||0,s.z],rot:myYaw});updateWhere();}
 function stand(){if(!mySeat)return;camGoal=null;const s=SEATS.find(x=>x.id===mySeat);mySeat=null;if(s.stand)rig.object3D.position.set(s.stand[0],0,s.stand[1]);else{const c=tableCenter(s.table);
  rig.object3D.position.set(clampX(s.x+(s.x-c.x)*.45),0,clampZ(s.z+(s.z-c.z)*.45));}route=[];socket.emit('seat',null);updateWhere();}
-function updateWhere(){document.body.classList.toggle('thseat',!!(mySeat&&mySeat.startsWith('TH-')));const t=mySeat&&mySeat.split('-')[0];$('where').textContent=t==='BAR'?'🍸 바 스툴':t==='TH'?'🎬 극장':window.IN_THEATER?'🎬 극장':t&&t[0]==='Y'?'🏮 야장':t?'🛋 테이블':'🌐 로비';}
+function updateWhere(){document.body.classList.toggle('seated',!!mySeat);document.body.classList.toggle('thseat',!!(mySeat&&mySeat.startsWith('TH-')));const t=mySeat&&mySeat.split('-')[0];$('where').textContent=t==='BAR'?'🍸 바 스툴':t==='TH'?'🎬 극장':window.IN_THEATER?'🎬 극장':t&&t[0]==='Y'?'🏮 야장':t?'🛋 테이블':'🌐 로비';}
 AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const p=rig.object3D.position;moving=false;
  if(joined){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),r=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
   let mx=0,mz=0,ignore=null,spd=1;if(joyX||joyY){f=-joyY;r=joyX;spd=Math.min(1,Math.hypot(f,r));}
@@ -229,8 +229,14 @@ let AC=null;function kya(){if(muted)return;try{AC=AC||new (window.AudioContext||
  const o=AC.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(520,t+.05);o.frequency.exponentialRampToValueAtTime(260,t+.6);const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1400;
  const og=AC.createGain();og.gain.setValueAtTime(0,t);og.gain.linearRampToValueAtTime(v*.25,t+.08);og.gain.exponentialRampToValueAtTime(.001,t+.6);o.connect(lp).connect(og).connect(AC.destination);o.start(t);o.stop(t+.7);}catch(e){}}
 window.kya=kya;
+/* 안주 먹을 때 냠냠(쩝쩝) 씹는 소리: 짧은 저음 잡음 4번 */
+function chew(){if(muted)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const v=(volume/100)*(window.OUTSIDE?.5:1)*.5;if(v<=0)return;const t0=AC.currentTime;
+ for(let k=0;k<4;k++){const t=t0+k*.26+Math.random()*.04,len=.13,buf=AC.createBuffer(1,Math.floor(AC.sampleRate*len),AC.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.sin(Math.PI*i/d.length);
+  const n=AC.createBufferSource();n.buffer=buf;const lp=AC.createBiquadFilter();lp.type='bandpass';lp.Q.value=.9;lp.frequency.value=650+Math.random()*350;const g=AC.createGain();g.gain.setValueAtTime(v*.9,t);g.gain.exponentialRampToValueAtTime(.001,t+len);n.connect(lp).connect(g).connect(AC.destination);n.start(t);
+  const o=AC.createOscillator();o.type='sine';o.frequency.setValueAtTime(170,t);o.frequency.exponentialRampToValueAtTime(90,t+.09);const og=AC.createGain();og.gain.setValueAtTime(v*.35,t);og.gain.exponentialRampToValueAtTime(.001,t+.1);o.connect(og).connect(AC.destination);o.start(t);o.stop(t+.12);}}catch(e){}}
+window.chew=chew;
 function drink(type){if(!canDrink(type))return;const n=Date.now();if(n-(window._lastDrink||0)<2000)return;window._lastDrink=n;const m=$('myAvatar');if(m._h)m._h.drink(type);socket.emit('drink',type);setTimeout(kya,2000);}
-function eat(k){const t=myTable();if(!t||!(TABLE_ITEMS[t]||[]).includes(k))return;const n=Date.now();if(n-(window._lastEat||0)<2000)return;window._lastEat=n;const m=$('myAvatar');if(m._h)m._h.drink('eat');socket.emit('eat',k);}
+function eat(k){const t=myTable();if(!t||!(TABLE_ITEMS[t]||[]).includes(k))return;const n=Date.now();if(n-(window._lastEat||0)<2000)return;window._lastEat=n;const m=$('myAvatar');if(m._h)m._h.drink('eat');socket.emit('eat',k);setTimeout(chew,700);}
 window.eat=eat;
 socket.on('eat',({id})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink('eat');});
 function inBarZone(){const B=window.BAR_ZONE,p=rig.object3D.position;return !mySeat&&B&&p.x>=B.x0&&p.x<=B.x1&&p.z>=B.z0&&p.z<=B.z1;}

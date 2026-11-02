@@ -97,3 +97,14 @@ body.pfs{height:100dvh;overflow:hidden;overscroll-behavior:none}
 #presetBox .presetEdit{margin-top:6px;display:flex;flex-direction:column;gap:4px}#presetBox .prow{display:flex;gap:4px}#presetBox .pn{width:28%}#presetBox .pu{flex:1;min-width:0}
 #presetBox input{background:#1a0a22;color:#fff;border:1px solid #fff4;border-radius:6px;padding:4px 6px;font-size:12px}
 @media (pointer:coarse){#presetBox .presetEdit{display:none}}
+/* 모바일 캐릭터 만들기: 옵션 줄마다 한 줄에 (작은 칩 + 넘치면 가로 스크롤) */
+@media (max-width:520px){
+ .row{display:flex;align-items:center;gap:4px;margin:6px 0}
+ .row b{flex:0 0 34px;width:34px;font-size:13px}
+ .row>span{display:flex;flex-wrap:nowrap;align-items:center;gap:3px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1}
+ .row>span::-webkit-scrollbar{display:none}
+ .row button.opt{flex:0 0 auto;padding:5px 7px;font-size:12.5px;margin:0;white-space:nowrap}
+ .row .swatch{flex:0 0 auto;width:21px;height:21px;margin:1px}
+}
+@media (max-width:370px){.row .swatch{width:19px;height:19px;margin:0}.row>span{gap:2px}.row b{flex-basis:30px;width:30px}}
+@media (max-width:700px),(pointer:coarse){body.seated #jumpBtn{display:none!important}}
