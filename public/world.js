@@ -218,7 +218,7 @@ const G={sph:(r,ws=28,hs=20)=>new THREE.SphereGeometry(r,ws,hs),cap:(r,l)=>new T
 function mesh(g,m,p=[0,0,0],s=null,r=null){const o=new THREE.Mesh(g,m);o.position.set(...p);if(s)o.scale.set(...s);if(r)o.rotation.set(...r);return o;}
 function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['basic','suit','disco','hanbok','aerobic'].includes(opts.style)?opts.style:'suit';
  const LK=(window.LOOKS?LOOKS.resolve(opts):{top:opts.outfit,bottom:opts.outfit,acc:'none',hair:''});const npc=opts.dj||opts.waiter||!opts.top; // NPC 는 예전 한 가지 색 그대로
- const col=npc?(opts.outfit||OUTFIT_DEFAULTS[f?'f':'m'][st]):LK.top,bcol=npc?col:LK.bottom;opts={...opts,top:col,bottom:bcol,acc:npc?'none':LK.acc,hair:npc?'':LK.hair};
+ const col=npc?(opts.outfit||OUTFIT_DEFAULTS[f?'f':'m'][st]):LK.top,bcol=npc?col:LK.bottom;opts={...opts,top:col,bottom:bcol,acc:npc?'none':LK.acc,hair:npc?'':LK.hair,pig:!npc&&f&&!LK.hair};
  const root=new THREE.Group(),hips=new THREE.Group();hips.position.y=.42;root.add(hips);
  const torso=new THREE.Group();hips.add(torso);
  // 의상별 재질
@@ -260,7 +260,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['basic'
   const wide=st==='hanbok';
   const arm=new THREE.Group();arm.rotation.z=s*.55;a.add(arm);
   arm.add(wide?mesh(G.cyl(.065,.09,.2),sleeve,[0,-.1,0]):mesh(G.cap(.06,.13),sleeve,[0,-.09,0]));
-  if(cuff)arm.add(mesh(G.cyl(.065,.065,.035),cuff,[0,-.18,0]));if(opts.tee)arm.add(mesh(G.cyl(.07,.072,.09),top,[0,-.03,0])); /* 반팔 */
+  if(cuff)arm.add(mesh(G.cyl(.065,.065,.035),cuff,[0,-.18,0]));if(opts.tee){arm.add(mesh(G.cyl(.07,.072,.09),top,[0,-.03,0]));arm.add(mesh(G.sph(.071,18,12),top,[0,.0,0]));} /* 반팔 + 어깨까지 상의색 */
   if(!f&&st==='suit')arm.add(mesh(G.cyl(.062,.062,.03),M.white,[0,-.18,0]));
   arm.add(mesh(G.sph(.07),M.skin,[0,-.24,0]));return a;});
  // 다리
@@ -283,13 +283,12 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['basic'
  return {root,hips,torso,head,arms,legs,M};}
 function T2(M,c){return M.T(c);}
 function curls(head,H,pts,r){pts.forEach(([x,y,z,k=1])=>head.add(mesh(G.sph(r*k,18,14),H,[x,y,z])));}
-function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';if(o.hair&&!o.dj)return hairPick(head,M,H,o.hair);
+function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';if(o.hair&&!o.dj)return hairPick(head,M,H,o.hair);if(o.pig)return hairPick(head,M,H,'fp'); /* 여자 기본 = 양갈래 */
  if(o.dj||(!f&&st==='disco')){ // 큰 아프로
   head.add(mesh(G.sph(.45,32,24),H,[0,.47,-.17],[1.05,.92,.85]));head.add(mesh(new THREE.SphereGeometry(.335,32,24,0,Math.PI*2,0,Math.PI*.42),H,[0,.33,0]));return;}
  const cap=mesh(new THREE.SphereGeometry(.335,36,22,0,Math.PI*2,0,Math.PI*.42),H,[0,.33,0],[1.04,.97,1.02]);head.add(mesh(new THREE.SphereGeometry(.33,32,24,Math.PI,Math.PI),H,[0,.26,-.005],[1.05,.97,1]));head.add(cap);
  if(!f&&st==='suit'){ // 짧은 옆가르마
-  head.add(mesh(G.sph(.14),H,[.05,.55,.15],[1.9,.6,1]));head.add(mesh(G.sph(.1),H,[-.19,.5,.13],[1,.6,.9]));
-  [-1,1].forEach(s=>head.add(mesh(G.box(.05,.14,.12),H,[s*.3,.32,.02])));return;}
+  head.add(mesh(G.sph(.14),H,[.05,.55,.15],[1.9,.6,1]));head.add(mesh(G.sph(.1),H,[-.19,.5,.13],[1,.6,.9]));return;}
  if(!f&&st==='hanbok'){ // 갓 (차양 넓은 검은 갓 + 높은 모자 + 끈)
   const gat=new THREE.MeshStandardMaterial({color:'#151515',roughness:.6,transparent:true,opacity:.95});
   head.add(mesh(G.cyl(.62,.62,.012,40),gat,[0,.53,0]));head.add(mesh(G.cyl(.16,.18,.3,28),gat,[0,.69,0]));head.add(mesh(G.sph(.16,20,10),gat,[0,.84,0],[1,.25,1]));
@@ -312,7 +311,7 @@ function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';if(o.hair&&!o.dj)retu
 // 헤어 6종 (참고 이미지 스타일): 머리에 딱 붙는 하나로 이어진 매끈한 껍질 + 스타일별 볼륨. 틈/뜬 조각 없음
 const HC={rx:.355,ry:.325,rz:.34,cy:.27};
 function hairShell(tf,o={}){const U=72,V=30,pos=[],idx=[],rx=o.rx||HC.rx,ry=o.ry||HC.ry,rz=o.rz||HC.rz,cy=HC.cy,bump=o.bump||(()=>0),flare=o.flare||0,drop=o.drop||1;
- for(let i=0;i<=U;i++){const ph=Math.PI+i/U*Math.PI*2,f=Math.abs(Math.atan2(Math.sin(ph),Math.cos(ph))),tm=tf(f);
+ for(let i=0;i<=U;i++){const ph=Math.PI+i/U*Math.PI*2,sa=Math.atan2(Math.sin(ph),Math.cos(ph)),f=Math.abs(sa),tm=tf(f,sa);
   for(let j=0;j<=V;j++){const th=j/V*tm,b=1+bump(ph,th,f);let x,y,z;
    if(th<=Math.PI/2){const sn=Math.sin(th);x=rx*b*sn*Math.sin(ph);z=rz*b*sn*Math.cos(ph);y=cy+ry*b*Math.cos(th);}
    else{const d=th-Math.PI/2,k=b*(1+flare*d);x=rx*k*Math.sin(ph);z=rz*k*Math.cos(ph);y=cy-ry*d*drop;}
@@ -327,11 +326,21 @@ function hairPick(head,M,H0,k){const H=H0.clone();H.side=THREE.DoubleSide;H.roug
  const sidePart=(ph,th)=>{const a=Math.atan2(Math.sin(ph),Math.cos(ph));return th<Math.PI*.38?-.05*Math.exp(-(((a-1.0)/.08)**2))*(1-th/(Math.PI*.38)):0;}; // 옆 가르마
  if(k==='m1'){ // 버즈컷(반삭)
   const Bz=H.clone();Bz.transparent=true;Bz.opacity=.88;head.add(mesh(hairShell(line3(P*.33,P*.44,P*.6),{bump:()=>.004}),Bz)); /* 버즈컷(반삭): 두피에 바짝 */return;}
- if(k==='m2'){ // 가르마: 옆 가르마 댄디, 위쪽 부드러운 볼륨
-  add(hairShell(line3(P*.3,P*.43,P*.6),{bump:(ph,th)=>{const a=Math.atan2(Math.sin(ph),Math.cos(ph));const top=.06*Math.max(0,1-th/(P*.42));const sweep=a<1.0&&a>-1.6&&th<P*.34?.06*Math.sin(Math.min(1,(1.0-a)/.3)*P/2)*(1-th/(P*.34)):0; /* 8:2 가르마 */return .015+top+sweep+sidePart(ph,th);}}));return;}
+ if(k==='m2'){ // 가르마 (스케치): 오른쪽 깊은 옆가르마, 큰 쪽은 이마 위로 둥글게 넘기고 왼쪽 관자놀이로 살짝 내려옴, 귀는 보임
+  const pa=.72,base=line3(P*.3,P*.42,P*.6);
+  const tf=(f,a)=>{if(f>P*.5)return base(f);const big=a<pa;let t=big?P*.33+P*.1*sstep(-.2,-1.0,a):P*.4;t-=P*.08*Math.exp(-(((a-pa)/.06)**2)); /* 가르마 자리 V 홈 */const w=sstep(P*.32,P*.5,f);return t*(1-w)+base(f)*w;};
+  add(hairShell(tf,{bump:(ph,th,f)=>{const a=Math.atan2(Math.sin(ph),Math.cos(ph));const pg=th<P*.4?-.07*Math.exp(-(((a-pa)/.06)**2))*(1-th/(P*.4)):0;
+   const vol=f<P*.55?(a<pa?.07:.05)*Math.max(0,1-th/(P*.45))*Math.min(1,Math.abs(a-pa)/.25+.2):0;return .015+vol+pg;}}));return;}
  if(k==='m3'){ // 쉐이브: 옆은 짧게 밀고(페이드) 앞머리를 위로 쓸어올린 볼륨
   add(hairShell(line3(P*.3,P*.43,P*.6),{rx:.348,bump:(ph,th,f)=>{const fr=Math.max(0,Math.cos(f));return .005+.24*fr*fr*Math.exp(-(((th-P*.22)/(P*.12))**2))+.05*Math.max(0,1-th/(P*.3));}}));
   const F=H.clone();F.transparent=true;F.opacity=.45;head.add(mesh(hairShell(line3(P*.2,P*.47,P*.63),{rx:.343,rz:.33,ry:.32}),F));return;}
+ if(k==='fp'){ // 양갈래: 가운데 가르마, 양옆으로 묶어 내린 두 갈래
+  add(hairShell(line3(P*.3,P*.45,P*.62),{bump:(ph,th)=>.02+partGroove(ph,th)}));
+  [-1,1].forEach(sd=>{head.add(mesh(new THREE.TorusGeometry(.045,.018,8,18),M.T('#ff3cac'),[sd*.33,.35,-.12],null,[0,P/2,0]));
+   const c=new THREE.CatmullRomCurve3([[sd*.31,.36,-.12],[sd*.38,.3,-.15],[sd*.4,.14,-.15],[sd*.38,-.02,-.13],[sd*.35,-.14,-.11]].map(q=>new THREE.Vector3(...q)));
+   const tg=new THREE.TubeGeometry(c,32,1,14,false),pa=tg.attributes.position,v=new THREE.Vector3();for(let i=0;i<=32;i++){const t=i/32,q=c.getPoint(t),r=.085*(t<.12?.75+t*2:1-(t-.12)*.65);for(let j=0;j<=14;j++){const n=i*15+j;v.fromBufferAttribute(pa,n).sub(q).multiplyScalar(r).add(q);pa.setXYZ(n,v.x,v.y,v.z);}}
+   tg.computeVertexNormals();add(tg);add(G.sph(.032,12,10),[sd*.35,-.14,-.11]);add(G.sph(.06,14,10),[sd*.31,.36,-.12]);});
+  return;}
  if(k==='f1'){ // 단발: 턱선 길이, 앞 얼굴만 열린 닫힌 형태
   add(hairShell(f=>f<P*.27?P*.31+P*.06*f/(P*.27):f<P*.42?P*.37+(P*.86-P*.37)*sstep(P*.27,P*.42,f):P*.86,{rx:.375,rz:.36,flare:.18,drop:.95,bump:(ph,th)=>.05*Math.min(1,th*2)+(Math.atan2(Math.sin(ph),Math.cos(ph))>0&&th<P*.3?.015:0)}));
   return;}
@@ -347,15 +356,14 @@ function hairPick(head,M,H0,k){const H=H0.clone();H.side=THREE.DoubleSide;H.roug
   for(const [y,k,n] of [[-.15,1.2,15],[-.02,1.13,14],[.1,1.06,12]])for(let q=0;q<n;q++){const ph=P*.42+q/(n-1)*P*1.16;const rr=.38*k;add(G.sph(.075,14,10),[Math.sin(ph)*rr,y+(q%2)*.03,Math.cos(ph)*rr*.96]);} // 파마 컬
   return;}
 }
-// 남자 수염: 까칠/염소/짧은 턱수염/구레나룻/콧수염
+// 남자 수염: 까칠/염소/짧은 턱수염/콧수염 (구레나룻 없음)
 function beard(head,M,k){const P=Math.PI,B=M.hair.clone();B.side=THREE.DoubleSide;const jaw=(t0,tl,op,r=.322)=>{const m=B.clone();if(op<1){m.transparent=true;m.opacity=op;}head.add(mesh(new THREE.SphereGeometry(r,36,14,P/2-.95,1.9,P*t0,P*tl),m,[0,.26,0],[1.06,.96,.98]));};
  const must=()=>[-1,1].forEach(s=>head.add(mesh(G.cap(.014,.045),B,[s*.032,.183,.303],null,[0,0,P/2+s*.25])));
  const goat=()=>head.add(mesh(G.sph(.05,16,12),B,[0,.075,.27],[1,1.1,.6]));
  if(k==='stubble')jaw(.64,.26,.28);
  if(k==='full'){jaw(.66,.25,1,.326);must();}
  if(k==='goatee'){goat();must();}
- if(k==='mustache')must();
- if(k==='sideburns')[-1,1].forEach(s=>head.add(mesh(G.box(.035,.15,.07),B,[s*.315,.22,.07])));}
+ if(k==='mustache')must();}
 // 액세서리: 안경 / 선글라스
 function accessory(head,a){if(!a||a==='none')return;const g=new THREE.Group();g.position.set(0,.275,.33);head.add(g);
  const frame=new THREE.MeshStandardMaterial({color:a==='sunglasses'?'#111':'#3a2a1a',metalness:.5,roughness:.3});

@@ -10,6 +10,7 @@ r=L.resolve({gender:'m',style:'suit',top:'#e0262e',bottom:'#1a1a1a',acc:'sunglas
 r=L.resolve({gender:'f',hair:'m2',acc:'crown',top:'red'});a.strictEqual(r.hair,'');a.strictEqual(r.acc,'none');a.strictEqual(r.top,L.DEF.f.suit[0]);
 a.strictEqual(L.resolve({}).style,'suit');
 a.strictEqual(L.STYLES[0],'basic','기본 first');r=L.resolve({gender:'f',style:'basic'});a.deepStrictEqual([r.top,r.bottom],['#f5f5f5','#2f7bff']);r=L.resolve({gender:'m',style:'basic',top:'#e0262e',bottom:'#1a1a1a'});a.deepStrictEqual([r.style,r.top,r.bottom],['basic','#e0262e','#1a1a1a']);
+a(!L.BEARDS.includes('sideburns'));a.strictEqual(L.resolve({gender:'m',beard:'sideburns'}).beard,'','old sideburns → none');
 r=L.resolve({gender:'m',face:3,beard:'goatee'});a.deepStrictEqual([r.face,r.beard],[3,'goatee']);r=L.resolve({gender:'f',face:9,beard:'full'});a.deepStrictEqual([r.face,r.beard],[0,''],'female no beard, bad face→0');a.deepStrictEqual([L.resolve({}).face,L.resolve({}).beard],[0,''],'old data compat');
 // 서버 동기: 다른 사람에게 상의/하의/액세서리/헤어 전달
 const {io}=require('socket.io-client');const W=ms=>new Promise(x=>setTimeout(x,ms));const U='http://localhost:'+(process.env.PORT||8080);

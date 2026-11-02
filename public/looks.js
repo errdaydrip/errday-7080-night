@@ -8,7 +8,7 @@
             f:{basic:['#f5f5f5','#2f7bff'],suit:['#7b2cbf','#7b2cbf'],disco:['#2f7bff','#2f7bff'],hanbok:['#ffd400','#e0262e'],aerobic:['#f5f5f5','#ff69b4']}};
  const HEX=/^#[0-9a-fA-F]{6}$/;
  // 예전 저장값(outfit 한 가지 색)도 그대로: 옛날 색은 상의로 (여자 한복은 치마가 주색이라 하의로)
- const FACES=5,BEARDS=['','stubble','goatee','full','sideburns','mustache']; // 얼굴 5종, 남자 수염(없음 포함)
+ const FACES=5,BEARDS=['','stubble','goatee','full','mustache']; // 얼굴 5종, 남자 수염(없음 포함)
  function resolve(o){o=o||{};const g=o.gender==='f'?'f':'m',st=STYLES.includes(o.style)?o.style:'suit',d=DEF[g][st];
   const legacy=HEX.test(o.outfit||'')?o.outfit:null,legacyBottom=g==='f'&&st==='hanbok';
   const top=HEX.test(o.top||'')?o.top:(legacy&&!legacyBottom?legacy:d[0]);
