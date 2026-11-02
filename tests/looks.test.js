@@ -9,6 +9,7 @@ r=L.resolve({gender:'f',style:'hanbok',outfit:'#e0262e'});a.strictEqual(r.bottom
 r=L.resolve({gender:'m',style:'suit',top:'#e0262e',bottom:'#1a1a1a',acc:'sunglasses',hair:'m2'});a.deepStrictEqual([r.top,r.bottom,r.acc,r.hair],['#e0262e','#1a1a1a','sunglasses','m2']);
 r=L.resolve({gender:'f',hair:'m2',acc:'crown',top:'red'});a.strictEqual(r.hair,'');a.strictEqual(r.acc,'none');a.strictEqual(r.top,L.DEF.f.suit[0]);
 a.strictEqual(L.resolve({}).style,'suit');
+a.strictEqual(L.STYLES[0],'basic','<기본> first');r=L.resolve({gender:'f',style:'basic'});a.deepStrictEqual([r.top,r.bottom],['#f5f5f5','#2f7bff']);r=L.resolve({gender:'m',style:'basic',top:'#e0262e',bottom:'#1a1a1a'});a.deepStrictEqual([r.style,r.top,r.bottom],['basic','#e0262e','#1a1a1a']);
 // 서버 동기: 다른 사람에게 상의/하의/액세서리/헤어 전달
 const {io}=require('socket.io-client');const W=ms=>new Promise(x=>setTimeout(x,ms));const U='http://localhost:'+(process.env.PORT||8080);
 (async()=>{const w=io(U,{forceNew:true});const seen={};w.on('player',p=>seen[p.id]=p);const s=io(U,{forceNew:true});await W(400);

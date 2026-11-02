@@ -2,13 +2,13 @@ const CID=localStorage.getItem('cid')||(()=>{const v=(crypto.randomUUID?crypto.r
 // ===== ERRDAY 나이트클럽: 아바타 · 이동 · 채팅 · 음악 =====
 const socket=io({transports:['websocket','polling']});const $=id=>document.getElementById(id);
 const COLORS=['#2b3352','#9a9cc0','#2a3f9e','#2fb8b0','#2f8f45','#e2525c','#c8102e','#ffd400','#ff69b4','#7b2cbf','#ff8c00','#f5f5f5','#ff2fa6','#9cf03a','#4fc3ff','#b04cff'];
-const JOINT={suit:'#1a1a1a',disco:'#ffd700',hanbok:'#ffffff',aerobic:'#ff2fa6'};
+const JOINT={basic:'#2f7bff',suit:'#1a1a1a',disco:'#ffd700',hanbok:'#ffffff',aerobic:'#ff2fa6'};
 let me={nick:'',gender:'m',style:'suit',outfit:'#2b3352',skin:'#f2c29a'},myId=null,joined=false,mySeat=null,adminToken=sessionStorage.getItem('adminToken');
-try{Object.assign(me,JSON.parse(localStorage.getItem('profile')||'{}'));}catch(e){}delete me.hat;if(!['suit','disco','hanbok','aerobic'].includes(me.style))me.style='suit';
+try{Object.assign(me,JSON.parse(localStorage.getItem('profile')||'{}'));}catch(e){}delete me.hat;if(!['basic','suit','disco','hanbok','aerobic'].includes(me.style))me.style='suit';
 const others={};const scene=document.querySelector('a-scene');
-const humanOpts=p=>({...LOOKS.resolve(p),outfit:p.outfit||null,skin:p.skin||'#f2c29a',gender:p.gender==='f'?'f':'m',style:['suit','disco','hanbok','aerobic'].includes(p.style)?p.style:'suit'});
+const humanOpts=p=>({...LOOKS.resolve(p),outfit:p.outfit||null,skin:p.skin||'#f2c29a',gender:p.gender==='f'?'f':'m',style:['basic','suit','disco','hanbok','aerobic'].includes(p.style)?p.style:'suit'});
 const SKINS=['#f2c29a','#ffdcc0','#d9a074','#a8724a'];
-const STYLE_NAMES={m:{suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'},f:{suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'}};
+const STYLE_NAMES={m:{basic:'&lt;기본&gt;',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'},f:{basic:'&lt;기본&gt;',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'}};
 // 모바일 성능: 픽셀 비율 낮추기
 scene.addEventListener('loaded',()=>{if(IS_MOBILE&&scene.renderer)scene.renderer.setPixelRatio(Math.min(1.25,devicePixelRatio));});
 // ---------- 입장 화면 ----------
