@@ -6,4 +6,6 @@ let r=D.parse({code:101,content:{name:'철수$3영희',amount:5000,message:'노�
 r=D.parse({list:[{code:101,content:{name:'A',amount:1000}},{code:102,content:{name:'sub'}},{code:101,content:{name:'G',amount:1,gifticon:true}}]},clean);a.strictEqual(r.length,1,'donations only, no gifticon');
 r=D.parse({conf:{}},clean);a.strictEqual(r.length,0);
 r=D.parse({code:101,content:{name:'욕',amount:1000,message:'씨발 좋아'}},clean);a(!/씨발/.test(r[0].msg),'profanity filtered: '+r[0].msg);
+const rk=D.parseRank({type:0,conf:{title_text:'후원랭킹',display_count:5},data:[{acc:'mu*****l@gmail.com',rank:1,cash:1000},{name:'철수',rank:2,cash:500}]},clean);a.deepStrictEqual(rk.list.map(r=>[r.rank,r.name,r.cash]),[[1,'mu*****l@gmail.com',1000],[2,'철수',500]]);
+a.ok(D.rankPayload(D.RANK_URL));a.strictEqual(JSON.parse(Buffer.from(D.rankPayload(D.RANK_URL),'base64')).service,'rank');a.strictEqual(D.parseRank({conf:{}},clean),null);
 console.log('donations OK');

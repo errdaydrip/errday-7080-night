@@ -840,15 +840,35 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
 // ---------- 💝 후원 전광판 (나이트 뒷벽, 네온 스크롤) ----------
 (function donationTicker(){const W=2048,H=128,cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
  const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace||tex.colorSpace;
- const SZ=(window.STAGE&&STAGE.z1)||-11.82;const board=E('a-entity',{position:`0 6.35 ${Math.min(-6,SZ+.15)}`});
+ const SZ=(window.STAGE&&STAGE.z1)||-11.82;const board=E('a-entity',{position:`0 6.35 ${Math.min(-6,SZ+.15)}`});window.setBoards=b=>{board.setAttribute('visible',!!(b&&b.ticker!==false));window.setRankVis&&window.setRankVis(!!(b&&b.rank!==false));};
  E('a-box',{position:'0 0 -.04',width:11.4,height:1.15,depth:.06,material:'color:#0a0210;roughness:.6'},board);
  [[0,.6,11.5,.06],[0,-.6,11.5,.06],[-5.72,0,.06,1.26],[5.72,0,.06,1.26]].forEach(([px,py,w,h])=>E('a-box',{position:`${px} ${py} 0`,width:w,height:h,depth:.05,material:'color:#ff3cac;emissive:#ff3cac;emissiveIntensity:1.4'},board));
  const pl=E('a-plane',{position:'0 0 .005',width:11,height:11*H/W*1.4},board);pl.addEventListener('loaded',()=>{const m=pl.getObject3D('mesh');m.material=new THREE.MeshBasicMaterial({map:tex,toneMapped:false});});
- const fmt=n=>(+n||0).toLocaleString('ko-KR');let text='',tw=1,off=1400,last=0;
- const build=l=>{text=l&&l.length?'💝 후원 감사합니다!   '+l.map(d=>`★ ${d.name} ${fmt(d.amount)}원${d.msg?' · "'+d.msg+'"':''}`).join('     '):'💝 ERRDAY 후원 전광판 · 후원하면 여기에 이름이 떠요! · 웨이터·알바에게 💝 후원하기';x.font='bold 72px "Malgun Gothic","Noto Sans KR",sans-serif';tw=x.measureText(text).width+200;};
- window.setDonations=l=>{window.DONATIONS=l||[];build(window.DONATIONS);};build([]);
- AFRAME.registerComponent('don-ticker',{tick(t){if(t-last<33)return;last=t;off=(off+4)%tw;x.fillStyle='#0a0210';x.fillRect(0,0,W,H);
-  x.font='bold 72px "Malgun Gothic","Noto Sans KR",sans-serif';x.textBaseline='middle';
-  const sx=W-off;for(const px of [sx,sx+tw])for(const [c,b] of [['#ff3cac',26],['#fff3fb',0]]){x.shadowColor=c;x.shadowBlur=b;x.fillStyle=b?'#ff3cac':'#fff3fb';x.fillText(text,px,H/2+4);}
-  x.shadowBlur=0;tex.needsUpdate=true;}});
+ /* 정지형 전광판: 새 후원이 올 때만 깜빡깜빡 → 글자 전체가 한 번에 바뀜. 그 전까지는 이전 목록 그대로 */
+ const fmt=n=>(+n||0).toLocaleString('ko-KR'),FONT='"Malgun Gothic","Noto Sans KR",sans-serif';let L1='',L2='',lastT=null,blinkUntil=0,last=0,dirty=true;
+ const line=d=>`★ ${d.name} ${fmt(d.amount)}원${d.msg?' · "'+d.msg+'"':''}`;
+ const fit=(t,max,px)=>{let s=px;x.font=`bold ${s}px ${FONT}`;while(s>22&&x.measureText(t).width>W-80){s-=2;x.font=`bold ${s}px ${FONT}`;}if(x.measureText(t).width>W-80){while(t.length>1&&x.measureText(t+'…').width>W-80)t=t.slice(0,-1);t+='…';}return t;};
+ const neon=(t,y,px,c)=>{x.font=`bold ${px}px ${FONT}`;x.textAlign='center';x.textBaseline='middle';for(const b of [22,0]){x.shadowColor=c;x.shadowBlur=b;x.fillStyle=b?c:'#fff3fb';x.fillText(t,W/2,y);}x.shadowBlur=0;};
+ const draw=on=>{x.fillStyle='#0a0210';x.fillRect(0,0,W,H);if(on){if(L2){const s1=fitPx(L1,64);neon(fit(L1,0,s1),44,s1,'#ff3cac');const s2=fitPx(L2,34);neon(fit(L2,0,s2),104,s2,'#3cd8ff');}else{const s1=fitPx(L1,72);neon(fit(L1,0,s1),H/2+4,s1,'#ff3cac');}}tex.needsUpdate=true;};
+ const fitPx=(t,px)=>{let s=px;x.font=`bold ${s}px ${FONT}`;while(s>22&&x.measureText(t).width>W-80){s-=2;x.font=`bold ${s}px ${FONT}`;}return s;};
+ const build=l=>{if(l&&l.length){L1='💝 '+line(l[0]);L2=l.length>1?'이전 후원  '+l.slice(1).map(line).join('   '):'💝 후원 감사합니다!';}else if(window.TICKER_IDLE){L1=window.TICKER_IDLE;L2='';}else{L1='💝 ERRDAY 후원 전광판';L2='후원하면 여기에 이름이 떠요! · 웨이터·알바에게 💝 후원하기';}};
+ window.setTickerIdle=t=>{window.TICKER_IDLE=t||'';build(window.DONATIONS||[]);dirty=true;};
+ window.setDonations=l=>{l=l||[];const t=l[0]?l[0].t+'|'+l[0].name:'';const isNew=lastT!==null&&t&&t!==lastT;lastT=t;window.DONATIONS=l;build(l);if(isNew)blinkUntil=performance.now()+1800;dirty=true;};build([]);
+ window.TICKER_STATE=()=>({L1,L2,blinking:performance.now()<blinkUntil});
+ AFRAME.registerComponent('don-ticker',{tick(t){const now=performance.now();if(now<blinkUntil){const on=Math.floor((blinkUntil-now)/150)%2===0;if(on!==this._on||t-last>150){this._on=on;last=t;/* 깜빡이는 동안: 새 글자 전체가 켜졌다 꺼졌다 */draw(on);}dirty=true;return;}
+  if(dirty){dirty=false;draw(true);}}});
  document.querySelector('a-scene').setAttribute('don-ticker','');})();
+(function rankingBoard(){const W=1024,H=1024,cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
+ const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace||tex.colorSpace;const FONT='"Malgun Gothic","Noto Sans KR",sans-serif';
+ const board=E('a-entity',{position:'-11.9 5.6 -4.2',rotation:'0 90 0'}); /* 클럽 왼쪽 벽 위쪽 */
+ E('a-box',{position:'0 0 -.04',width:3.3,height:3.3,depth:.06,material:'color:#0a0210;roughness:.6'},board);
+ [[0,1.68,3.4,.06],[0,-1.68,3.4,.06],[-1.68,0,.06,3.42],[1.68,0,.06,3.42]].forEach(([px,py,w,h])=>E('a-box',{position:`${px} ${py} 0`,width:w,height:h,depth:.05,material:'color:#ffd23c;emissive:#ffd23c;emissiveIntensity:1.4'},board));
+ const pl=E('a-plane',{position:'0 0 .005',width:3.2,height:3.2},board);pl.addEventListener('loaded',()=>{pl.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:tex,toneMapped:false});});
+ const fmt=n=>(+n||0).toLocaleString('ko-KR');let data=null;
+ const neon=(t,X,y,px,c,al)=>{x.font=`bold ${px}px ${FONT}`;x.textAlign=al||'left';x.textBaseline='middle';for(const b of [18,0]){x.shadowColor=c;x.shadowBlur=b;x.fillStyle=b?c:'#fff8e6';x.fillText(t,X,y);}x.shadowBlur=0;};
+ const draw=()=>{x.fillStyle='#0a0210';x.fillRect(0,0,W,H);neon('🏆 '+((data&&data.title)||'후원랭킹'),W/2,100,96,'#ffd23c','center');
+  x.fillStyle='#ff3cac';x.fillRect(80,160,W-160,4);const L=(data&&data.list)||[];
+  if(!L.length)neon('아직 랭킹이 없어요',W/2,H/2,54,'#3cd8ff','center');
+  L.slice(0,5).forEach((r,i)=>{const y=290+i*160,c=['#ffd23c','#d8e4f0','#e09050'][r.rank-1]||'#3cd8ff';neon(r.rank+'등',60,y,76,c);let nm=r.name;x.font=`bold 62px ${FONT}`;while(nm.length>1&&x.measureText(nm).width>520)nm=nm.slice(0,-1);neon(nm,215,y-28,62,'#ff3cac');neon(fmt(r.cash)+'원',W-60,y+36,56,'#3cd8ff','right');});
+  tex.needsUpdate=true;};
+ window.setRanking=r=>{data=r;draw();};window.setRankVis=v=>board.setAttribute('visible',v);draw();})();

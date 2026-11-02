@@ -52,8 +52,11 @@ async function addLink(req,res){if(!isAdmin(req.get('x-admin-token')))return res
 app.post('/link',addLink);app.post('/youtube',addLink);
 const {advance}=require('./playback');
 // 투네이션 후원 전광판: 최근 후원 목록을 모두에게
-const DON=require('./donations');let donList=[];
-const donTicker=process.env.TICKER_OFF?null:DON.start({clean:t=>cleanText(t),onDonation:(l)=>{donList=l;io.emit('donations',donList);},log:m=>console.log(m)});
+const DON=require('./donations');let donList=[],tickerIdle='',tickerUrl=process.env.TOONATION_TICKER_URL||DON.DEFAULT_URL,donTicker=null;
+let rankUrl=DON.RANK_URL,rankData=null,rankWs=null,boards={ticker:true,rank:true};
+const boardsPub=()=>({...boards,idle:tickerIdle});
+function startRank(){if(rankWs)rankWs.stop();rankWs=process.env.TICKER_OFF||!boards.rank?null:DON.startRank({url:rankUrl,clean:t=>cleanText(t),onRank:r=>{rankData=r;save();io.emit('ranking',rankData);},log:m=>console.log(m)});}
+function startTicker(){if(donTicker)donTicker.stop();donTicker=process.env.TICKER_OFF||!boards.ticker?null:DON.start({url:tickerUrl,clean:t=>cleanText(t),onDonation:(l,ds)=>{donList=[...ds,...donList].slice(0,10);save();io.emit('donations',donList);},log:m=>console.log(m)});}
 const STATE=process.env.STATE_FILE||path.join(__dirname,'data','state.json');
 const durations={}; // videoId 또는 mp3 id -> 초 (클라이언트가 알려줌)
 const durOf=t=>t&&(t.dur||durations[t.type==='yt'?t.videoId:t.id]);
@@ -77,10 +80,10 @@ app.post('/upload',(req,res,next)=>isAdmin(req.get('x-admin-token'))?next():res.
  music.playlist.push(t); if(music.index<0){music.index=music.playlist.length-1;music.playing=true;music.startedAt=Date.now();}
  broadcastMusic(); res.json(t);
 }));
-function save(){try{fs.mkdirSync(path.dirname(STATE),{recursive:true});fs.writeFileSync(STATE,JSON.stringify({music,durations,played:[...played],presets}));}catch(e){}}
-function load(){try{const j=JSON.parse(fs.readFileSync(STATE,'utf8'));Object.assign(music,j.music);Object.assign(durations,j.durations||{});played=new Set(j.played||[]);if(Array.isArray(j.presets)&&j.presets.length===3)presets=j.presets;
+function save(){try{fs.mkdirSync(path.dirname(STATE),{recursive:true});fs.writeFileSync(STATE,JSON.stringify({music,durations,played:[...played],presets,tickerUrl,donList,tickerIdle,rankUrl,rankData,boards}));}catch(e){}}
+function load(){try{const j=JSON.parse(fs.readFileSync(STATE,'utf8'));Object.assign(music,j.music);Object.assign(durations,j.durations||{});played=new Set(j.played||[]);if(Array.isArray(j.presets)&&j.presets.length===3)presets=j.presets;if(typeof j.tickerUrl==='string'&&DON.payloadOf(j.tickerUrl))tickerUrl=j.tickerUrl;if(typeof j.rankUrl==='string'&&DON.rankPayload(j.rankUrl))rankUrl=j.rankUrl;if(j.rankData&&Array.isArray(j.rankData.list))rankData=j.rankData;if(j.boards)boards={ticker:j.boards.ticker!==false,rank:j.boards.rank!==false};if(typeof j.tickerIdle==='string')tickerIdle=j.tickerIdle.slice(0,80);if(Array.isArray(j.donList))donList=j.donList.slice(0,10);
  music.playlist=music.playlist.filter(t=>t.type!=='mp3'||fs.existsSync(path.join(UP,t.id)));if(music.index>=music.playlist.length)music.index=music.playlist.length?0:-1;}catch(e){}}
-load();
+load();startTicker();startRank();
 const DEFAULT_LIST='PL1cIIyrjZ9L3YEUl8DAz_R6uTf2-80wWY';let defLoading=false;
 async function ensureDefault(){if(music.playlist.length||defLoading||music.cleared)return; /* 관리자가 전체삭제했으면 기본목록 다시 안 채움 */defLoading=true;try{const items=await ytPlaylist(DEFAULT_LIST);
   if(items.length&&!music.playlist.length){music.playlist=items.map(it=>({type:'yt',id:'yt_'+it.id+'_def',videoId:it.id,title:it.title||'YouTube',by:'기본 재생목록'}));
@@ -175,11 +178,19 @@ io.on('connection',s=>{
  s.on('move',m=>{const pl=players[s.id];if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.emit('glasses',glassPub());
- s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));s.emit('donations',donList);if(albaJob)s.emit('albaJob',albaJob);
+ s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));s.emit('donations',donList);s.emit('tickerIdle',tickerIdle);s.emit('boards',boardsPub());if(rankData)s.emit('ranking',rankData);if(albaJob)s.emit('albaJob',albaJob);
  s.on('drink',type=>{const pl=players[s.id];if(!pl||!pl.seat||!DRINKS.includes(type))return;if(!canDrink(pl.seat,type))return;const n=Date.now();if(n-(pl.lastDrink||0)<2000)return;pl.lastDrink=n;
   pl.drinks=(pl.drinks||[]).filter(x=>n-x<1800000).concat(n).slice(-20);
   if(BAR_Z[pl.seat]!==undefined){delete glasses[pl.seat];io.emit('glasses',glassPub());}const tb=pochaTable(pl.seat);if(tb)useItem(tb,type);io.emit('drink',{id:s.id,type});});
  s.emit('presets',presets);
+ s.on('getTicker',(tok,ack)=>{if(typeof ack==='function')ack(isAdmin(tok)?{ok:true,url:tickerUrl,rankUrl}:{ok:false});});
+ s.on('setTickerIdle',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});tickerIdle=cleanText(String(d.text||'').replace(/\s+/g,' ').trim().slice(0,80));save();io.emit('tickerIdle',tickerIdle);io.emit('boards',boardsPub());ack({ok:true,text:tickerIdle});});
+ s.on('setRank',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});const u=String(d.url||'').trim().slice(0,300);if(!DON.rankPayload(u))return ack({ok:false,err:'투네이션 ranking 위젯 주소가 아니에요'});
+  rankUrl=u;rankData=null;save();io.emit('ranking',null);startRank();ack({ok:true,url:rankUrl});});
+ s.on('setBoards',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});const was={...boards};
+  if(typeof d.ticker==='boolean')boards.ticker=d.ticker;if(typeof d.rank==='boolean')boards.rank=d.rank;save();if(was.ticker!==boards.ticker)startTicker();if(was.rank!==boards.rank)startRank();io.emit('boards',boardsPub());ack({ok:true,boards});});
+ s.on('setTicker',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});const u=String(d.url||'').trim().slice(0,300);if(!DON.payloadOf(u))return ack({ok:false,err:'투네이션 donation_ticker 위젯 주소가 아니에요'});
+  tickerUrl=u;save();startTicker();ack({ok:true,url:tickerUrl});});
  s.on('setPresets',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token)||!Array.isArray(d.list)||d.list.length!==3)return ack({ok:false,err:'관리자만'});
   const L=d.list.map(p=>({name:String(p&&p.name||'').trim().slice(0,20),url:String(p&&p.url||'').trim().slice(0,300)}));if(L.some(p=>!p.name||!parseYT(p.url).list))return ack({ok:false,err:'이름과 유튜브 재생목록 주소(list=)를 확인해 주세요'});
   presets=L;save();io.emit('presets',presets);ack({ok:true});});

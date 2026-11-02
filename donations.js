@@ -20,4 +20,17 @@ function start({url=process.env.TOONATION_TICKER_URL||DEFAULT_URL,clean=s=>s,onD
   ws.on('close',()=>{clearInterval(st.ping);retry();});ws.on('error',()=>{});};
  const retry=()=>{if(st.stopped)return;setTimeout(connect,st.backoff).unref();st.backoff=Math.min(st.backoff*2,60000);};
  connect();return {get list(){return st.list;},stop(){st.stopped=true;clearInterval(st.ping);try{st.ws&&st.ws.close();}catch(e){}}};}
-module.exports={start,parse,payloadOf,DEFAULT_URL};
+// 후원 랭킹 위젯 (ranking/<id>) : 접속하면 {type:0,conf,data:[{rank,cash,acc|name}]} 한 번 + 바뀔 때마다 다시 옴
+const RANK_URL='https://toon.at/widget/ranking/f57b46ea2a24fd9601dc95c3eedd90e3';
+function rankPayload(url){const m=/ranking\/([0-9a-f]{16,64})/i.exec(url||'');return m?Buffer.from(JSON.stringify({auth:m[1],service:'rank'})).toString('base64'):null;}
+function parseRank(o,clean){if(!o||!Array.isArray(o.data))return null;const c=o.conf||{};const n=Math.max(1,Math.min(10,+c.display_count||5));
+ return {title:clean(String(c.title_text||'후원랭킹').slice(0,20)),list:o.data.slice(0,n).map((r,i)=>({rank:+r.rank||i+1,name:clean(decode(r.name||r.nickname||r.nick||r.acc||'익명').trim().slice(0,20)),cash:+r.cash||+r.amount||0}))};}
+function startRank({url=RANK_URL,clean=s=>s,onRank,log=()=>{}}={}){const p=rankPayload(url);if(!p){log('rank: bad url');return {stop(){}};}
+ const st={ws:null,stopped:false,ping:null,backoff:2000};
+ const connect=()=>{if(st.stopped)return;let ws;try{ws=new WS('wss://ws.toon.at/'+p,{headers:{Origin:'https://toon.at','User-Agent':'Mozilla/5.0'}});}catch(e){return retry();}st.ws=ws;
+  ws.on('open',()=>{st.backoff=2000;log('rank: connected');clearInterval(st.ping);st.ping=setInterval(()=>{try{ws.send('#ping');}catch(e){}},12000);});
+  ws.on('message',d=>{const s=d.toString();if(s[0]==='#')return;let o;try{o=JSON.parse(s);}catch(e){return;}const r=parseRank(o,clean);if(r)onRank&&onRank(r);});
+  ws.on('close',()=>{clearInterval(st.ping);retry();});ws.on('error',()=>{});};
+ const retry=()=>{if(st.stopped)return;setTimeout(connect,st.backoff).unref();st.backoff=Math.min(st.backoff*2,60000);};
+ connect();return {stop(){st.stopped=true;clearInterval(st.ping);try{st.ws&&st.ws.close();}catch(e){}}};}
+module.exports={start,parse,payloadOf,DEFAULT_URL,RANK_URL,rankPayload,parseRank,startRank};
