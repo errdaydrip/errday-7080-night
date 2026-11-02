@@ -847,14 +847,14 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  [[0,.6,11.5,.06],[0,-.6,11.5,.06],[-5.72,0,.06,1.26],[5.72,0,.06,1.26]].forEach(([px,py,w,h])=>E('a-box',{position:`${px} ${py} 0`,width:w,height:h,depth:.05,material:'color:#ff3cac;emissive:#ff3cac;emissiveIntensity:1.4'},board));
  const pl=E('a-plane',{position:'0 0 .005',width:11,height:11*H/W*1.4},board);pl.addEventListener('loaded',()=>{const m=pl.getObject3D('mesh');m.material=new THREE.MeshBasicMaterial({map:tex,toneMapped:false});});
  /* 일반 LED 전광판: 관리자가 넣은 글자가 LED 점(도트) 모양으로 흐르며 번쩍번쩍. 글자 없으면 기본 문구 */
- const FONT='"Malgun Gothic","Noto Sans KR",sans-serif',DEF='★ ERRDAY 7080 NIGHT ★ 오늘 밤도 신나게! ★';let text=DEF,tw=1,off=0,last=0;
+ const FONT='"Malgun Gothic","Noto Sans KR",sans-serif',DEF='★ ERRDAY 7080 NIGHT ★ 오늘 밤도 신나게! ★';let text=DEF,tw=1,off=0,last=0;const GAP=320;
  const src=document.createElement('canvas');src.width=W;src.height=H;const sx=src.getContext('2d');
  const DOT=8,COLS=W/DOT,ROWS=H/DOT;const COLORS=['#ff3cac','#ffd23c','#3cd8ff','#7cff5c','#ff7a30'];
  const build=()=>{sx.font=`bold 100px ${FONT}`;tw=sx.measureText(text).width;};
  window.setTickerIdle=t=>{window.TICKER_IDLE=t||'';text=window.TICKER_IDLE||DEF;build();off=0;};build();window.setDonations=()=>{};
  window.TICKER_STATE=()=>({text});
- AFRAME.registerComponent('don-ticker',{tick(t){if(t-last<40)return;last=t;off+=6;if(W-off<-tw-DOT)off=0; /* 마지막 글자까지 왼쪽으로 완전히 나간 뒤 오른쪽 끝에서 다시 시작 */
-  sx.fillStyle='#000';sx.fillRect(0,0,W,H);sx.font=`bold 100px ${FONT}`;sx.textBaseline='middle';sx.fillStyle='#fff';const px=W-off;sx.fillText(text,px,H/2+6);
+ AFRAME.registerComponent('don-ticker',{tick(t){if(t-last<40)return;last=t;off+=6;if(off>=tw+GAP)off-=tw+GAP; /* 끝부분이 아직 보일 때 다음 글자가 오른쪽에서 따라 들어옴 (긴 빈칸 없음) */
+  sx.fillStyle='#000';sx.fillRect(0,0,W,H);sx.font=`bold 100px ${FONT}`;sx.textBaseline='middle';sx.fillStyle='#fff';const px=W-off;for(let q=px;q<W;q+=tw+GAP)sx.fillText(text,q,H/2+6);
   const d=sx.getImageData(0,0,W,H).data;const k=Math.floor(t/500),flash=Math.floor(t/120)%9===0; /* 가끔 번쩍 */
   x.fillStyle='#0a0208';x.fillRect(0,0,W,H);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const i=((r*DOT+DOT/2)*W+(c*DOT+DOT/2))*4;const on=d[i]>110;
