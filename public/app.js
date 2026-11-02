@@ -222,21 +222,13 @@ function myTable(){const m=/^([YT]\d)-/.exec(mySeat||'');return m?m[1]:null;}
 function isBarSeat(){return !!mySeat&&mySeat.startsWith('BAR-');}
 function canDrink(type){if(!mySeat)return false;if(isBarSeat())return GLASSES[mySeat]===type;if(type==='whiskey'||type==='cocktail')return false;const t=myTable();if(t)return (TABLE_ITEMS[t]||[]).includes(type);return false;}
 // "캬~" 효과음 (Web Audio 합성, 내 화면에서만)
-let AC=null;function kya(){if(muted)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime,v=(volume/100)*(window.OUTSIDE?.5:1)*.5;if(v<=0)return;
- const len=.75,buf=AC.createBuffer(1,AC.sampleRate*len,AC.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
- const n=AC.createBufferSource();n.buffer=buf;const bp=AC.createBiquadFilter();bp.type='bandpass';bp.Q.value=1.2;bp.frequency.setValueAtTime(3200,t);bp.frequency.exponentialRampToValueAtTime(900,t+len);
- const ng=AC.createGain();ng.gain.setValueAtTime(0,t);ng.gain.linearRampToValueAtTime(v*.9,t+.04);ng.gain.exponentialRampToValueAtTime(.001,t+len);n.connect(bp).connect(ng).connect(AC.destination);n.start(t);
- const o=AC.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(520,t+.05);o.frequency.exponentialRampToValueAtTime(260,t+.6);const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1400;
- const og=AC.createGain();og.gain.setValueAtTime(0,t);og.gain.linearRampToValueAtTime(v*.25,t+.08);og.gain.exponentialRampToValueAtTime(.001,t+.6);o.connect(lp).connect(og).connect(AC.destination);o.start(t);o.stop(t+.7);}catch(e){}}
-window.kya=kya;
-/* 안주 먹을 때 냠냠(쩝쩝) 씹는 소리: 짧은 저음 잡음 4번 */
-function chew(){if(muted)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const v=(volume/100)*(window.OUTSIDE?.5:1)*.5;if(v<=0)return;const t0=AC.currentTime;
- for(let k=0;k<4;k++){const t=t0+k*.26+Math.random()*.04,len=.13,buf=AC.createBuffer(1,Math.floor(AC.sampleRate*len),AC.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.sin(Math.PI*i/d.length);
-  const n=AC.createBufferSource();n.buffer=buf;const lp=AC.createBiquadFilter();lp.type='bandpass';lp.Q.value=.9;lp.frequency.value=650+Math.random()*350;const g=AC.createGain();g.gain.setValueAtTime(v*.9,t);g.gain.exponentialRampToValueAtTime(.001,t+len);n.connect(lp).connect(g).connect(AC.destination);n.start(t);
-  const o=AC.createOscillator();o.type='sine';o.frequency.setValueAtTime(170,t);o.frequency.exponentialRampToValueAtTime(90,t+.09);const og=AC.createGain();og.gain.setValueAtTime(v*.35,t);og.gain.exponentialRampToValueAtTime(.001,t+.1);o.connect(og).connect(AC.destination);o.start(t);o.stop(t+.12);}}catch(e){}}
-window.chew=chew;
+/* 효과음: 술 마시면 '캬~', 안주 먹으면 'Yum yum~'. 음소거면 전부 끔, 볼륨 슬라이더는 음악만 */
+const SFX={ka:'/sfx/ka.mp3',yum:'/sfx/yum.mp3'},SFXA={};for(const k in SFX){SFXA[k]=new Audio(SFX[k]);SFXA[k].preload='auto';}
+function sfx(k){if(muted||!SFXA[k])return;try{const a=SFXA[k].cloneNode();a.volume=window.OUTSIDE?.7:1;const pr=a.play();pr&&pr.catch(()=>{});}catch(e){}}
+function kya(){sfx('ka');}function chew(){sfx('yum');}
+window.kya=kya;window.chew=chew;window.sfx=sfx;
 function drink(type){if(!canDrink(type))return;const n=Date.now();if(n-(window._lastDrink||0)<2000)return;window._lastDrink=n;const m=$('myAvatar');if(m._h)m._h.drink(type);socket.emit('drink',type);setTimeout(kya,2000);}
-function eat(k){const t=myTable();if(!t||!(TABLE_ITEMS[t]||[]).includes(k))return;const n=Date.now();if(n-(window._lastEat||0)<2000)return;window._lastEat=n;const m=$('myAvatar');if(m._h)m._h.drink('eat');socket.emit('eat',k);setTimeout(chew,700);}
+function eat(k){const t=myTable();if(!t||!(TABLE_ITEMS[t]||[]).includes(k))return;const n=Date.now();if(n-(window._lastEat||0)<2000)return;window._lastEat=n;const m=$('myAvatar');if(m._h)m._h.drink('eat');socket.emit('eat',k);setTimeout(chew,600);}
 window.eat=eat;
 socket.on('eat',({id})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink('eat');});
 function inBarZone(){const B=window.BAR_ZONE,p=rig.object3D.position;return !mySeat&&B&&p.x>=B.x0&&p.x<=B.x1&&p.z>=B.z0&&p.z<=B.z1;}

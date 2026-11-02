@@ -108,3 +108,4 @@ body.pfs{height:100dvh;overflow:hidden;overscroll-behavior:none}
 }
 @media (max-width:370px){.row .swatch{width:19px;height:19px;margin:0}.row>span{gap:2px}.row b{flex-basis:30px;width:30px}}
 @media (max-width:700px),(pointer:coarse){body.seated #jumpBtn{display:none!important}}
+@media (max-width:700px),(pointer:coarse){body:has(#entry:not(.hidden)) #mob,body:has(#entry:not(.hidden)) #jumpBtn,body:has(#entry:not(.hidden)) #subsMob{display:none!important}} /* 캐릭터 창 열리면 모바일 조이스틱·점프 숨김 */
