@@ -43,7 +43,7 @@ $('enter').onclick=()=>{if(window.enterFullscreenMobile&&!window.AUTO_JOIN)enter
 // 앱(설치 모드)이 백그라운드에서 종료됐다 다시 열려도 이어서: 위치·자리·들고있는 것까지 localStorage 에 (6시간)
 const RESUME_MS=6*3600*1000;
 function lastState(){try{const v=JSON.parse(localStorage.getItem('lastState')||sessionStorage.getItem('lastState')||'null');return v&&Date.now()-v.t<RESUME_MS?v:null;}catch(e){return null;}}
-function saveState(){if(!joined)return;try{const p=rig.object3D.position,m=$('myAvatar');localStorage.setItem('lastState',JSON.stringify({t:Date.now(),pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
+function saveState(){if(!joined||window.BYE)return;try{const p=rig.object3D.position,m=$('myAvatar');localStorage.setItem('lastState',JSON.stringify({t:Date.now(),pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
 setInterval(saveState,1000);addEventListener('pagehide',saveState);addEventListener('freeze',saveState);
 // 돌아왔을 때: 소켓 즉시 재연결 + 음악 위치 다시 맞춤
 function wake(){if(!socket.connected)socket.connect();if(joined){setTimeout(()=>{applyMusic(true);},300);}}
@@ -225,7 +225,7 @@ socket.on('seat',({id,seat})=>{const o=others[id];if(o)applySeatPose(o,seat);});
 function removeOther(id){const o=others[id];if(o){try{if(o.el._h){HUMANS.delete(o.el._h);o.el._h.dispose();}}catch(e){}o.el.remove();delete others[id];}}
 function clearOthers(){for(const id in others)removeOther(id);}
 socket.on('leave',removeOther);
-socket.on('drink',({id,type})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink(type);});
+socket.on('drink',({id,type})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink(type);setTimeout(()=>sfxNear('ka',id),2000);});
 const GLASS_EL={};let GLASSES={},TABLE_ITEMS={};const TABLE_EL={};
 const ITEM_NAME={soju:'🍶 소주',beer:'🍺 맥주',dakbal:'🍗 닭발',kkom:'🐍 꼼장어',fish:'🐟 생선구이',squid:'🦑 오징어볶음',chicken:'🍗 통닭',hoe:'🐟 모듬회',fruit:'🍉 과일안주'};
 function myTable(){const m=/^([YT]\d)-/.exec(mySeat||'');return m?m[1]:null;}
@@ -234,13 +234,15 @@ function canDrink(type){if(!mySeat)return false;if(isBarSeat())return GLASSES[my
 // "캬~" 효과음 (Web Audio 합성, 내 화면에서만)
 /* 효과음: 술 마시면 '캬~', 안주 먹으면 'Yum yum~'. 음소거면 전부 끔, 볼륨 슬라이더는 음악만 */
 const SFX={ka:'/sfx/ka.mp3',yum:'/sfx/yum.mp3'},SFXA={};for(const k in SFX){SFXA[k]=new Audio(SFX[k]);SFXA[k].preload='auto';}
-function sfx(k){if(muted||!SFXA[k])return;try{const a=SFXA[k].cloneNode();a.volume=window.OUTSIDE?.7:1;const pr=a.play();pr&&pr.catch(()=>{});}catch(e){}}
+function sfx(k,g=1){if(muted||!SFXA[k]||g<=0)return;try{const a=SFXA[k].cloneNode();a.volume=Math.min(1,(window.OUTSIDE?.7:1)*(k==='ka'?.8:1)*g); /* 캐 20% 줄임 */const pr=a.play();pr&&pr.catch(()=>{});}catch(e){}}
 function kya(){sfx('ka');}function chew(){sfx('yum');}
+/* 다른 사람 먹고 마시는 소리: 가까이(7m 안)만 들리고 멀수록 작게 */
+function sfxNear(k,id){const el=others[id]&&others[id].el;if(!el)return;const p=rig.object3D.position,q=el.object3D.position,d=Math.hypot(p.x-q.x,p.z-q.z);if(d>7)return;sfx(k,Math.pow(1-d/7,1.5)*.9);}
 window.kya=kya;window.chew=chew;window.sfx=sfx;
 function drink(type){if(!canDrink(type))return;const n=Date.now();if(n-(window._lastDrink||0)<2000)return;window._lastDrink=n;const m=$('myAvatar');if(m._h)m._h.drink(type);socket.emit('drink',type);setTimeout(kya,2000);}
 function eat(k){const t=myTable();if(!t||!(TABLE_ITEMS[t]||[]).includes(k))return;const n=Date.now();if(n-(window._lastEat||0)<2000)return;window._lastEat=n;const m=$('myAvatar');if(m._h)m._h.drink('eat');socket.emit('eat',k);setTimeout(chew,600);}
 window.eat=eat;
-socket.on('eat',({id})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink('eat');});
+socket.on('eat',({id})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink('eat');setTimeout(()=>sfxNear('yum',id),600);});
 function inBarZone(){const B=window.BAR_ZONE,p=rig.object3D.position;return !mySeat&&B&&p.x>=B.x0&&p.x<=B.x1&&p.z>=B.z0&&p.z<=B.z1;}
 const near=(o,r)=>{const p=rig.object3D.position;return o&&!mySeat&&Math.hypot(p.x-o.x,p.z-o.z)<r;};
 function nearTable(){const p=rig.object3D.position;let best=null,bd=1e9;for(const k in (window.POCHA_TABLES||{})){const [x,z,,r]=POCHA_TABLES[k],d=Math.hypot(p.x-x,p.z-z);if(d<(r||1.7)&&d<bd){bd=d;best=k;}}return best;}
@@ -503,8 +505,10 @@ $('chatClear').addEventListener('click',e=>{e.stopPropagation();e.preventDefault
 socket.on('chatCleared',()=>{$('msgs').innerHTML='';sys('🧹 채팅 기록이 지워졌어요');});
 
 /* 🚕 택시 '집으로 돌아가기' = 게임 종료 (서버에서 바로 퇴장 처리, 유령 안 남음) */
-function goHome(){if(!confirm('집으로 돌아갈까요? (게임에서 나가요)'))return;try{localStorage.removeItem('lastState');}catch(e){}
- socket.emit('bye',()=>{});setTimeout(()=>{try{socket.disconnect();}catch(e){}},300);
- const d=document.createElement('div');d.id='byeScreen';d.innerHTML='<div class="bx"><div class="bt">🚕 안녕히 가세요!</div><div class="bs">오늘 밤도 즐거우셨나요? 또 놀러 오세요 ✨</div><button type="button">다시 들어가기</button></div>';document.body.appendChild(d);
- d.querySelector('button').onclick=()=>location.reload();try{audio.pause();yt&&yt.pauseVideo&&yt.pauseVideo();}catch(e){}}
+function goHome(){if(!confirm('집으로 돌아갈까요? (게임이 완전히 종료돼요)'))return;window.BYE=true;
+ /* 다음 접속 땐 처음부터 (이름·캐릭터 창). 외형(profile)은 창에 미리 채워지도록 유지 */
+ try{['lastState','joinedAt'].forEach(k=>{localStorage.removeItem(k);sessionStorage.removeItem(k);});}catch(e){}
+ try{audio.pause();yt&&yt.pauseVideo&&yt.pauseVideo();}catch(e){}
+ const end=()=>{try{socket.disconnect();}catch(e){}try{window.close();}catch(e){}setTimeout(()=>{location.replace('about:blank');},250);};
+ socket.timeout(1500).emit('bye',()=>end());setTimeout(end,1600);}
 window.goHome=goHome;
