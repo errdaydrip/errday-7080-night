@@ -12,11 +12,11 @@ AFRAME.registerComponent('if-music',{schema:{mode:{default:'spin'},speed:{defaul
   if(d.mode==='bulb'){const m=this.el.getObject3D('mesh');if(m)m.material.emissiveIntensity=((Math.floor(t/(on?250:700))+d.i)%3)===0?.2:1;}}});
 // 한글/영문 캔버스 텍스트
 AFRAME.registerComponent('ktext',{schema:{value:{default:''},color:{default:'#fff'},glow:{default:'#ff3cac'},bg:{default:''},size:{default:48},width:{default:2},font:{default:'"Malgun Gothic",sans-serif'},top:{default:false}},
- update(){const d=this.data,c=document.createElement('canvas'),x=c.getContext('2d'),F=`bold ${d.size}px ${d.font}`;x.font=F;
+ update(){const d0=this.data,K=2,d={...d0,size:d0.size*K},c=document.createElement('canvas'),x=c.getContext('2d'),F=`bold ${d.size}px ${d.font}`;x.font=F; /* 2배 해상도로 그려서 선명하게 */
   const w=Math.max(64,x.measureText(d.value).width+d.size),h=d.size*1.7;c.width=w;c.height=h;x.font=F;
   if(d.bg){x.fillStyle=d.bg;x.beginPath();x.roundRect(0,0,w,h,h/3);x.fill();}
   x.textAlign='center';x.textBaseline='middle';x.shadowColor=d.glow||'transparent';x.shadowBlur=d.glow?d.size/3:0;x.fillStyle=d.color;x.fillText(d.value,w/2,h/2);if(d.glow)x.fillText(d.value,w/2,h/2);
-  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const old=this.el.getObject3D('mesh');if(old){old.material.map.dispose();old.geometry.dispose();}
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.minFilter=THREE.LinearMipmapLinearFilter;t.anisotropy=8;const old=this.el.getObject3D('mesh');if(old){old.material.map.dispose();old.geometry.dispose();}
   this.el.setObject3D('mesh',new THREE.Mesh(new THREE.PlaneGeometry(d.width,d.width*h/w),new THREE.MeshBasicMaterial({map:t,transparent:true,side:THREE.DoubleSide,depthWrite:false,depthTest:!d.top})));
   if(d.top)this.el.getObject3D('mesh').renderOrder=999;}});
 AFRAME.registerComponent('cbubble',{schema:{value:{default:''}},
@@ -900,7 +900,7 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  E('a-box',{position:`${window.DARTS[bi].x-.2} .015 ${ZS[bi]}`,width:.05,height:.01,depth:1.2,material:'color:#ffd23c;emissive:#ffd23c;emissiveIntensity:.8'});
  });
  // 점수판
- const sc=document.createElement('canvas');sc.width=512;sc.height=512;const s=sc.getContext('2d');const stex=new THREE.CanvasTexture(sc);stex.colorSpace=THREE.SRGBColorSpace||stex.colorSpace;
+ const sc=document.createElement('canvas');sc.width=1024;sc.height=1024;const s=sc.getContext('2d');s.scale(2,2);const stex=new THREE.CanvasTexture(sc);stex.colorSpace=THREE.SRGBColorSpace||stex.colorSpace;
  const sp=E('a-plane',{position:'1.35 .1 0',width:1.2,height:1.2},g);sp.addEventListener('loaded',()=>{sp.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:stex,toneMapped:false});});
  let last='';window.dartBoard=top=>{s.fillStyle='#14051c';s.fillRect(0,0,512,512);s.strokeStyle='#ff3cac';s.lineWidth=10;s.strokeRect(5,5,502,502);s.textBaseline='middle';
   s.fillStyle='#ffd23c';s.font='bold 50px "Malgun Gothic","Noto Sans KR",sans-serif';s.textAlign='center';s.fillText('🎯 하이스코어',256,60);
@@ -908,7 +908,7 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
   if(!(top||[]).length){s.fillStyle='#aaa';s.textAlign='center';s.fillText('아직 기록 없음',256,240);}
   if(last){s.fillStyle='#3cd8ff';s.textAlign='center';s.font='bold 32px "Malgun Gothic","Noto Sans KR",sans-serif';s.fillText(last,256,470);}stex.needsUpdate=true;};window.dartBoard([]);
  /* 판마다 게임 상태판 (판 아래) */
- const ST=G.map(g=>{const c2=document.createElement('canvas');c2.width=512;c2.height=300;const tx=new THREE.CanvasTexture(c2);tx.colorSpace=THREE.SRGBColorSpace||tx.colorSpace;E('a-box',{position:'0 .97 -.03',width:1.32,height:.82,depth:.05,material:'color:#3cd8ff;emissive:#3cd8ff;emissiveIntensity:.6'},g);const pl=E('a-plane',{position:'0 .97 .002',width:1.24,height:.74},g); /* 다트판 바로 위 이 판 전용 점수판 */pl.addEventListener('loaded',()=>{pl.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:tx,toneMapped:false});});return{c:c2.getContext('2d'),tx};});
+ const ST=G.map(g=>{const c2=document.createElement('canvas');c2.width=1024;c2.height=600;c2.getContext('2d').scale(2,2);const tx=new THREE.CanvasTexture(c2);tx.colorSpace=THREE.SRGBColorSpace||tx.colorSpace;E('a-box',{position:'0 .97 -.03',width:1.32,height:.82,depth:.05,material:'color:#3cd8ff;emissive:#3cd8ff;emissiveIntensity:.6'},g);const pl=E('a-plane',{position:'0 .97 .002',width:1.24,height:.74},g); /* 다트판 바로 위 이 판 전용 점수판 */pl.addEventListener('loaded',()=>{pl.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:tx,toneMapped:false});});return{c:c2.getContext('2d'),tx};});
  window.dartState=d=>{const S=ST[d.b];if(!S)return;const c=S.c,g=d.g;c.fillStyle='#14051c';c.fillRect(0,0,512,300);c.strokeStyle='#3cd8ff';c.lineWidth=8;c.strokeRect(4,4,504,292);const F='"Malgun Gothic","Noto Sans KR",sans-serif';
   c.textBaseline='middle';c.textAlign='center';c.fillStyle='#ffd23c';c.font=`bold 36px ${F}`;c.fillText(g.mode==='high'?'하이스코어 (8라운드)':g.mode==='501'?'501 (더블 아웃)':'크리켓',256,36);
   if(!g.players.length){c.fillStyle='#aaa';c.font=`28px ${F}`;c.fillText('혼자서도 바로! 던지면 시작',256,150);}

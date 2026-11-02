@@ -34,7 +34,7 @@
  <div id="topbar"><span id="where">🌐 로비</span><button id="setBtn">⚙</button><button id="adminBtn">🔑</button>
   <button id="fsBtn" title="전체화면">⛶</button><button id="muteBtn" title="내 소리 켜기/끄기">🔊</button><input id="vol" type="range" min="0" max="100" value="80" title="볼륨"></div>
  <button id="chatToggle" class="fab">💬</button><button id="musicToggle" class="fab">🎵</button>
- <div id="chat" class="panel"><div id="chatTitle">💬 전체 채팅<span id="onlineCnt"></span></div><div id="msgs"></div>
+ <div id="chat" class="panel"><div id="chatTitle">💬 전체 채팅<span id="onlineCnt"></span><button id="chatClear" type="button" title="채팅 기록 전체 삭제 (관리자)" style="display:none">🧹 채팅 지우기</button></div><div id="msgs"></div>
   <form id="chatForm"><input id="chatIn" maxlength="200" placeholder="메시지 입력 (Enter)" autocomplete="off"><button>전송</button></form></div>
  <div id="music" class="panel"><div>🎵 <b id="now">재생 중인 곡 없음</b> <button id="admFold" class="hidden" type="button" title="관리자 메뉴 접기/펴기">⚙ 관리자 ▲</button></div>
   <div id="adminCtl" class="hidden"><button data-c="play">▶</button><button data-c="pause">⏸</button><button data-c="skip">⏭</button><button data-c="shuffleToggle" id="shufBtn" title="랜덤 재생 켜기/끄기">🔀 랜덤 끔</button><button id="cleanBtn" type="button">🔄 새로고침(유령 정리)</button><button id="clubDoorBtn" type="button">🚪 나이트 문: 열림</button><button data-c="shuffleNow" title="대기열 순서 섞기">섞기</button><button id="clearAllBtn" type="button" title="재생목록 전체삭제">🗑 재생목록 전체삭제</button><div id="presetBox"><div class="pbtns"></div><div class="presetEdit"></div></div>

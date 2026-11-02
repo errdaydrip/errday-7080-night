@@ -11,10 +11,12 @@ const SKINS=['#f2c29a','#ffdcc0','#d9a074','#a8724a'];
 const STYLE_NAMES={m:{basic:'기본',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'},f:{basic:'기본',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'}};
 // 모바일 성능: 픽셀 비율 낮추기
 /* 모바일 화질: 예전엔 픽셀비율 1.25 고정 + 안티앨리어싱 꺼짐 → 깨져 보임. 이제 최대 2 로 시작하고 프레임이 떨어지면 자동으로 낮춤 */
-scene.addEventListener('loaded',()=>{const R=scene.renderer;if(!R||!IS_MOBILE)return;const MAXPR=Math.min(2,devicePixelRatio||1),STEPS=[MAXPR,1.75,1.5,1.25,1].filter((v,i,a)=>v<=MAXPR&&a.indexOf(v)===i);
- let lvl=+(localStorage.getItem('prLvl')||0);if(!(lvl>=0&&lvl<STEPS.length))lvl=0;const apply=()=>{R.setPixelRatio(STEPS[lvl]);const s=scene.canvas;if(s)R.setSize(s.clientWidth,s.clientHeight,false);window.MOBILE_PR=STEPS[lvl];};apply();
+scene.addEventListener('loaded',()=>{const R=scene.renderer;if(!R)return;
+ /* 글자 텍스처 선명하게: 비스듬히 봐도 덜 뭉개지게 최대 이방성 필터 */const AN=R.capabilities.getMaxAnisotropy?R.capabilities.getMaxAnisotropy():4;setInterval(()=>scene.object3D.traverse(o=>{const m=o.material,t=m&&m.map;if(t&&t.isCanvasTexture&&t.anisotropy!==AN){t.anisotropy=AN;t.needsUpdate=true;}}),1500);
+ if(!IS_MOBILE)return;const MAXPR=Math.min(2,devicePixelRatio||1),STEPS=[MAXPR,1.75,1.5].filter((v,i,a)=>v<=MAXPR&&a.indexOf(v)===i); /* 글자 흐림 방지: 최소 1.5 까지만 낮춤 */
+ let lvl=+(localStorage.getItem('prLvl2')||0);if(!(lvl>=0&&lvl<STEPS.length))lvl=0;const apply=()=>{R.setPixelRatio(STEPS[lvl]);const s=scene.canvas;if(s)R.setSize(s.clientWidth,s.clientHeight,false);window.MOBILE_PR=STEPS[lvl];};apply();
  let fr=0,t0=performance.now(),good=0;(function mon(){requestAnimationFrame(mon);if(document.hidden){t0=performance.now();fr=0;return;}fr++;const now=performance.now();if(now-t0<3000)return;const fps=fr*1000/(now-t0);fr=0;t0=now;
-  if(fps<38&&lvl<STEPS.length-1){lvl++;good=0;apply();localStorage.setItem('prLvl',lvl);}else if(fps>56){if(++good>=4&&lvl>0){lvl--;good=0;apply();localStorage.setItem('prLvl',lvl);}}else good=0;})();});
+  if(fps<38&&lvl<STEPS.length-1){lvl++;good=0;apply();localStorage.setItem('prLvl2',lvl);}else if(fps>56){if(++good>=4&&lvl>0){lvl--;good=0;apply();localStorage.setItem('prLvl2',lvl);}}else good=0;})();});
 // ---------- 입장 화면 ----------
 const palHtml=k=>LOOKS.PALETTE.map(([c,n])=>`<span class="swatch ${k}" data-v="${c}" title="${n}" style="background:${c}"></span>`).join('');$('swTop').innerHTML=palHtml('tp');$('swBot').innerHTML=palHtml('bt');
 $('accs').innerHTML=LOOKS.ACC.map(a=>`<button class="opt a" data-v="${a}">${LOOKS.ACC_NAME[a]}</button>`).join('');
@@ -491,3 +493,9 @@ function renderPresets(){const B=document.querySelector('#presetBox .pbtns'),E=d
  $('presetSave').onclick=e=>{e.stopPropagation();const list=[...E.querySelectorAll('.prow:not(.trow)')].map(r=>({name:r.querySelector('.pn').value,url:r.querySelector('.pu').value}));socket.emit('setPresets',{token:adminToken,list},r=>sys(r&&r.ok?'💾 프리셋 저장됨 (모두에게 반영)':'저장 실패: '+((r&&r.err)||'?')));};}
 socket.on('presets',p=>{PRESETS=p||[];renderPresets();});
 socket.on('boards',b=>{window.BOARDS=b;window.setBoards&&window.setBoards(b);window.renderBoardsUi&&window.renderBoardsUi();});socket.on('ranking',r=>{window.setRanking&&window.setRanking(r);});socket.on('tickerIdle',t=>{window.setTickerIdle&&window.setTickerIdle(t);const i=$('tickerIdle');if(i&&document.activeElement!==i)i.value=t||'';});socket.on('donations',l=>{window.setDonations&&window.setDonations(l);});
+
+/* 관리자: 채팅 기록 전체 삭제 (서버 기록 + 모든 사람 채팅창) */
+setInterval(()=>{const b=$('chatClear');if(b)b.style.display=adminToken?'':'none';},800);
+$('chatClear').addEventListener('click',e=>{e.stopPropagation();e.preventDefault();if(!adminToken||!confirm('모든 사람의 채팅 기록을 지울까요?'))return;socket.emit('clearChat',{token:adminToken},r=>{if(!r||!r.ok){sys('채팅 지우기 실패: '+((r&&r.err)||'관리자 다시 로그인'));}});});
+['pointerdown','touchstart','mousedown'].forEach(ev=>$('chatClear').addEventListener(ev,e=>e.stopPropagation(),{passive:true}));
+socket.on('chatCleared',()=>{$('msgs').innerHTML='';sys('🧹 채팅 기록이 지워졌어요');});

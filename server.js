@@ -202,6 +202,7 @@ io.on('connection',s=>{
  s.on('setTickerIdle',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});tickerIdle=cleanText(String(d.text||'').replace(/\s+/g,' ').trim().slice(0,120));save();io.emit('tickerIdle',tickerIdle);io.emit('boards',boardsPub());ack({ok:true,text:tickerIdle});});
  s.on('setRank',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});const u=String(d.url||'').trim().slice(0,300);if(!DON.rankPayload(u))return ack({ok:false,err:'투네이션 ranking 위젯 주소가 아니에요'});
   rankUrl=u;rankData=null;save();io.emit('ranking',null);startRank();ack({ok:true,url:rankUrl});});
+ s.on('clearChat',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});chatHist.length=0;io.emit('chatCleared');ack({ok:true});});
  s.on('setClubDoor',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token)||typeof d.open!=='boolean')return ack({ok:false,err:'관리자만'});clubOpen=d.open;save();io.emit('clubDoor',{open:clubOpen,by:true});ack({ok:true,open:clubOpen});});
  s.on('setBoards',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});const was={...boards};
   if(typeof d.ticker==='boolean')boards.ticker=d.ticker;if(typeof d.rank==='boolean')boards.rank=d.rank;save();if(was.rank!==boards.rank)startRank();io.emit('boards',boardsPub());ack({ok:true,boards});});
