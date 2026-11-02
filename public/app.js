@@ -401,17 +401,17 @@ function setClubDoor(open,announce){const was=window.CLUB_OPEN;window.CLUB_OPEN=
 function ejectFromClub(){if(mySeat){const s=mySeat;mySeat=null;socket.emit('seat',null);camGoal=null;}route=[];goal=null;goalSeat=null;marker.setAttribute('visible',false);
  const D=window.DOOR;rig.object3D.position.set(D.x+(Math.random()-.5)*3,0,14+Math.random()*1.5);myYaw=0;updateWhere();}
 window.ejectFromClub=ejectFromClub;
-window.DART_G=[];socket.on('dartState',d=>{window.DART_G[d.b]=d.g;const h=d.hit&&d.hit.id===myId?d.hit:null; /* 다른 사람 다트는 점수판 숫자만 갱신, 꽂히는 다트·알림은 내 것만 */window.dartState&&window.dartState({...d,hit:h});if(h&&(h.bust||h.win))sys(`🎯 ${h.label}${h.bust?' (버스트!)':''}${h.win?' 🏆 승리!':''}`);});
+window.DART_G=[];socket.on('dartState',d=>{window.DART_G[d.b]=d.g;const h=d.hit&&d.hit.id===myId?d.hit:null; /* 다른 사람 다트는 점수판 숫자만 갱신, 꽂히는 다트·알림은 내 것만 */window.dartState&&window.dartState({...d,hit:h});if(h&&h.win)setTimeout(()=>window.dartAimClose(),1300);if(h&&(h.bust||h.win))sys(`🎯 ${h.label}${h.bust?' (버스트!)':''}${h.win?' 🏆 승리!':''}`);});
 /* 조준: 판 위를 드래그(또는 마우스 이동)해서 위치를 정하고 손을 떼면 던짐. 조준점은 살짝 흔들림 */
 function dartAim(b){if(document.getElementById('dartAim'))return;const o=document.createElement('div');o.id='dartAim';o.innerHTML='<div class="dah">🎯 판 위를 누르고 끌어 조준 → 손 떼면 던지기</div><canvas width="320" height="320"></canvas><button type="button">닫기</button>';document.body.appendChild(o);
  const cv=o.querySelector('canvas'),c=cv.getContext('2d'),img=window.DART_IMG;let ax=0,ay=0,down=false,raf=0;const S=320,R=S/2*0.86; /* 판(더블 바깥선)=R */
  const pos=e=>{const r=cv.getBoundingClientRect();ax=((e.clientX-r.left)/r.width*S-S/2)/R;ay=-((e.clientY-r.top)/r.height*S-S/2)/R;};
  const draw=t=>{c.clearRect(0,0,S,S);if(img)c.drawImage(img,S/2-R/200*256,S/2-R/200*256,R/200*512,R/200*512);o._sx=(o._sx??ax)+(ax-(o._sx??ax))*.12;o._sy=(o._sy??ay)+(ay-(o._sy??ay))*.12; /* 조준점이 손가락을 늦게 따라옴 */const w=down?.13:.07,wx=o._sx+(Math.sin(t/110)+Math.sin(t/47)*.5)*w,wy=o._sy+(Math.cos(t/150)+Math.cos(t/61)*.5)*w;o._w=[wx,wy];
   const px=S/2+wx*R,py=S/2-wy*R;c.strokeStyle='#00ffcc';c.lineWidth=2;c.beginPath();c.arc(px,py,9,0,7);c.moveTo(px-15,py);c.lineTo(px+15,py);c.moveTo(px,py-15);c.lineTo(px,py+15);c.stroke();raf=requestAnimationFrame(draw);};raf=requestAnimationFrame(draw);
- const close=()=>{cancelAnimationFrame(raf);o.remove();};o.querySelector('button').onclick=close;
+ const close=()=>{cancelAnimationFrame(raf);o.remove();};o._close=close;o.querySelector('button').onclick=close;
  cv.addEventListener('pointerdown',e=>{e.preventDefault();down=true;cv.setPointerCapture(e.pointerId);pos(e);});cv.addEventListener('pointermove',e=>{if(down||e.pointerType==='mouse')pos(e);});
- cv.addEventListener('pointerup',e=>{if(!down)return;down=false;const [x,y]=o._w||[ax,ay];socket.emit('dart',{b,x,y},r=>{if(r&&r.ok&&r.me)sys(r.done?`🏁 끝! 총 ${r.done.score}점`:(r.me.thrown?`R${r.me.round} · ${r.me.thrown}/3발`:`R${r.me.round-1} 끝 · 3/3발`)+` · 합계 ${r.me.score}점 (+${r.hit.pts} ${r.hit.label})`);if(r&&!r.ok&&r.err)sys(`🎯 ${(r.err)}`);});});}
-window.dartAim=dartAim;
+ cv.addEventListener('pointerup',e=>{if(!down)return;down=false;const [x,y]=o._w||[ax,ay];socket.emit('dart',{b,x,y},r=>{if(r&&r.ok&&r.done)setTimeout(()=>window.dartAimClose(),1300); /* 게임 끝나면 조준 화면 자동으로 닫힘 */if(r&&r.ok&&r.me)sys(r.done?`🏁 끝! 총 ${r.done.score}점`:(r.me.thrown?`R${r.me.round} · ${r.me.thrown}/3발`:`R${r.me.round-1} 끝 · 3/3발`)+` · 합계 ${r.me.score}점 (+${r.hit.pts} ${r.hit.label})`);if(r&&!r.ok&&r.err)sys(`🎯 ${(r.err)}`);});});}
+window.dartAim=dartAim;window.dartAimClose=()=>{const o=document.getElementById('dartAim');o&&o._close&&o._close();};
 socket.on('clubDoor',d=>setClubDoor(!!(d&&d.open),!!(d&&d.by)));
 $('clubDoorBtn').onclick=()=>{if(!adminToken)return;const open=!window.CLUB_OPEN;if(!open&&!confirm('나이트 문을 닫을까요? 안에 있는 사람은 모두 야장 포차로 나가요.'))return;socket.emit('setClubDoor',{token:adminToken,open},r=>{if(!(r&&r.ok))sys('실패: '+((r&&r.err)||'?'));});};
 $('cleanBtn').onclick=()=>{if(!adminToken)return;socket.emit('adminCleanup',adminToken,r=>{if(r&&r.ok)sys(`🔄 유령 정리 완료: ${r.removed}명 제거`);else{sys('정리 실패: '+((r&&r.error)||'오류'));}});};
