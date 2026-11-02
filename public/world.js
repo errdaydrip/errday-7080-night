@@ -283,7 +283,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['basic'
  return {root,hips,torso,head,arms,legs,M};}
 function T2(M,c){return M.T(c);}
 function curls(head,H,pts,r){pts.forEach(([x,y,z,k=1])=>head.add(mesh(G.sph(r*k,18,14),H,[x,y,z])));}
-function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';if(o.hair&&!o.dj)return hairPick(head,M,H,o.hair);if(o.pig)return hairPick(head,M,H,'fp'); /* 여자 기본 = 양갈래 */
+function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';if(o.hair&&!o.dj)return hairPick(head,M,H,o.hair);if(o.pig)return hairPick(head,M,H,'fp'); /* 여자 기본 = 양갈래 */if(!f&&!o.dj&&(st==='suit'||st==='basic'))return hairPick(head,M,H,'m0'); /* 남자 기본: 짧고 단정 */
  if(o.dj||(!f&&st==='disco')){ // 큰 아프로
   head.add(mesh(G.sph(.45,32,24),H,[0,.47,-.17],[1.05,.92,.85]));head.add(mesh(new THREE.SphereGeometry(.335,32,24,0,Math.PI*2,0,Math.PI*.42),H,[0,.33,0]));return;}
  const cap=mesh(new THREE.SphereGeometry(.335,36,22,0,Math.PI*2,0,Math.PI*.42),H,[0,.33,0],[1.04,.97,1.02]);head.add(mesh(new THREE.SphereGeometry(.33,32,24,Math.PI,Math.PI),H,[0,.26,-.005],[1.05,.97,1]));head.add(cap);
@@ -312,7 +312,7 @@ function hair(head,M,o,st){const H=M.hair,f=o.gender==='f';if(o.hair&&!o.dj)retu
 const HC={rx:.355,ry:.325,rz:.34,cy:.27};
 function hairShell(tf,o={}){const U=72,V=30,pos=[],idx=[],rx=o.rx||HC.rx,ry=o.ry||HC.ry,rz=o.rz||HC.rz,cy=HC.cy,bump=o.bump||(()=>0),flare=o.flare||0,drop=o.drop||1;
  for(let i=0;i<=U;i++){const ph=Math.PI+i/U*Math.PI*2,sa=Math.atan2(Math.sin(ph),Math.cos(ph)),f=Math.abs(sa),tm=tf(f,sa);
-  for(let j=0;j<=V;j++){const th=j/V*tm,b=1+bump(ph,th,f);let x,y,z;
+  for(let j=0;j<=V;j++){const t0=o.t0?o.t0(f):0,th=t0+j/V*(tm-t0),b=1+bump(ph,th,f);let x,y,z;
    if(th<=Math.PI/2){const sn=Math.sin(th);x=rx*b*sn*Math.sin(ph);z=rz*b*sn*Math.cos(ph);y=cy+ry*b*Math.cos(th);}
    else{const d=th-Math.PI/2,k=b*(1+flare*d);x=rx*k*Math.sin(ph);z=rz*k*Math.cos(ph);y=cy-ry*d*drop;}
    pos.push(x,y,z);}}
@@ -324,8 +324,16 @@ const line3=(fr,sd,bk)=>f=>{const P=Math.PI;return f<P*.45?fr+(sd-fr)*sstep(P*.1
 const partGroove=(ph,th)=>{const a=Math.atan2(Math.sin(ph),Math.cos(ph));return th<Math.PI*.4?-.035*Math.exp(-((a/.07)**2))*(1-th/(Math.PI*.4)):0;}; // 가운데 가르마
 function hairPick(head,M,H0,k){const H=H0.clone();H.side=THREE.DoubleSide;H.roughness=.55;H.metalness=.05;const P=Math.PI;const add=(g,p,sc,r)=>head.add(mesh(g,H,p||[0,0,0],sc,r));
  const sidePart=(ph,th)=>{const a=Math.atan2(Math.sin(ph),Math.cos(ph));return th<Math.PI*.38?-.05*Math.exp(-(((a-1.0)/.08)**2))*(1-th/(Math.PI*.38)):0;}; // 옆 가르마
- if(k==='m1'){ // 버즈컷(반삭)
-  const Bz=H.clone();Bz.transparent=true;Bz.opacity=.88;head.add(mesh(hairShell(line3(P*.33,P*.44,P*.6),{bump:()=>.004}),Bz)); /* 버즈컷(반삭): 두피에 바짝 */return;}
+ if(k==='m5'){ // 대머리: 이마·정수리는 민머리, 귀 위 옆머리와 뒷머리 둘레만 짧게 남음
+  const end=f=>P*.5+P*.12*sstep(P*.5,P*.85,f),w=f=>sstep(P*.3,P*.5,f);
+  add(hairShell(end,{t0:f=>end(f)-(P*.13+P*.06*sstep(P*.5,P*.85,f))*w(f)-.001,rx:.352,rz:.338,bump:(ph,th,f)=>.012-.9*(1-sstep(P*.3,P*.4,f))}));return;}
+ if(k==='m4'){ // 짧은 퍼마: 둥글고 곱슬한 짧은 볼륨
+  add(hairShell(line3(P*.32,P*.44,P*.6),{bump:(ph,th)=>.06+.035*Math.sin(ph*11)*Math.sin(th*16)+.04*Math.max(0,1-th/(P*.45))}));return;}
+ if(k==='m0'){ // 남자 기본: 짧고 단정한 머리, 위쪽 살짝 볼륨
+  add(hairShell(line3(P*.31,P*.42,P*.6),{bump:(ph,th)=>.018+.04*Math.max(0,1-th/(P*.4))}));return;}
+ if(k==='m1'){ // 포마드: 위·뒤로 넘긴 높은 올림머리 + 옆·관자놀이는 쉐이브처럼 희미하게 짧게 친 페이드
+  add(hairShell(line3(P*.3,P*.43,P*.6),{rx:.348,bump:(ph,th,f)=>{const fr=Math.max(0,Math.cos(f));return .008+.3*fr*Math.exp(-(((th-P*.17)/(P*.16))**2))+.09*Math.max(0,1-th/(P*.36));}}));
+  const F=H.clone();F.transparent=true;F.opacity=.45;head.add(mesh(hairShell(line3(P*.2,P*.47,P*.63),{rx:.343,rz:.33,ry:.32}),F));return;}
  if(k==='m2'){ // 가르마 (스케치): 오른쪽 깊은 옆가르마, 큰 쪽은 이마 위로 둥글게 넘기고 왼쪽 관자놀이로 살짝 내려옴, 귀는 보임
   const pa=.72,base=line3(P*.3,P*.42,P*.6);
   const tf=(f,a)=>{if(f>P*.5)return base(f);const big=a<pa;let t=big?P*.33+P*.1*sstep(-.2,-1.0,a):P*.4;t-=P*.08*Math.exp(-(((a-pa)/.06)**2)); /* 가르마 자리 V 홈 */const w=sstep(P*.32,P*.5,f);return t*(1-w)+base(f)*w;};

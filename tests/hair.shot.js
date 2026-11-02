@@ -6,7 +6,7 @@ const p=require('puppeteer-core');const W=ms=>new Promise(r=>setTimeout(r,ms));c
  const R=()=>{window._R=window._R||(()=>{const cv=document.createElement('canvas');const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:true});r.setScissorTest(true);r.setClearColor('#f4f0ee');return r;})();};
  fs.writeFileSync(D+'hair_grid.png',await shot(()=>{const cv=document.createElement('canvas');cv.width=3*260;cv.height=8*260;const r=new THREE.WebGLRenderer({canvas:cv,antialias:true});r.setScissorTest(true);r.setClearColor('#f4f0ee');
   const sc=new THREE.Scene();sc.add(new THREE.HemisphereLight('#fff','#887',1.3));const dl=new THREE.DirectionalLight('#fff',1.5);dl.position.set(1,2,3);sc.add(dl);const d2=new THREE.DirectionalLight('#fff',.7);d2.position.set(-2,1,-3);sc.add(d2);
-  const list=[['m',''],['m','m3'],['m','m2'],['m','m1'],['f','f1'],['f','f2'],['f','f3'],['f','']];
+  const list=[['m',''],['m','m1'],['m','m2'],['m','m4'],['f','f1'],['f','f2'],['f','f3'],['f','']];
   list.forEach(([g,h],row)=>[0,Math.PI/2,Math.PI].forEach((ry,col)=>{const ch=makeChibi({gender:g,style:'suit',top:'#f5f5f5',bottom:'#1a1a1a',hair:h,acc:'none',skin:'#e8b48c'});ch.root.rotation.y=ry;sc.add(ch.root);
    const cm=new THREE.PerspectiveCamera(30,1,.1,20);cm.position.set(0,1.36,1.95);cm.lookAt(0,1.22,0);const x=col*260,y=(7-row)*260;r.setViewport(x,y,260,260);r.setScissor(x,y,260,260);r.render(sc,cm);sc.remove(ch.root);}));
   return cv.toDataURL();}));
