@@ -230,6 +230,7 @@ function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['suit',
  if(f&&st==='disco'){top=M.T(col);sleeve=top;pants=M.T(bcol);shoe=M.silver;cuff=M.T('#8a5bd6');}
  if(f&&st==='hanbok'){top=M.T(npc?'#b9e08a':col);sleeve=M.T('#fff',{map:SAEKDONG});pants=M.skin;shoe=M.T('#fff');}
  if(st==='aerobic'){top=M.T(col,{map:RAINBOW});sleeve=M.skin;pants=new THREE.MeshStandardMaterial({color:bcol,metalness:.2,roughness:.28,emissive:new THREE.Color(bcol).multiplyScalar(.25)});shoe=f?M.T('#fbfbf7'):M.skin;cuff=M.T(aeroAccent(bcol));}
+ if(opts.tee){top=M.T('#f5f5f5');sleeve=M.skin;pants=M.T('#2f5fa8');shoe=M.T('#fbfbf7');cuff=pants;} /* 알바: 흰 티 + 청바지 */
  // 몸통 (짧고 둥근 원통)
  torso.add(mesh(G.cap(.17,.22),top,[0,.27,0],[1.12,1,.8]));
  torso.add(mesh(G.cyl(.07,.08,.08),M.skin,[0,.53,0]));
@@ -466,7 +467,8 @@ function hand(v,o={}){return `value:${v};color:${o.c||'#fff'};glow:${o.g||''};bg
  // 앞벽(z=12)은 아래에서 문 구멍 있게 생성
  const seg=(x0,x1,y0,y1,inside)=>{const w=x1-x0,h=y1-y0,el=E('a-plane',{position:`${(x0+x1)/2} ${(y0+y1)/2} ${inside?11.99:12.01}`,rotation:inside?'0 180 0':'0 0 0',width:w,height:h,material:inside?'roughness:.9':'color:#3b3532;roughness:1'});
   if(inside){const t=TEX.wall();t.repeat.set(w/2,h/8);t.offset.y=(y0)/8;texMesh(el,t);}else texMesh(el,TEX.brick(w,h));};
- [true,false].forEach(i=>{seg(-12,dl,0,8,i);seg(dr,12,0,8,i);seg(dl,dr,DOOR.h,8,i);});
+ const C2=THEATER.CLUB_DOOR,cl=C2.x-C2.w/2,cr=C2.x+C2.w/2;
+ [true,false].forEach(i=>{seg(-12,dl,0,8,i);seg(dr,cl,0,8,i);seg(cr,12,0,8,i);seg(dl,dr,DOOR.h,8,i);seg(cl,cr,C2.h,8,i);});
  // 문틀 + 열린 문짝
  [[dl-.06,DOOR.h/2,.12,DOOR.h],[dr+.06,DOOR.h/2,.12,DOOR.h],[DOOR.x,DOOR.h+.06,DOOR.w+.24,.12]].forEach(([x,y,w,h])=>E('a-box',{position:`${x} ${y} 12`,width:w,height:h,depth:.3,material:'color:#d4a017;metalness:.7;roughness:.3'}));
  E('a-box',{position:`${dl+.05} ${DOOR.h/2-.05} 12.5`,rotation:'0 90 0',width:.95,height:DOOR.h-.15,depth:.05,material:'color:#5a1010;roughness:.6'});
@@ -753,17 +755,14 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
 })();
 
 // ---------- 나이트 → 극장 바로가기 문 ----------
-(function clubTheaterDoor(){const D=THEATER.CLUB_DOOR,z=D.z-.04;
- E('a-box',{position:`${D.x} ${D.h/2} ${z}`,width:D.w,height:D.h,depth:.04,material:'color:#2a0a14;roughness:.5;emissive:#300010;emissiveIntensity:.4'});
- [-1,1].forEach(s=>E('a-box',{position:`${D.x+s*(D.w/2+.06)} ${D.h/2} ${z-.02}`,width:.12,height:D.h,depth:.08,material:'color:#c8a040;metalness:.6;roughness:.3'}));
- E('a-box',{position:`${D.x} ${D.h+.06} ${z-.02}`,width:D.w+.24,height:.12,depth:.08,material:'color:#c8a040;metalness:.6;roughness:.3'});
- [-1,1].forEach(s=>E('a-sphere',{position:`${D.x+s*.12} 1.2 ${z-.05}`,radius:.04,material:'color:#ffd060;metalness:.8'}));
- E('a-entity',{position:`${D.x} ${D.h+.5} ${z-.05}`,rotation:'0 180 0',ktext:'value:EXIT · 🎬 극장 앞 포차 →;color:#fff3c0;glow:#ff8a00;size:70;width:2.2'});
- E('a-entity',{position:`${D.x} 1.6 ${z-.06}`,rotation:'0 180 0',ktext:'value:THEATER;color:#ffd060;glow:#ff2a6a;size:60;width:1.1'});
- E('a-entity',{position:`${D.x} ${D.h} ${z-.6}`,light:'type:point;color:#ffb070;intensity:.6;distance:3'});})();
+(function clubTheaterDoor(){const D=THEATER.CLUB_DOOR,dl=D.x-D.w/2,dr=D.x+D.w/2; /* 포장마차 문과 같은 모양: 금색 문틀 + 열린 빨간 문짝 + 초록 EXIT 네온 */
+ [[dl-.06,D.h/2,.12,D.h],[dr+.06,D.h/2,.12,D.h],[D.x,D.h+.06,D.w+.24,.12]].forEach(([x,y,w,h])=>E('a-box',{position:`${x} ${y} 12`,width:w,height:h,depth:.3,material:'color:#d4a017;metalness:.7;roughness:.3'}));
+ E('a-box',{position:`${dl+.05} ${D.h/2-.05} 12.5`,rotation:'0 90 0',width:.95,height:D.h-.15,depth:.05,material:'color:#5a1010;roughness:.6'});
+ E('a-box',{position:`${dr-.05} ${D.h/2-.05} 12.5`,rotation:'0 90 0',width:.95,height:D.h-.15,depth:.05,material:'color:#5a1010;roughness:.6'});
+ E('a-entity',{position:`${D.x} ${D.h+.5} 11.9`,rotation:'0 180 0',ktext:'value:EXIT · 🎬 극장 →;color:#d6ffe0;glow:#00ff66;size:70;width:1.9'});})();
 // ---------- 야장 알바: 주문 들어오면 냉장고/주방에서 집어 테이블로 ----------
-(async function alba(){const holder=E('a-entity',{position:'0.2 0 18.4'});const h=await makeHuman(holder,{...LOOKS.resolve({gender:'f',style:'aerobic',top:'#ff8c00',bottom:'#24306e',hair:'f2'}),gender:'f',style:'aerobic',skin:'#f6d2b0'});HUMANS.add(h);
- E('a-entity',{position:'0 1.85 0',billboard:'',ktext:'value:알바 민지 · 야장;color:#fff;glow:#ff8a00;size:36;width:1.4'},holder);
+(async function alba(){const holder=E('a-entity',{position:'0.2 0 18.4'});const h=await makeHuman(holder,{...LOOKS.resolve({gender:'f',style:'aerobic',top:'#f5f5f5',bottom:'#2f5fa8',hair:'f2'}),gender:'f',style:'aerobic',tee:true,skin:'#f6d2b0'});HUMANS.add(h);
+ E('a-entity',{position:'0 1.85 0',billboard:'',ktext:'value:알바;color:#fff;glow:#ff8a00;size:36;width:1.4'},holder);
  const A=window.ALBA={x:.2,z:18.4,job:null,holder,h};holder.object3D.rotation.y=-Math.PI/2;
  const lerp=(a,b,k)=>[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k];
  AFRAME.registerComponent('alba-walk',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const J=window.ALBA_JOB,o=holder.object3D;let p=[A.x,A.z],face=null,anim='Idle_Loop';

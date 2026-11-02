@@ -125,7 +125,7 @@ let route=[];
 function setRoute(x,z){const p=rig.object3D.position,onSt=(X,Z)=>X>=STAGE.x0-.3&&X<=STAGE.x1+.3&&Z<=STAGE.sz1&&heightAt(X,Z)>.35,up=onSt(x,z),me_up=onSt(p.x,p.z);route=[];
  const bottom=new THREE.Vector3(0,0,STAGE.sz1+.35),top=new THREE.Vector3(0,0,STAGE.sz0-.35);
  if(up&&!me_up)route=[bottom,top];else if(!up&&me_up)route=[top,bottom];
- if(isOut(z)!==isOut(p.z)){const D=window.DOOR,a=new THREE.Vector3(D.x,0,11.1),b=new THREE.Vector3(D.x,0,12.9);if(isOut(z))route.push(a,b);else route.push(b,a);}
+ if(isOut(z)!==isOut(p.z)){const D0=window.DOOR,D1=THEATER.CLUB_DOOR,dd=d=>Math.abs(p.x-d.x)+Math.abs(x-d.x),D=dd(D1)<dd(D0)?D1:D0,a=new THREE.Vector3(D.x,0,11.1),b=new THREE.Vector3(D.x,0,12.9);if(isOut(z))route.push(a,b);else route.push(b,a);}
  {const inZ=(X,Z)=>{const B=window.BAR_ZONE;return B&&X>=B.x0-.1&&X<=B.x1&&Z>=B.z0&&Z<=B.z1;},N=(p.z+z)/2<2.25,A=new THREE.Vector3(9.9,0,N?-2.4:6.8),Bv=new THREE.Vector3(11.02,0,N?-2.4:6.8);
   if(inZ(x,z)&&!inZ(p.x,p.z))route.push(A,Bv);else if(!inZ(x,z)&&inZ(p.x,p.z))route.push(Bv,A);}
  route.push(new THREE.Vector3(x,0,z));goal=route.shift();showMarker(x,z,heightAt(x,z));}
@@ -133,7 +133,7 @@ function showMarker(x,z,y=0){marker.object3D.position.set(x,y+.06,z);marker.setA
 const BOUND={x0:-11.4,x1:13.4,z0:-11.4,z1:25.4},ROOM_IN={x0:-11.8,x1:11.8,z0:-11.8,z1:11.8,y1:7.8},ROOM_OUT={x0:-13.5,x1:25.5,z0:12.2,z1:25.8,y1:14};let ROOM=ROOM_IN;
 const isOut=z=>z>12;
 // 앞벽(문 구멍 제외)은 사각 장애물
-{const D=window.DOOR,dl=D.x-D.w/2,dr=D.x+D.w/2;OBSTACLES.push({x0:11.6,x1:14,z0:-12.5,z1:12.15},{x0:-12.5,x1:dl,z0:11.85,z1:12.15},{x0:dr,x1:12.5,z0:11.85,z1:12.15});}
+{const D=window.DOOR,dl=D.x-D.w/2,dr=D.x+D.w/2;OBSTACLES.push({x0:11.6,x1:14,z0:-12.5,z1:12.15},{x0:-12.5,x1:dl,z0:11.85,z1:12.15},{x0:dr,x1:THEATER.CLUB_DOOR.x-THEATER.CLUB_DOOR.w/2,z0:11.85,z1:12.15},{x0:THEATER.CLUB_DOOR.x+THEATER.CLUB_DOOR.w/2,x1:12.5,z0:11.85,z1:12.15});}
 // 카메라 충돌: 벽·바·무대 구조물을 상자(AABB)로 근사해 머리→카메라 광선 검사 (모바일에서도 가벼움)
 const CAM_OCC=[[10-.65,0,-1.65,10+.65,1.3,6.15],[9.4,1.2,6,10.6,2.3,6.15],[9.45,0,7.45,10.55,1.3,7.75],[11.4,0,-1.6,12.5,3.9,7.6],[-3.6,0,-11.8,3.6,4.9,-11.45],[-5.6,.7,-11.6,-3.5,5.5,-11.05],[3.5,.7,-11.6,5.6,5.5,-11.05],[-5.6,4.8,-11.4,5.6,5.5,-11],[1.65,.7,-9.45,4.35,1.95,-8.55],[TENT.x0-.1,TENT.e-.1,TENT.z0-.1,TENT.x1+.1,TENT.r+.2,TENT.z1+.1],[TENT.x0,.4,TENT.z1-.1,TENT.x1,TENT.e,TENT.z1+.1],[-.6,0,15.3,2.2,1.1,16.7],THEATER.camOcc[THEATER.camOcc.length-1]];const CAM_SKIP=new Set([3]); // 벽은 카메라를 막지 않음 (대신 가리는 벽을 숨김)
 function camHit(ox,oy,oz,dr,max,bt){let t=max;const lim=[[dr.y,oy,.25,ROOM.y1-.1]];
@@ -169,7 +169,6 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
   {const ss=mySeat&&SEATS.find(q=>q.id===mySeat);const hy=mySeat?(ss.y||0):heightAt(p.x,p.z);if(mySeat)jumpV=null;else if(jumpV===null&&p.y-hy>.25)jumpV=0;if(jumpV!==null){jumpV-=14*dt;p.y+=jumpV*dt;if(p.y<=hy&&jumpV<0){p.y=hy;jumpV=null;}}else p.y+=(hy-p.y)*Math.min(1,dt*14);}if(!mySeat)$('prompt').classList.add('hidden');}
  if(!mySeat&&!moving&&!goal&&joined){idleT+=dt;if(idleT>3&&!myDance)myDance=1+Math.floor(Math.random()*3);}else{idleT=0;myDance=0;}
  myAv.object3D.rotation.y=myYaw;if(myAv._h)myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
-if(!mySeat&&!window.OUTSIDE&&THEATER.clubDoorHit(p.x,p.z)&&performance.now()-(window._tdT||0)>1500){window._tdT=performance.now();const A=THEATER.ARRIVE;p.set(A.x,0,A.z);myYaw=A.yaw;camYaw=A.yaw+Math.PI;goal=null;goalSeat=null;route=[];marker.setAttribute('visible',false);sys('🎬 극장 앞 포차 거리로 나왔어요');}
  {const out=isOut(p.z);ROOM=out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();applySubs();}}
  const tx=p.x,ty=p.y+(mySeat?.95:1.1)+(mySeat&&mySeat.startsWith('TH-')?THEATER.CAM_LIFT:0),tz=p.z;let d=camDist;
  if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));const k=1-Math.exp(-dt*5);camYaw+=d*k;camPitch+=(camGoal.pitch-camPitch)*k;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
@@ -251,7 +250,7 @@ function serve(kind){if(!inBarZone())return;const n=Date.now();if(n-(window._las
  const p=rig.object3D.position;socket.emit('serve',{x:p.x,z:p.z,kind});}
 window.serve=serve;window.drink=drink;
 function actions(){const A=[];if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.push([GLASSES[mySeat]==='cocktail'?'🍸 칵테일':'🥃 위스키',()=>drink(GLASSES[mySeat]),'d-'+GLASSES[mySeat]]);}
-  else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);if(t&&t[0]==='Y'){A.push(['🛎 주문하기',()=>openOrder(),'order']);if(MY_ORDERS.length)A.push(['⏳ 주문: '+MY_ORDERS.map(o=>ITEM_NAME[o.kind]).join(', ')+' · 알바가 준비 중',null,'lbl']);}}
+  else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);if(t&&t[0]==='Y'){A.push(['🛎 주문하기',()=>openOrder(),'order']);if(ORDER_NOTE)A.push([ORDER_NOTE,null,'lbl']);if(MY_ORDERS.length)A.push(['⏳ 주문: '+MY_ORDERS.map(o=>ITEM_NAME[o.kind]).join(', ')+' · 알바가 준비 중',null,'lbl']);}}
   return A;}
  if(inBarZone()){A.push(['🍸 바텐더 서빙:',null,'lbl'],['🥃 위스키',()=>serve('whiskey'),'s-whiskey'],['🍸 칵테일',()=>serve('cocktail'),'s-cocktail']);return A;}
  if(!mySeat&&(window.WAITERS||[]).some(w=>w.near))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
@@ -436,14 +435,14 @@ let _fovNow=0;function theaterFov(cx,cy,cz){const o=scene.camera;if(!o||!o.isPer
  if(Math.abs(want-o.fov)>.05){o.fov+= (want-o.fov)*.2;o.updateProjectionMatrix();}}
 
 // ---------- 야장 주문 (포차 테이블에 앉으면 🛎 주문하기 → 알바가 가져다 줌) ----------
-const ORDER_MENU={anju:['dakbal','kkom','fish','squid','chicken','hoe'],drink:['soju','beer']};var MY_ORDERS=[];let orderTab='anju';window.ALBA_JOB=null;
+const ORDER_MENU={anju:['dakbal','kkom','fish','squid','chicken','hoe'],drink:['soju','beer']};var MY_ORDERS=[],ORDER_NOTE='';let _onT=0;/* 주문 관련 안내는 채팅창이 아니라 행동바에만 잠깐 표시 */function orderNote(t){ORDER_NOTE=t;clearTimeout(_onT);_onT=setTimeout(()=>{ORDER_NOTE='';refreshAct(true);},3000);refreshAct(true);}let orderTab='anju';window.ALBA_JOB=null;
 function renderOrder(){const m=$('orderMenu');m.querySelectorAll('.otab').forEach(b=>b.classList.toggle('on',b.dataset.tab===orderTab));const L=m.querySelector('.olist');L.innerHTML='';
  for(const k of ORDER_MENU[orderTab]){const b=document.createElement('button');b.textContent=ITEM_NAME[k];b.dataset.k=k;b.onclick=e=>{e.stopPropagation();placeOrder(k);};L.appendChild(b);}}
 function openOrder(){const m=$('orderMenu');if(!m.classList.contains('hidden')){m.classList.add('hidden');return;}renderOrder();m.classList.remove('hidden');}
-function placeOrder(k){socket.emit('order',k,r=>{if(r&&r.ok){MY_ORDERS.push({id:r.id,kind:k});sys(`🛎 ${ITEM_NAME[k]} 주문했어요${r.queue>1?` (대기 ${r.queue-1}건)`:''}`);$('orderMenu').classList.add('hidden');refreshAct(true);}else sys('주문 실패: '+((r&&r.err)||'?'));});}
+function placeOrder(k){socket.emit('order',k,r=>{if(r&&r.ok){MY_ORDERS.push({id:r.id,kind:k});$('orderMenu').classList.add('hidden');refreshAct(true);}else orderNote('주문 실패: '+((r&&r.err)||'?'));});}
 document.querySelectorAll('#orderMenu .otab').forEach(b=>b.onclick=e=>{e.stopPropagation();orderTab=b.dataset.tab;renderOrder();});$('orderClose').onclick=e=>{e.stopPropagation();$('orderMenu').classList.add('hidden');};
 socket.on('albaJob',j=>{window.ALBA_JOB=j;});
-socket.on('albaDone',d=>{const i=MY_ORDERS.findIndex(o=>o.id===d.id);if(i>=0){MY_ORDERS.splice(i,1);sys(d.ok?`🙋 알바: "${ITEM_NAME[d.kind]} 나왔습니다~"`:'🙋 알바: "자리가 꽉 차서 못 놨어요 ㅠ"');refreshAct(true);}});
+socket.on('albaDone',d=>{const i=MY_ORDERS.findIndex(o=>o.id===d.id);if(i>=0){MY_ORDERS.splice(i,1);orderNote(d.ok?`✅ ${ITEM_NAME[d.kind]} 나왔어요`:'자리가 꽉 차서 못 놨어요');refreshAct(true);}});
 setInterval(()=>{const t=mySeat&&myTable();if(!(t&&t[0]==='Y'))$('orderMenu').classList.add('hidden');},300);
 
 // ---------- 재생목록 프리셋 3개 (관리자) : 모바일=버튼만, PC=버튼+이름/주소 편집 ----------

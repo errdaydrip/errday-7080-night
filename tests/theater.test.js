@@ -32,9 +32,7 @@ a.strictEqual(TH.pickTrack([{language:'ja'},{language:'ko-KR'}],'language').lang
 // 폰 세로/가로: 계산한 시야각이면 스크린 폭·높이가 여백 두고 화면 안에 들어감
 [[9/19.5,70],[19.5/9,55],[16/9,70],[3/4,70]].forEach(([asp,base])=>[6,9,11].forEach(D=>{const f=TH.fitFov(D,asp,base)*Math.PI/180,th=Math.tan(f/2);
  a(T.screen.h/2/D<=th/1.19,'height fits '+asp+' '+D);a(T.screen.w/2/D<=th*asp/1.19,'width fits '+asp+' '+D);a(TH.fitFov(D,asp,base)>=base);}));
-// 나이트→극장 문: 포차 출구와 안 겹치고, 클럽 안에서 닿을 수 있고, 도착지는 극장 안 빈자리
-{const CD=TH.CLUB_DOOR,PD={x:-3.3,w:2};a(CD.x-CD.w/2>PD.x+PD.w/2+.5,'not overlapping pocha exit');
- a(TH.clubDoorHit(CD.x,11.55),'reachable (club wall pad stops at 11.6)');a(!TH.clubDoorHit(CD.x,11),'not in middle of club');a(!TH.clubDoorHit(PD.x,11.55),'pocha door untouched');
- const A=TH.ARRIVE;a(!TH.inside(A.x,A.z),'arrive outside (street)');a(A.z>12&&A.x<=13.4,'on pocha street');a(!hit(A.x,A.z),'arrive free');a(Math.abs(A.z-(T.door.z0+T.door.z1)/2)<.5&&T.x0-A.x<1.5,'in front of theater door');
- a(TH.seats.every(s=>Math.hypot(s.x-A.x,s.z-A.z)>.8),'not on a seat');}
+// 나이트→극장 문: 포장마차 문처럼 진짜 뚫린 문, 극장 쪽 벽 끝 (포차 문과 따로)
+{const CD=TH.CLUB_DOOR,PD={x:-3.3,w:2};a(CD.x-CD.w/2>PD.x+PD.w/2+.5,'not overlapping pocha exit');a.strictEqual(CD.z,12,'on club front wall like pocha door');a.strictEqual(CD.w,PD.w,'same size as pocha door');
+ a(Math.abs(T.x0-CD.x)<Math.abs(T.x0-PD.x)&&CD.x+CD.w/2<12,'nearer the theater, inside club wall');a(TH.clubDoorHit(CD.x,11.55)&&!TH.clubDoorHit(PD.x,11.55));}
 console.log('theater OK');
