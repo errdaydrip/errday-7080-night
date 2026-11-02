@@ -410,7 +410,7 @@ function dartAim(b){if(document.getElementById('dartAim'))return;const o=documen
   const px=S/2+wx*R,py=S/2-wy*R;c.strokeStyle='#00ffcc';c.lineWidth=2;c.beginPath();c.arc(px,py,9,0,7);c.moveTo(px-15,py);c.lineTo(px+15,py);c.moveTo(px,py-15);c.lineTo(px,py+15);c.stroke();raf=requestAnimationFrame(draw);};raf=requestAnimationFrame(draw);
  const close=()=>{cancelAnimationFrame(raf);o.remove();};o.querySelector('button').onclick=close;
  cv.addEventListener('pointerdown',e=>{e.preventDefault();down=true;cv.setPointerCapture(e.pointerId);pos(e);});cv.addEventListener('pointermove',e=>{if(down||e.pointerType==='mouse')pos(e);});
- cv.addEventListener('pointerup',e=>{if(!down)return;down=false;const [x,y]=o._w||[ax,ay];socket.emit('dart',{b,x,y},r=>{if(r&&r.ok&&r.me)sys(r.done?`🏁 끝! 총 ${r.done.score}점`:`R${r.me.round} · ${r.me.thrown}/3발 · 합계 ${r.me.score}점 (+${r.hit.pts} ${r.hit.label})`);if(r&&!r.ok&&r.err)sys(`🎯 ${(r.err)}`);});});}
+ cv.addEventListener('pointerup',e=>{if(!down)return;down=false;const [x,y]=o._w||[ax,ay];socket.emit('dart',{b,x,y},r=>{if(r&&r.ok&&r.me)sys(r.done?`🏁 끝! 총 ${r.done.score}점`:(r.me.thrown?`R${r.me.round} · ${r.me.thrown}/3발`:`R${r.me.round-1} 끝 · 3/3발`)+` · 합계 ${r.me.score}점 (+${r.hit.pts} ${r.hit.label})`);if(r&&!r.ok&&r.err)sys(`🎯 ${(r.err)}`);});});}
 window.dartAim=dartAim;
 socket.on('clubDoor',d=>setClubDoor(!!(d&&d.open),!!(d&&d.by)));
 $('clubDoorBtn').onclick=()=>{if(!adminToken)return;const open=!window.CLUB_OPEN;if(!open&&!confirm('나이트 문을 닫을까요? 안에 있는 사람은 모두 야장 포차로 나가요.'))return;socket.emit('setClubDoor',{token:adminToken,open},r=>{if(!(r&&r.ok))sys('실패: '+((r&&r.err)||'?'));});};
