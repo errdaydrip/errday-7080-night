@@ -165,7 +165,7 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
   else if(goal&&!mySeat){mx=goal.x-p.x;mz=goal.z-p.z;const d=Math.hypot(mx,mz);if(goalSeat&&!goalSeat.stand)ignore=tableCenter(goalSeat.table);
    if(d<.12&&route.length){goal=route.shift();}else if(d<.12||(goalSeat&&d<.8)){if(goalSeat){sit(goalSeat);}goal=null;mx=mz=0;marker.setAttribute('visible',false);}}
   const l=Math.hypot(mx,mz);
-  if(l>1e-4&&!mySeat){mx/=l;mz/=l;const sp=4*dt*spd;let nx=clampX(p.x+mx*sp),nz=clampZ(p.z+mz*sp);
+  if(l>1e-4&&!mySeat){mx/=l;mz/=l;const sp=4*dt*spd*((keys.ShiftLeft||window.RUN_HOLD)?1.8:1); /* 달리기: PC 왼쪽 Shift / 모바일 달리기 버튼 누르고 있기 */let nx=clampX(p.x+mx*sp),nz=clampZ(p.z+mz*sp);
    if(!blocked(nx,nz,ignore)){p.x=nx;p.z=nz;moving=true;}
    else if(!blocked(nx,p.z,ignore)){p.x=nx;moving=true;}else if(!blocked(p.x,nz,ignore)){p.z=nz;moving=true;}
    else if(goal){goal=null;goalSeat=null;marker.setAttribute('visible',false);sys('앞이 막혀서 멈췄어요');}
@@ -359,7 +359,8 @@ $('ytForm').onsubmit=async e=>{e.preventDefault();const url=$('ytUrl').value.tri
  const r=await fetch('/link',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':adminToken},body:JSON.stringify({url,by:me.nick||'관리자'})});
  const j=await r.json();$('upMsg').textContent=r.ok?`✅ ${j.service} 인식 · ${j.added>1?j.added+'곡':'「'+(j.title||'')+'」'} 추가!`:(j.error||'실패');adminFail(r);if(r.ok)$('ytUrl').value='';};
 // 점프 버튼: 오른쪽 끝, 액션바 바로 위
-setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElementById('actBar');if(!j)return;let top=innerHeight-70;if(a&&!a.classList.contains('hidden')&&a.offsetHeight){top=Math.min(top,a.getBoundingClientRect().top);}j.style.bottom=(innerHeight-top+10)+'px';},200);
+setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElementById('actBar'),rb=document.getElementById('runBtn');if(!j)return;let top=innerHeight-70;if(a&&!a.classList.contains('hidden')&&a.offsetHeight){top=Math.min(top,a.getBoundingClientRect().top);}const jb=innerHeight-top+10;j.style.bottom=jb+'px';if(rb)rb.style.bottom=(jb+(j.offsetHeight||60)+10)+'px';},200);
+{const rb=$('runBtn');if(rb){const on=e=>{e.preventDefault();e.stopPropagation();window.RUN_HOLD=true;rb.classList.add('on');},off=e=>{window.RUN_HOLD=false;rb.classList.remove('on');};rb.addEventListener('pointerdown',on);['pointerup','pointercancel','pointerleave'].forEach(ev=>rb.addEventListener(ev,off));window.addEventListener('blur',off);}}
 
 // ---------- 화면 비율별 시야각 / 전체화면 ----------
 (function(){

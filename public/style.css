@@ -134,3 +134,7 @@ body.pfs{height:100dvh;overflow:hidden;overscroll-behavior:none}
 #byeScreen{position:fixed;inset:0;z-index:200;background:radial-gradient(#2a0c3a,#07020c);display:flex;align-items:center;justify-content:center}
 #byeScreen .bx{text-align:center;color:#fff;padding:24px}#byeScreen .bt{font-size:32px;font-weight:900;color:#ffd23c;text-shadow:0 0 12px #ff8a00}#byeScreen .bs{margin:14px 0 22px;font-size:16px}
 #byeScreen button{padding:10px 26px;border-radius:20px;border:2px solid #ff3cac;background:#2a0c1c;color:#fff;font-size:16px}
+
+#runBtn{position:fixed;right:12px;bottom:164px;width:64px;height:64px;border-radius:50%;background:rgba(60,216,255,.3);border:2px solid rgba(255,216,74,.7);color:#fff;font-size:20px;line-height:1;text-align:center;padding-top:10px;box-sizing:border-box;display:none;touch-action:none;pointer-events:auto;z-index:20;user-select:none;-webkit-user-select:none}#runBtn small{font-size:11px}#runBtn.on{background:rgba(60,216,255,.7)}
+@media (max-width:700px),(pointer:coarse){#runBtn{display:block;right:calc(12px + env(safe-area-inset-right))}#hud.showChat~#runBtn,body.seated #runBtn,body.thseat #runBtn,body.typing #runBtn,body:has(#entry:not(.hidden)) #runBtn,body:has(#dartAim) #runBtn{display:none!important}}
+@media (max-width:700px) and (orientation:landscape),(pointer:coarse) and (orientation:landscape){#runBtn{width:56px;height:56px;padding-top:7px;font-size:18px}}
