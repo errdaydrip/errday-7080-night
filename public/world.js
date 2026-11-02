@@ -894,7 +894,7 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  window.DART_IMG=cv;const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace||tex.colorSpace;
  G.forEach((g,bi)=>{ E('a-cylinder',{position:'0 0 -.03',rotation:'90 0 0',radius:.52,height:.05,material:'color:#3a2410;roughness:.8'},g);
  const face=E('a-circle',{position:'0 0 .002',radius:.5,'segments':64},g);face.addEventListener('loaded',()=>{const m=face.getObject3D('mesh');m.material=new THREE.MeshBasicMaterial({map:tex});});
- E('a-entity',{position:'0 .78 0',ktext:'value:🎯 DARTS '+(bi+1)+';color:#fff;glow:#ff3cac;size:70;width:1.4'},g);
+ E('a-entity',{position:'0 -.66 0',ktext:'value:🎯 DARTS '+(bi+1)+';color:#fff;glow:#ff3cac;size:70;width:1.4'},g);
  E('a-entity',{position:'0 2.25 1.5',light:'type:spot;angle:30;penumbra:.5;intensity:1.2;color:#fff3d0;distance:4',rotation:'-50 0 0'},g);
  // 던지는 선 (바닥)
  E('a-box',{position:`${window.DARTS[bi].x-.2} .015 ${ZS[bi]}`,width:.05,height:.01,depth:1.2,material:'color:#ffd23c;emissive:#ffd23c;emissiveIntensity:.8'});
@@ -908,7 +908,7 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
   if(!(top||[]).length){s.fillStyle='#aaa';s.textAlign='center';s.fillText('아직 기록 없음',256,240);}
   if(last){s.fillStyle='#3cd8ff';s.textAlign='center';s.font='bold 32px "Malgun Gothic","Noto Sans KR",sans-serif';s.fillText(last,256,470);}stex.needsUpdate=true;};window.dartBoard([]);
  /* 판마다 게임 상태판 (판 아래) */
- const ST=G.map(g=>{const c2=document.createElement('canvas');c2.width=512;c2.height=300;const tx=new THREE.CanvasTexture(c2);tx.colorSpace=THREE.SRGBColorSpace||tx.colorSpace;const pl=E('a-plane',{position:'0 -.95 0',width:1.2,height:.7},g);pl.addEventListener('loaded',()=>{pl.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:tx,toneMapped:false});});return{c:c2.getContext('2d'),tx};});
+ const ST=G.map(g=>{const c2=document.createElement('canvas');c2.width=512;c2.height=300;const tx=new THREE.CanvasTexture(c2);tx.colorSpace=THREE.SRGBColorSpace||tx.colorSpace;E('a-box',{position:'0 .97 -.03',width:1.32,height:.82,depth:.05,material:'color:#3cd8ff;emissive:#3cd8ff;emissiveIntensity:.6'},g);const pl=E('a-plane',{position:'0 .97 .002',width:1.24,height:.74},g); /* 다트판 바로 위 이 판 전용 점수판 */pl.addEventListener('loaded',()=>{pl.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:tx,toneMapped:false});});return{c:c2.getContext('2d'),tx};});
  window.dartState=d=>{const S=ST[d.b];if(!S)return;const c=S.c,g=d.g;c.fillStyle='#14051c';c.fillRect(0,0,512,300);c.strokeStyle='#3cd8ff';c.lineWidth=8;c.strokeRect(4,4,504,292);const F='"Malgun Gothic","Noto Sans KR",sans-serif';
   c.textBaseline='middle';c.textAlign='center';c.fillStyle='#ffd23c';c.font=`bold 36px ${F}`;c.fillText(g.mode==='high'?'하이스코어 (8라운드)':g.mode==='501'?'501 (더블 아웃)':'크리켓',256,36);
   if(!g.players.length){c.fillStyle='#aaa';c.font=`28px ${F}`;c.fillText('혼자서도 바로! 던지면 시작',256,150);}
