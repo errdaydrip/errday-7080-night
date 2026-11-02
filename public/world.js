@@ -218,7 +218,7 @@ const G={sph:(r,ws=28,hs=20)=>new THREE.SphereGeometry(r,ws,hs),cap:(r,l)=>new T
 function mesh(g,m,p=[0,0,0],s=null,r=null){const o=new THREE.Mesh(g,m);o.position.set(...p);if(s)o.scale.set(...s);if(r)o.rotation.set(...r);return o;}
 function makeChibi(opts){const M=chibiMats(opts),f=opts.gender==='f',st=['basic','suit','disco','hanbok','aerobic'].includes(opts.style)?opts.style:'suit';
  const LK=(window.LOOKS?LOOKS.resolve(opts):{top:opts.outfit,bottom:opts.outfit,acc:'none',hair:''});const npc=opts.dj||opts.waiter||!opts.top; // NPC 는 예전 한 가지 색 그대로
- const col=npc?(opts.outfit||OUTFIT_DEFAULTS[f?'f':'m'][st]):LK.top,bcol=npc?col:LK.bottom;opts={...opts,top:col,bottom:bcol,acc:npc?'none':LK.acc,hair:npc?'':LK.hair,pig:!npc&&f&&!LK.hair};
+ const col=npc?(opts.outfit||OUTFIT_DEFAULTS[f?'f':'m'][st]):LK.top,bcol=npc?col:LK.bottom;opts={...opts,top:col,bottom:bcol,acc:npc?'none':LK.acc,hair:npc?'':LK.hair,pig:!npc&&f&&!LK.hair&&st==='basic'}; /* 기본 의상만 양갈래, 나머지 의상은 원래 의상별 기본 머리 */
  const root=new THREE.Group(),hips=new THREE.Group();hips.position.y=.42;root.add(hips);
  const torso=new THREE.Group();hips.add(torso);
  // 의상별 재질
@@ -334,6 +334,7 @@ function hairPick(head,M,H0,k){const H=H0.clone();H.side=THREE.DoubleSide;H.roug
  if(k==='m3'){ // 쉐이브: 옆은 짧게 밀고(페이드) 앞머리를 위로 쓸어올린 볼륨
   add(hairShell(line3(P*.3,P*.43,P*.6),{rx:.348,bump:(ph,th,f)=>{const fr=Math.max(0,Math.cos(f));return .005+.24*fr*fr*Math.exp(-(((th-P*.22)/(P*.12))**2))+.05*Math.max(0,1-th/(P*.3));}}));
   const F=H.clone();F.transparent=true;F.opacity=.45;head.add(mesh(hairShell(line3(P*.2,P*.47,P*.63),{rx:.343,rz:.33,ry:.32}),F));return;}
+ if(k==='f4')k='fp'; // 양갈래 (선택 가능)
  if(k==='fp'){ // 양갈래: 가운데 가르마, 양옆으로 묶어 내린 두 갈래
   add(hairShell(line3(P*.3,P*.45,P*.62),{bump:(ph,th)=>.02+partGroove(ph,th)}));
   [-1,1].forEach(sd=>{head.add(mesh(new THREE.TorusGeometry(.045,.018,8,18),M.T('#ff3cac'),[sd*.33,.35,-.12],null,[0,P/2,0]));
@@ -828,3 +829,18 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
   if(face){const y=Math.atan2(face[0][0]-face[1][0],face[0][1]-face[1][1]);let dy=y-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*8);}
   h.play(anim);}});
  document.querySelector('a-scene').setAttribute('alba-walk','');})();
+// ---------- 💝 후원 전광판 (나이트 뒷벽, 네온 스크롤) ----------
+(function donationTicker(){const W=2048,H=128,cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
+ const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace||tex.colorSpace;
+ const SZ=(window.STAGE&&STAGE.z1)||-11.82;const board=E('a-entity',{position:`0 6.35 ${Math.min(-6,SZ+.15)}`});
+ E('a-box',{position:'0 0 -.04',width:11.4,height:1.15,depth:.06,material:'color:#0a0210;roughness:.6'},board);
+ [[0,.6,11.5,.06],[0,-.6,11.5,.06],[-5.72,0,.06,1.26],[5.72,0,.06,1.26]].forEach(([px,py,w,h])=>E('a-box',{position:`${px} ${py} 0`,width:w,height:h,depth:.05,material:'color:#ff3cac;emissive:#ff3cac;emissiveIntensity:1.4'},board));
+ const pl=E('a-plane',{position:'0 0 .005',width:11,height:11*H/W*1.4},board);pl.addEventListener('loaded',()=>{const m=pl.getObject3D('mesh');m.material=new THREE.MeshBasicMaterial({map:tex,toneMapped:false});});
+ const fmt=n=>(+n||0).toLocaleString('ko-KR');let text='',tw=1,off=1400,last=0;
+ const build=l=>{text=l&&l.length?'💝 후원 감사합니다!   '+l.map(d=>`★ ${d.name} ${fmt(d.amount)}원${d.msg?' · "'+d.msg+'"':''}`).join('     '):'💝 ERRDAY 후원 전광판 · 후원하면 여기에 이름이 떠요! · 웨이터·알바에게 💝 후원하기';x.font='bold 72px "Malgun Gothic","Noto Sans KR",sans-serif';tw=x.measureText(text).width+200;};
+ window.setDonations=l=>{window.DONATIONS=l||[];build(window.DONATIONS);};build([]);
+ AFRAME.registerComponent('don-ticker',{tick(t){if(t-last<33)return;last=t;off=(off+4)%tw;x.fillStyle='#0a0210';x.fillRect(0,0,W,H);
+  x.font='bold 72px "Malgun Gothic","Noto Sans KR",sans-serif';x.textBaseline='middle';
+  const sx=W-off;for(const px of [sx,sx+tw])for(const [c,b] of [['#ff3cac',26],['#fff3fb',0]]){x.shadowColor=c;x.shadowBlur=b;x.fillStyle=b?'#ff3cac':'#fff3fb';x.fillText(text,px,H/2+4);}
+  x.shadowBlur=0;tex.needsUpdate=true;}});
+ document.querySelector('a-scene').setAttribute('don-ticker','');})();

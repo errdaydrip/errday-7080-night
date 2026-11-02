@@ -2,7 +2,7 @@
 const a=require('assert');const L=require('../public/looks.js');
 a.strictEqual(L.PALETTE.length,10);a(L.PALETTE.every(([c])=>L.HEX.test(c)));
 for(const g of ['m','f'])for(const st of L.STYLES){const d=L.DEF[g][st];a(d&&L.HEX.test(d[0])&&L.HEX.test(d[1]),g+st);}
-a.strictEqual(L.HAIR.m.filter(h=>h[0]).length,3);a.strictEqual(L.HAIR.f.filter(h=>h[0]).length,3);
+a.strictEqual(L.HAIR.m.filter(h=>h[0]).length,3);a.strictEqual(L.HAIR.f.filter(h=>h[0]).length,4);
 // 예전 데이터 (outfit 한 색): 남자 디스코는 상의로 (바지가 바뀌던 버그)
 let r=L.resolve({gender:'m',style:'disco',outfit:'#ff8c00'});a.strictEqual(r.top,'#ff8c00');a.strictEqual(r.bottom,L.DEF.m.disco[1]);
 r=L.resolve({gender:'f',style:'hanbok',outfit:'#e0262e'});a.strictEqual(r.bottom,'#e0262e','hanbok chima keeps old color');
@@ -10,6 +10,7 @@ r=L.resolve({gender:'m',style:'suit',top:'#e0262e',bottom:'#1a1a1a',acc:'sunglas
 r=L.resolve({gender:'f',hair:'m2',acc:'crown',top:'red'});a.strictEqual(r.hair,'');a.strictEqual(r.acc,'none');a.strictEqual(r.top,L.DEF.f.suit[0]);
 a.strictEqual(L.resolve({}).style,'suit');
 a.strictEqual(L.STYLES[0],'basic','기본 first');r=L.resolve({gender:'f',style:'basic'});a.deepStrictEqual([r.top,r.bottom],['#f5f5f5','#2f7bff']);r=L.resolve({gender:'m',style:'basic',top:'#e0262e',bottom:'#1a1a1a'});a.deepStrictEqual([r.style,r.top,r.bottom],['basic','#e0262e','#1a1a1a']);
+a(L.HAIR.f.some(h=>h[0]==='f4'&&h[1]==='양갈래'));a.strictEqual(L.resolve({gender:'f',hair:'f4'}).hair,'f4');
 a(!L.BEARDS.includes('sideburns'));a.strictEqual(L.resolve({gender:'m',beard:'sideburns'}).beard,'','old sideburns → none');
 r=L.resolve({gender:'m',face:3,beard:'goatee'});a.deepStrictEqual([r.face,r.beard],[3,'goatee']);r=L.resolve({gender:'f',face:9,beard:'full'});a.deepStrictEqual([r.face,r.beard],[0,''],'female no beard, bad face→0');a.deepStrictEqual([L.resolve({}).face,L.resolve({}).beard],[0,''],'old data compat');
 // 서버 동기: 다른 사람에게 상의/하의/액세서리/헤어 전달

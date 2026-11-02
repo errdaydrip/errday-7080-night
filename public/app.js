@@ -28,7 +28,7 @@ function syncOpts(){fillLook();renderHairs();$('nick').value=me.nick;document.qu
  document.querySelectorAll('#skins .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.skin));updatePreview();}
 syncOpts();
 $('entry').addEventListener('click',e=>{const b=e.target;const resetCol=()=>{const d=LOOKS.DEF[me.gender==='f'?'f':'m'][me.style];me.top=d[0];me.bottom=d[1];delete me.outfit;};
- if(b.classList.contains('g')){const rb=()=>LOOKS.BEARDS[Math.floor(Math.random()*LOOKS.BEARDS.length)];if(me.gender===b.dataset.v){me.face=((+me.face||0)+1)%LOOKS.FACES;} /* 같은 성별 버튼 다시 누르면 다음 얼굴 */else{me.gender=b.dataset.v;me.hair='';me.face=0;resetCol();}me.beard=me.gender==='m'?rb():'';}if(b.classList.contains('s')){me.style=b.dataset.v;resetCol();}
+ if(b.classList.contains('g')){const rb=()=>LOOKS.BEARDS[Math.floor(Math.random()*LOOKS.BEARDS.length)];if(me.gender===b.dataset.v){me.face=((+me.face||0)+1)%LOOKS.FACES;} /* 같은 성별 버튼 다시 누르면 다음 얼굴 */else{me.gender=b.dataset.v;me.hair='';me.face=0;resetCol();}me.beard=me.gender==='m'?rb():'';}if(b.classList.contains('s')){me.style=b.dataset.v;me.hair='';resetCol();} /* 의상 고르면 그 의상 고유 기본 머리 */
  if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('tp')){me.top=b.dataset.v;delete me.outfit;}else if(b.classList.contains('bt')){me.bottom=b.dataset.v;delete me.outfit;}
  if(b.classList.contains('h'))me.hair=b.dataset.v;if(b.classList.contains('a'))me.acc=b.dataset.v;me.nick=$('nick').value;syncOpts();});
 $('enter').onclick=()=>{if(window.enterFullscreenMobile&&!window.AUTO_JOIN)enterFullscreenMobile();me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
@@ -452,3 +452,4 @@ function renderPresets(){const B=document.querySelector('#presetBox .pbtns'),E=d
  if(E.contains(document.activeElement))return;E.innerHTML=PRESETS.map((p,i)=>`<div class="prow"><input class="pn" maxlength="20" value="${esc(p.name)}" placeholder="이름"><input class="pu" maxlength="300" value="${esc(p.url)}" placeholder="유튜브 재생목록 주소"></div>`).join('')+'<button type="button" id="presetSave">💾 버튼 저장</button>';
  $('presetSave').onclick=e=>{e.stopPropagation();const list=[...E.querySelectorAll('.prow')].map(r=>({name:r.querySelector('.pn').value,url:r.querySelector('.pu').value}));socket.emit('setPresets',{token:adminToken,list},r=>sys(r&&r.ok?'💾 프리셋 저장됨 (모두에게 반영)':'저장 실패: '+((r&&r.err)||'?')));};}
 socket.on('presets',p=>{PRESETS=p||[];renderPresets();});
+socket.on('donations',l=>{window.setDonations&&window.setDonations(l);});

@@ -51,6 +51,9 @@ async function addLink(req,res){if(!isAdmin(req.get('x-admin-token')))return res
  broadcastMusic();res.json({added:items.length,service:r.service,title:items.length===1?items[0].title:undefined});}
 app.post('/link',addLink);app.post('/youtube',addLink);
 const {advance}=require('./playback');
+// 투네이션 후원 전광판: 최근 후원 목록을 모두에게
+const DON=require('./donations');let donList=[];
+const donTicker=process.env.TICKER_OFF?null:DON.start({clean:t=>cleanText(t),onDonation:(l)=>{donList=l;io.emit('donations',donList);},log:m=>console.log(m)});
 const STATE=process.env.STATE_FILE||path.join(__dirname,'data','state.json');
 const durations={}; // videoId 또는 mp3 id -> 초 (클라이언트가 알려줌)
 const durOf=t=>t&&(t.dur||durations[t.type==='yt'?t.videoId:t.id]);
@@ -172,7 +175,7 @@ io.on('connection',s=>{
  s.on('move',m=>{const pl=players[s.id];if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.emit('glasses',glassPub());
- s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));if(albaJob)s.emit('albaJob',albaJob);
+ s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));s.emit('donations',donList);if(albaJob)s.emit('albaJob',albaJob);
  s.on('drink',type=>{const pl=players[s.id];if(!pl||!pl.seat||!DRINKS.includes(type))return;if(!canDrink(pl.seat,type))return;const n=Date.now();if(n-(pl.lastDrink||0)<2000)return;pl.lastDrink=n;
   pl.drinks=(pl.drinks||[]).filter(x=>n-x<1800000).concat(n).slice(-20);
   if(BAR_Z[pl.seat]!==undefined){delete glasses[pl.seat];io.emit('glasses',glassPub());}const tb=pochaTable(pl.seat);if(tb)useItem(tb,type);io.emit('drink',{id:s.id,type});});
