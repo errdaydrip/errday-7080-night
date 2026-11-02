@@ -327,8 +327,9 @@ function hairPick(head,M,H0,k){const H=H0.clone();H.side=THREE.DoubleSide;H.roug
  if(k==='m5'){ // 대머리: 이마·정수리는 민머리, 귀 위 옆머리와 뒷머리 둘레만 짧게 남음
   const end=f=>P*.5+P*.12*sstep(P*.5,P*.85,f),w=f=>sstep(P*.3,P*.5,f);
   add(hairShell(end,{t0:f=>end(f)-(P*.13+P*.06*sstep(P*.5,P*.85,f))*w(f)-.001,rx:.352,rz:.338,bump:(ph,th,f)=>.012-.9*(1-sstep(P*.3,P*.4,f))}));return;}
- if(k==='m4'){ // 짧은 퍼마: 둥글고 곱슬한 짧은 볼륨
-  add(hairShell(line3(P*.31,P*.46,P*.63),{bump:(ph,th)=>{const c=Math.sin(ph*13)*Math.sin(th*18),c2=Math.sin(ph*7+1.3)*Math.sin(th*11+.7);return .11+.045*c+.03*c2+.09*Math.max(0,1-th/(P*.5));}}));return;} /* 풍성한 짧은 파마 */
+ if(k==='m4'){ // 장발 파마 (80년대 남자 샤기/파마): 눈썹 위까지 덮는 두꺼운 앞머리(한쪽으로 쓸림), 귀 덮고 턱선 근처까지, 뒤는 목덜미까지 둥글게
+  const tf=(f,a)=>{const fr=P*.4+P*.04*Math.max(-1,Math.min(1,a/.6));return f<P*.18?fr:f<P*.4?fr+(P*.66-fr)*sstep(P*.18,P*.4,f):P*.66+P*.06*sstep(P*.55,P*.9,f);};
+  add(hairShell(tf,{flare:.18,drop:.6,bump:(ph,th,f)=>{const w=Math.sin(ph*9+th*6)*Math.sin(th*10),w2=Math.sin(ph*5+1.1)*Math.sin(th*7+.4);const top=Math.max(0,1-th/(P*.55));return .1+.03*w+.02*w2+.09*top;}}));return;}
  if(k==='m0'){ // 남자 기본: 짧고 단정한 머리, 위쪽 살짝 볼륨
   add(hairShell(line3(P*.31,P*.42,P*.6),{bump:(ph,th)=>.018+.04*Math.max(0,1-th/(P*.4))}));return;}
  if(k==='m1'){ // 포마드: 위·뒤로 넘긴 높은 올림머리 + 옆·관자놀이는 쉐이브처럼 희미하게 짧게 친 페이드

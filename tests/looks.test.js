@@ -2,7 +2,7 @@
 const a=require('assert');const L=require('../public/looks.js');
 a.strictEqual(L.PALETTE.length,10);a(L.PALETTE.every(([c])=>L.HEX.test(c)));
 for(const g of ['m','f'])for(const st of L.STYLES){const d=L.DEF[g][st];a(d&&L.HEX.test(d[0])&&L.HEX.test(d[1]),g+st);}
-a.strictEqual(L.HAIR.m.filter(h=>h[0]).length,4);a.deepStrictEqual(L.HAIR.m.map(h=>h[1]),['기본','포마드','가르마','짧은 파마','대머리']);a.strictEqual(L.resolve({gender:'m',hair:'m3'}).hair,'m1');a.strictEqual(L.resolve({gender:'m',hair:'m1'}).hair,'m1');a.strictEqual(L.HAIR.f.filter(h=>h[0]).length,4);
+a.strictEqual(L.HAIR.m.filter(h=>h[0]).length,4);a.deepStrictEqual(L.HAIR.m.map(h=>h[1]),['기본','포마드','가르마','장발 파마','대머리']);a.strictEqual(L.resolve({gender:'m',hair:'m3'}).hair,'m1');a.strictEqual(L.resolve({gender:'m',hair:'m1'}).hair,'m1');a.strictEqual(L.HAIR.f.filter(h=>h[0]).length,4);
 // 예전 데이터 (outfit 한 색): 남자 디스코는 상의로 (바지가 바뀌던 버그)
 let r=L.resolve({gender:'m',style:'disco',outfit:'#ff8c00'});a.strictEqual(r.top,'#ff8c00');a.strictEqual(r.bottom,L.DEF.m.disco[1]);
 r=L.resolve({gender:'f',style:'hanbok',outfit:'#e0262e'});a.strictEqual(r.bottom,'#e0262e','hanbok chima keeps old color');

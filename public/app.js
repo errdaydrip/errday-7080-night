@@ -28,7 +28,7 @@ function syncOpts(){fillLook();renderHairs();$('nick').value=me.nick;document.qu
  document.querySelectorAll('#skins .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.skin));updatePreview();}
 syncOpts();
 $('entry').addEventListener('click',e=>{const b=e.target;const resetCol=()=>{const d=LOOKS.DEF[me.gender==='f'?'f':'m'][me.style];me.top=d[0];me.bottom=d[1];delete me.outfit;};
- if(b.classList.contains('g')){const rb=()=>LOOKS.BEARDS[Math.floor(Math.random()*LOOKS.BEARDS.length)];if(me.gender===b.dataset.v){me.face=((+me.face||0)+1)%LOOKS.FACES;} /* 같은 성별 버튼 다시 누르면 다음 얼굴 */else{me.gender=b.dataset.v;me.hair='';me.face=0;resetCol();}me.beard=me.gender==='m'?rb():'';}if(b.classList.contains('s')){me.style=b.dataset.v;me.hair='';resetCol();} /* 의상 고르면 그 의상 고유 기본 머리 */
+ if(b.classList.contains('g')){const rb=()=>LOOKS.BEARDS[Math.floor(Math.random()*LOOKS.BEARDS.length)];if(me.gender===b.dataset.v){me.face=((+me.face||0)+1)%LOOKS.FACES;} /* 같은 성별 버튼 다시 누르면 다음 얼굴 */else{me.gender=b.dataset.v;me.hair='';me.face=0;resetCol();}me.beard=me.gender==='m'?rb():'';}if(b.classList.contains('s')){me.style=b.dataset.v;resetCol();} /* 의상 바꿔도 직접 고른 머리는 그대로 (안 고른 상태면 의상 기본 머리) */
  if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('tp')){me.top=b.dataset.v;delete me.outfit;}else if(b.classList.contains('bt')){me.bottom=b.dataset.v;delete me.outfit;}
  if(b.classList.contains('h'))me.hair=b.dataset.v;if(b.classList.contains('a'))me.acc=b.dataset.v;me.nick=$('nick').value;syncOpts();});
 $('enter').onclick=()=>{if(window.enterFullscreenMobile&&!window.AUTO_JOIN)enterFullscreenMobile();me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
