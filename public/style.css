@@ -130,3 +130,7 @@ body.pfs{height:100dvh;overflow:hidden;overscroll-behavior:none}
 #dartAim .dah{text-shadow:0 1px 2px #000;font-size:16px}
 
 #chatClear{margin-left:8px;padding:2px 9px;font-size:12px;border-radius:10px;border:1px solid #ff5a5a;background:#3a0c14;color:#fff;cursor:pointer;vertical-align:middle}
+
+#byeScreen{position:fixed;inset:0;z-index:200;background:radial-gradient(#2a0c3a,#07020c);display:flex;align-items:center;justify-content:center}
+#byeScreen .bx{text-align:center;color:#fff;padding:24px}#byeScreen .bt{font-size:32px;font-weight:900;color:#ffd23c;text-shadow:0 0 12px #ff8a00}#byeScreen .bs{margin:14px 0 22px;font-size:16px}
+#byeScreen button{padding:10px 26px;border-radius:20px;border:2px solid #ff3cac;background:#2a0c1c;color:#fff;font-size:16px}
