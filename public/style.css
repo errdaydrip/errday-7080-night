@@ -204,3 +204,18 @@ body:has(#poolUI) #keyHint,body:has(#poolUI) #runBtn,body:has(#poolUI) #jumpBtn,
  #poolUI .pbtn{position:absolute;right:6px;top:6px;flex-direction:column!important;flex-wrap:nowrap!important;gap:4px!important;width:114px}#poolUI .pbtn button{font-size:12px!important;padding:5px 6px!important;width:100%}
  #poolSpin{bottom:6px!important;right:6px!important;padding:3px!important}#poolSpin canvas{width:84px!important;height:84px!important}#poolSpin div{font-size:11px}
 }
+/* 가로 모바일 추가 정리 */
+@media (orientation:landscape) and (max-height:520px){
+ #poolUI .pbtn{top:auto!important;right:auto!important;left:6px!important;bottom:6px!important;width:184px!important;display:grid!important;grid-template-columns:1fr 1fr;gap:4px!important;flex-direction:initial!important}
+ #poolUI .pbtn button{width:100%;font-size:12px!important;padding:6px 4px!important}
+ #poolHud{max-height:calc(100vh - 130px);overflow:hidden}
+ #poolUI{padding-right:110px!important}#poolCv{width:min(calc(100vw - 316px),calc((100vh - 60px)*1.818))!important}#poolUI .pbw{width:min(calc(100vw - 316px),calc((100vh - 60px)*1.818))!important}
+}
+@media (orientation:landscape) and (max-height:500px){
+ body:has(#dartAim) #toast{top:50%!important;left:8px!important;transform:translateY(-50%)!important;align-items:flex-start!important;width:calc(50vw - 36vh - 20px)}body:has(#dartAim) #toast div{font-size:13px;padding:6px 10px;white-space:normal}
+ #userList{left:calc(100% + 8px)!important;bottom:0!important;max-height:calc(100vh - 24px)!important;width:200px}
+ #mob{left:calc(14px + env(safe-area-inset-left))!important;bottom:calc(64px + env(safe-area-inset-bottom))!important}
+ #jumpBtn{right:calc(12px + env(safe-area-inset-right))!important;bottom:calc(12px + env(safe-area-inset-bottom))!important}
+ #runBtn{right:calc(78px + env(safe-area-inset-right))!important;bottom:calc(12px + env(safe-area-inset-bottom))!important}
+ #actBar{right:calc(10px + env(safe-area-inset-right))!important;bottom:calc(78px + env(safe-area-inset-bottom))!important;flex-direction:column!important;flex-wrap:nowrap!important;align-items:flex-end!important;max-height:calc(100vh - 150px);overflow-y:auto}
+}
