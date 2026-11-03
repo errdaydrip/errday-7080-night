@@ -107,7 +107,7 @@ function bubble(id,text){const el=id===myId?$('myAvatar'):others[id]&&others[id]
 // ---------- 3인칭 카메라 · 이동 · 클릭 이동 · 자동 앉기 ----------
 const rig=$('rig'),cam=$('cam'),myAv=$('myAvatar'),marker=$('marker');
 const keys={};let camGoal=null,myDance=0,idleT=0,camYaw=0,camPitch=.4,camDist=IS_MOBILE?5.5:4.5,myYaw=Math.PI,goal=null,goalSeat=null,stillT=0,moving=false;
-let jumpV=null;function jump(){if(window.ARCADE_PLAYING||!joined||rollerSelectOpen||!$('entry').classList.contains('hidden')||mySeat||jumpV!==null)return;jumpV=window.IN_ROLLER&&Math.hypot(rig.object3D.position.x-10,rig.object3D.position.z-48.2)<5?6.8:5;}window.jump=jump;
+let jumpV=null;function jump(){if(window.ARCADE_PLAYING||!joined||rollerSelectOpen||!$('entry').classList.contains('hidden')||mySeat||jumpV!==null)return;jumpV=window.IN_ROLLER&&Math.hypot(rig.object3D.position.x-10,rig.object3D.position.z-49.8)<5?6.8:5;}window.jump=jump;
 const typing=()=>document.activeElement&&document.activeElement.tagName==='INPUT';
 window.addEventListener('keydown',e=>{if(window.ARCADE_PLAYING||rollerSelectOpen||typing()||!$('entry').classList.contains('hidden'))return;keys[e.code]=true;if(/Key[WASD]|Arrow/.test(e.code)){route=[];goal=null;goalSeat=null;marker.setAttribute('visible',false);}
  if(e.code==='Space'){e.preventDefault();jump();}

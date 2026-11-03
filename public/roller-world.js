@@ -114,12 +114,12 @@ AFRAME.registerComponent('roller-sparkle',{
   }
   window.createAlba({home:R.STAFF.home,roller:true});
   // Raised DJ deck, with a smooth skate ramp on both sides and a walkway behind the console.
-  box(hall,0,R.DJ.h/2,67.4,9,R.DJ.h,4.8,'#241a32');
-  box(hall,0,R.DJ.h+.01,65.02,9,.04,.04,'#39e1d1',true);
+  box(hall,0,R.DJ.h/2,68.65,9,R.DJ.h,2.3,'#241a32');
+  box(hall,0,R.DJ.h+.01,67.52,9,.04,.04,'#39e1d1',true);
   // The operator stands higher than the fixed-height console, so the torso clears the LP equipment.
-  box(hall,0,(R.DJ.h+R.DJ.operatorH)/2,68.55,9,R.DJ.operatorH-R.DJ.h,2.5,'#241a32');
+  box(hall,0,(R.DJ.h+R.DJ.operatorH)/2,69.375,9,R.DJ.operatorH-R.DJ.h,.85,'#241a32');
   const slopeGeometry=new THREE.BufferGeometry();
-  slopeGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array([-4.5,R.DJ.h,66.3,4.5,R.DJ.h,66.3,-4.5,R.DJ.operatorH,67.3,4.5,R.DJ.h,66.3,4.5,R.DJ.operatorH,67.3,-4.5,R.DJ.operatorH,67.3]),3));
+  slopeGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array([-4.5,R.DJ.h,68.65,4.5,R.DJ.h,68.65,-4.5,R.DJ.operatorH,68.95,4.5,R.DJ.h,68.65,4.5,R.DJ.operatorH,68.95,-4.5,R.DJ.operatorH,68.95]),3));
   slopeGeometry.computeVertexNormals();hall.object3D.add(new THREE.Mesh(slopeGeometry,new THREE.MeshStandardMaterial({color:'#241a32',side:THREE.DoubleSide,roughness:.7})));
   for(const r of R.ramps){
     const length=R.DJ.rampLength,h=R.DJ.operatorH,half=(R.DJ.rampZ1-R.DJ.rampZ0)/2;
@@ -132,7 +132,7 @@ AFRAME.registerComponent('roller-sparkle',{
     for(const edge of [-1,1])E('a-box',{position:`${(r.lowX+r.topX)/2-R.OFFSET.x} ${h/2+.025} ${r.z+edge*(half-.04)-R.OFFSET.z}`,width:Math.hypot(length,h),height:.035,depth:.035,rotation:`0 0 ${Math.atan2(h,dx)*180/Math.PI}`,material:'color:#39e1d1;emissive:#39e1d1;emissiveIntensity:1'},hall);
   }
   const h0=window.heightAt;window.heightAt=(x,z)=>R.floorAt(x,z)??h0(x,z);
-  const console=E('a-entity',{id:'rollerDJ',position:'0 .4 66.5'},hall);
+  const console=E('a-entity',{id:'rollerDJ',position:'0 .4 68.1'},hall);
   box(console,0,.48,0,5.6,.96,1,'#1b1826');
   box(console,0,.99,0,5.7,.08,1.1,'#3f394b');
   box(console,0,.35,-.51,5.3,.045,.025,'#ff3cac',true);

@@ -1,7 +1,9 @@
 // Original small arcade games. Pure simulation, shared by browser and tests.
 (function(root){
+ const H=typeof module!=='undefined'?require('./air-hockey'):root.AIR_HOCKEY;
  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),SHAPES=[[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[0,1,1],[1,1,0]],[[1,1,0],[0,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]]];
  function create(kind,seed=Date.now()){
+  if(kind==='hockey')return H.create();
   let n=seed>>>0;const random=()=>{n=(1664525*n+1013904223)>>>0;return n/4294967296;};
   const s={kind,t:0,score:0,lives:3,over:false,won:false,event:0,random,cool:0,hit:0};
   if(kind==='blocks'){s.grid=Array.from({length:20},()=>Array(10).fill(0));s.lines=0;s.bag=[];s.next=null;spawn(s);}
@@ -11,7 +13,7 @@
   else if(kind==='hoops'){s.hoop=.5;s.balls=[];s.time=45;}
   else if(kind==='reflex'){s.target=Math.floor(random()*9);s.time=30;s.targetAge=0;s.combo=0;}
   else if(kind==='rhythm'||kind==='ddr'){s.health=100;s.combo=0;s.maxCombo=0;s.judgement='READY';s.notes=Array.from({length:84},(_,i)=>({lane:Math.floor(random()*4),at:2+i*.48,judged:false}));s.duration=44;}
-  else if(kind==='pingpong'||kind==='hockey'){s.x=.5;s.y=.86;s.ai=.5;s.aiY=.14;s.opponent=0;s.ball={x:.5,y:.5,vx:0,vy:0};s.serve=true;}
+  else if(kind==='pingpong'){s.x=.5;s.y=.86;s.ai=.5;s.aiY=.14;s.opponent=0;s.ball={x:.5,y:.5,vx:0,vy:0};s.serve=true;}
   else throw Error('Unknown arcade game');
   return s;
  }
@@ -19,7 +21,7 @@
  function spawn(s){const k=s.next===null?piece(s):s.next;s.next=piece(s);s.shape=SHAPES[k].map(r=>r.slice());s.colour=k+1;s.px=Math.floor((10-s.shape[0].length)/2);s.py=0;s.fall=0;if(collide(s,s.shape,s.px,s.py))s.over=true;}
  function collide(s,p,x,y){return p.some((r,j)=>r.some((v,i)=>v&&(x+i<0||x+i>=10||y+j>=20||(y+j>=0&&s.grid[y+j][x+i]))));}
  function lock(s){s.shape.forEach((r,j)=>r.forEach((v,i)=>{if(v&&s.py+j>=0)s.grid[s.py+j][s.px+i]=s.colour;}));let lines=0;for(let y=19;y>=0;y--)if(s.grid[y].every(Boolean)){s.grid.splice(y,1);s.grid.unshift(Array(10).fill(0));lines++;y++;}s.lines+=lines;s.score+=[0,100,300,500,800][lines]||0;if(lines)s.event++;spawn(s);}
- function action(s,key){if(s.over)return;
+ function action(s,key){if(s.over)return;if(s.kind==='hockey'){if(key==='fire')H.serve(s,0);return;}
   if((s.kind==='rhythm'||s.kind==='ddr')&&/^lane[0-3]$/.test(key)){const lane=+key.slice(4),note=s.notes.find(n=>!n.judged&&n.lane===lane&&Math.abs(n.at-s.t)<.18);if(note){const perfect=Math.abs(note.at-s.t)<.08;note.judged=true;note.hit=true;s.combo++;s.maxCombo=Math.max(s.maxCombo,s.combo);s.score+=perfect?300:150;s.health=Math.min(100,s.health+2);s.judgement=perfect?'PERFECT':'GOOD';s.event++;}else{s.combo=0;s.health=Math.max(0,s.health-3);s.judgement='EARLY / LATE';}return;}
   if(s.kind==='blocks'){
    if(key==='left'||key==='right'){const x=s.px+(key==='left'?-1:1);if(!collide(s,s.shape,x,s.py))s.px=x;}
@@ -28,13 +30,13 @@
    if(key==='fire'){while(!collide(s,s.shape,s.px,s.py+1)){s.py++;s.score+=2;}lock(s);}
   }else if(s.kind==='racer'&&(key==='left'||key==='right'))s.x=clamp(s.x+(key==='left'?-.25:.25),.25,.75);
   else if(s.kind==='reflex'&&/^tap[0-8]$/.test(key)){const k=+key.slice(3);if(k===s.target){s.score+=10+Math.min(20,s.combo++);s.target=(s.target+1+Math.floor(s.random()*8))%9;s.targetAge=0;s.event++;}else{s.combo=0;s.score=Math.max(0,s.score-5);}}
-  else if((s.kind==='pingpong'||s.kind==='hockey')&&key==='fire'&&s.serve){s.serve=false;s.ball={x:.5,y:.5,vx:(s.random()-.5)*.5,vy:.42};}
+  else if(s.kind==='pingpong'&&key==='fire'&&s.serve){s.serve=false;s.ball={x:.5,y:.5,vx:(s.random()-.5)*.5,vy:.42};}
   else if(s.kind==='hoops'&&key==='fire'&&s.cool<=0){s.balls.push({x:.5,y:.88,vy:-1.5,vx:(s.hoop-.5)*.55,checked:false});s.cool=.5;s.event++;}
  }
  function wave(s){s.wave++;s.aliens=Array.from({length:24},(_,i)=>({x:.12+i%8*.105,y:.13+Math.floor(i/8)*.085,alive:true}));s.enemyTime=0;s.shift=0;}
  function lost(s){s.lives--;s.hit=.65;if(s.lives<=0)s.over=true;}
  function point(s,player){if(player){s.score++;s.event++;}else{s.opponent++;s.hit=.5;}s.serve=true;s.ball={x:.5,y:.5,vx:0,vy:0};if(s.score>=7||s.opponent>=7){s.over=true;s.won=s.score>=7;}}
- function update(s,dt,input={}){if(s.over)return;s.t+=dt;s.cool=Math.max(0,s.cool-dt);s.hit=Math.max(0,s.hit-dt);const dir=(input.right?1:0)-(input.left?1:0);
+ function update(s,dt,input={}){if(s.over)return;if(s.kind==='hockey'){const p=s.paddles[0],speed=input.fire?2.4:1.2,target={x:input.pointerX??p.x+((input.right?1:0)-(input.left?1:0))*dt*speed,y:input.pointerY??p.y+((input.down?1:0)-(input.up?1:0))*dt*speed/H.K.aspect};if(s.serve&&s.serveSide===1&&s.serveTime>.7)H.serve(s,1);H.update(s,dt,[target,H.ai(s,dt)]);return;}s.t+=dt;s.cool=Math.max(0,s.cool-dt);s.hit=Math.max(0,s.hit-dt);const dir=(input.right?1:0)-(input.left?1:0);
   if(s.kind==='blocks'){s.fall+=dt;if(s.fall>=Math.max(.1,.72-s.lines*.015)){action(s,'down');s.fall=0;}return;}
   if(s.kind==='shooter'){
    s.x=clamp(input.pointerX??s.x+dir*dt*.75,.05,.95);if(input.fire&&s.cool<=0){s.bullets.push({x:s.x,y:.85});s.cool=.18;}
@@ -59,19 +61,14 @@
   }
   if(s.kind==='reflex'){s.time=Math.max(0,30-s.t);s.targetAge+=dt;if(s.targetAge>1.15){s.target=(s.target+1+Math.floor(s.random()*8))%9;s.targetAge=0;s.combo=0;}if(s.time<=0)s.over=true;return;}
   if(s.kind==='rhythm'||s.kind==='ddr'){for(const n of s.notes)if(!n.judged&&s.t>n.at+.18){n.judged=true;s.health=Math.max(0,s.health-10);s.combo=0;s.judgement='MISS';s.hit=.2;}if(s.health<=0||s.t>=s.duration){s.over=true;s.won=s.health>0;}return;}
-  if(s.kind==='pingpong'||s.kind==='hockey'){
-   const hockey=s.kind==='hockey';s.x=clamp(input.pointerX??s.x+dir*dt*.85,.08,.92);if(hockey)s.y=clamp(input.pointerY??s.y+((input.down?1:0)-(input.up?1:0))*dt*.8,.58,.93);
-   const b=s.ball,aiSpeed=hockey?.39:.43;s.ai+=clamp(b.x-s.ai,-aiSpeed*dt,aiSpeed*dt);s.ai=clamp(s.ai,.1,.9);if(s.serve)return;
+  if(s.kind==='pingpong'){
+   s.x=clamp(input.pointerX??s.x+dir*dt*.85,.08,.92);
+   const b=s.ball;s.ai+=clamp(b.x-s.ai,-.43*dt,.43*dt);s.ai=clamp(s.ai,.1,.9);if(s.serve)return;
    const old=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;
    if(b.x<.025||b.x>.975){b.x=clamp(b.x,.025,.975);b.vx*=-1;}
-   if(hockey){
-    for(const [x,y,player] of [[s.x,s.y,true],[s.ai,s.aiY,false]]){const dx=b.x-x,dy=b.y-y,d=Math.hypot(dx,dy);if(d<.083&&((player&&b.vy>0)||(!player&&b.vy<0))){const a=dx/(d||1),v=.68;b.y=y+(player?-.085:.085);b.vx=a*v;b.vy=(player?-1:1)*Math.max(.35,Math.sqrt(Math.max(.1,v*v-b.vx*b.vx)));s.event++;}}
-    if(b.y<.025||b.y>.975){if(b.x>.33&&b.x<.67){point(s,b.y<.025);}else{b.y=clamp(b.y,.025,.975);b.vy*=-1;}}
-   }else{
-    if(b.vy>0&&old<.84&&b.y>=.84&&Math.abs(b.x-s.x)<.13){b.y=.84;b.vy=-Math.min(.86,Math.abs(b.vy)+.025);b.vx=(b.x-s.x)*3;s.event++;}
-    if(b.vy<0&&old>.16&&b.y<=.16&&Math.abs(b.x-s.ai)<.13){b.y=.16;b.vy=Math.min(.86,Math.abs(b.vy)+.025);b.vx=(b.x-s.ai)*2.8;}
-    if(b.y<0||b.y>1)point(s,b.y<0);
-   }
+   if(b.vy>0&&old<.84&&b.y>=.84&&Math.abs(b.x-s.x)<.13){b.y=.84;b.vy=-Math.min(.86,Math.abs(b.vy)+.025);b.vx=(b.x-s.x)*3;s.event++;}
+   if(b.vy<0&&old>.16&&b.y<=.16&&Math.abs(b.x-s.ai)<.13){b.y=.16;b.vy=Math.min(.86,Math.abs(b.vy)+.025);b.vx=(b.x-s.ai)*2.8;}
+   if(b.y<0||b.y>1)point(s,b.y<0);
   }
  }
  const api={create,action,update,collide,SHAPES};if(typeof module!=='undefined')module.exports=api;else root.ARCADE_CORE=api;

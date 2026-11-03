@@ -11,6 +11,7 @@ for(const r of R.ramps){
  assert(Math.abs(R.floorAt((r.lowX+r.topX)/2,r.z)-R.DJ.operatorH/2)<1e-8);
  assert.strictEqual(R.floorAt((r.lowX+r.topX)/2,R.DJ.rampZ0-.1),null,'ramps enter from the side');
 }
+assert(R.DJ.z0>40.7+7.8+.5,'DJ deck clears the outer oval with margin');
 assert.strictEqual(R.floorAt(10,50.8),R.DJ.operatorH);assert.strictEqual(R.floorAt(10,40),null);
 assert.strictEqual(R.PALETTE.length,10);assert.strictEqual(new Set(R.PALETTE.map(p=>p[0])).size,10);
 assert(R.PALETTE.some(([c])=>c===R.colours({skateBoot:'#f5f5f5'}).skateBoot),'legacy colour normalized');
