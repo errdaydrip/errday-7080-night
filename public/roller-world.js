@@ -1,7 +1,22 @@
 // 1980s Korean roller rink. Skates are chosen on entry.
 AFRAME.registerComponent('roller-sparkle',{
-  schema:{phase:{default:0}},
-  tick(t){const mesh=this.el.getObject3D('mesh');if(!mesh)return;const v=.35+.65*Math.max(0,Math.sin(t/230+this.data.phase*1.7));mesh.material.color.setRGB(v,v,Math.min(1,v+.12));}
+  init(){
+    const geometry=new THREE.PlaneGeometry(.105,.105),material=new THREE.MeshBasicMaterial({color:'#ffffff',side:THREE.DoubleSide});
+    const tiles=this.tiles=new THREE.InstancedMesh(geometry,material,128),dummy=new THREE.Object3D(),colour=new THREE.Color();
+    let i=0;for(let row=1;row<9;row++)for(let col=0;col<16;col++){
+      const theta=row/9*Math.PI,phi=col/16*Math.PI*2;
+      dummy.position.set(.66*Math.sin(theta)*Math.cos(phi),.66*Math.cos(theta),.66*Math.sin(theta)*Math.sin(phi));
+      dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),dummy.position.clone().normalize());dummy.updateMatrix();
+      tiles.setMatrixAt(i,dummy.matrix);tiles.setColorAt(i,colour.setRGB(.65,.65,.77));i++;
+    }
+    tiles.instanceColor.setUsage(THREE.DynamicDrawUsage);this.el.setObject3D('mirrorTiles',tiles);this.last=-Infinity;this.colour=colour;
+  },
+  tick(t){
+    if(!window.IN_ROLLER||t-this.last<100)return;this.last=t;
+    for(let i=0;i<128;i++){const v=.35+.65*Math.max(0,Math.sin(t/230+i*1.7));this.tiles.setColorAt(i,this.colour.setRGB(v,v,Math.min(1,v+.12)));}
+    this.tiles.instanceColor.needsUpdate=true;
+  },
+  remove(){if(!this.tiles)return;this.el.removeObject3D('mirrorTiles');this.tiles.geometry.dispose();this.tiles.material.dispose();}
 });
 (function buildRollerRink() {
   const R=ROLLER;
@@ -73,12 +88,12 @@ AFRAME.registerComponent('roller-sparkle',{
   box(hall,8.5,.5,49.4,5,1,1,'#46263c');
   box(hall,8.5,1.04,49.4,5.2,.08,1.2,'#bf9a69');
   box(hall,8.5,.85,49.96,4.5,.05,.025,'#39e1d1',true);
-  sign(hall,'매점 · 컵라면 / 사이다',8.5,2.6,49.95,4.3,'#ffe184');
+  sign(hall,'매점 · 컵라면 / 떡볶이',8.5,2.6,49.95,4.3,'#ffe184');
   for(let i=0;i<5;i++){
     const cup=makeItem('ramen');cup.position.set(6.8+i*.36,1.1,49.4);cup.scale.setScalar(1.35);hall.object3D.add(cup);
     const bottle=makeItem('cider');bottle.position.set(9+i*.3,1.1,49.4);bottle.scale.setScalar(1.5);hall.object3D.add(bottle);
   }
-  sign(hall,'테이블에 앉아 주문하세요',8.5,1.8,49.96,3.5,'#39e1d1');
+  sign(hall,'콜라 / 사이다 · 테이블에서 주문',8.5,1.8,49.96,3.5,'#39e1d1');
   for(const table of R.tables){
     const x=table.x-R.OFFSET.x,z=table.z-R.OFFSET.z;
     E('a-cylinder',{position:`${x} .73 ${z}`,radius:.77,height:.08,material:'color:#7b2948;roughness:.5'},hall);
@@ -99,12 +114,12 @@ AFRAME.registerComponent('roller-sparkle',{
   }
   window.createAlba({home:R.STAFF.home,roller:true});
   // Raised DJ deck, with a smooth skate ramp on both sides and a walkway behind the console.
-  box(hall,0,.6,67.4,9,1.2,4.8,'#241a32');
-  box(hall,0,1.21,65.02,9,.04,.04,'#39e1d1',true);
+  box(hall,0,R.DJ.h/2,67.4,9,R.DJ.h,4.8,'#241a32');
+  box(hall,0,R.DJ.h+.01,65.02,9,.04,.04,'#39e1d1',true);
   // The operator stands higher than the fixed-height console, so the torso clears the LP equipment.
-  box(hall,0,1.6,68.55,9,.8,2.5,'#241a32');
+  box(hall,0,(R.DJ.h+R.DJ.operatorH)/2,68.55,9,R.DJ.operatorH-R.DJ.h,2.5,'#241a32');
   const slopeGeometry=new THREE.BufferGeometry();
-  slopeGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array([-4.5,1.2,66.3,4.5,1.2,66.3,-4.5,2,67.3,4.5,1.2,66.3,4.5,2,67.3,-4.5,2,67.3]),3));
+  slopeGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array([-4.5,R.DJ.h,66.3,4.5,R.DJ.h,66.3,-4.5,R.DJ.operatorH,67.3,4.5,R.DJ.h,66.3,4.5,R.DJ.operatorH,67.3,-4.5,R.DJ.operatorH,67.3]),3));
   slopeGeometry.computeVertexNormals();hall.object3D.add(new THREE.Mesh(slopeGeometry,new THREE.MeshStandardMaterial({color:'#241a32',side:THREE.DoubleSide,roughness:.7})));
   for(const r of R.ramps){
     const length=R.DJ.rampLength,h=R.DJ.operatorH,half=(R.DJ.rampZ1-R.DJ.rampZ0)/2;
@@ -117,7 +132,7 @@ AFRAME.registerComponent('roller-sparkle',{
     for(const edge of [-1,1])E('a-box',{position:`${(r.lowX+r.topX)/2-R.OFFSET.x} ${h/2+.025} ${r.z+edge*(half-.04)-R.OFFSET.z}`,width:Math.hypot(length,h),height:.035,depth:.035,rotation:`0 0 ${Math.atan2(h,dx)*180/Math.PI}`,material:'color:#39e1d1;emissive:#39e1d1;emissiveIntensity:1'},hall);
   }
   const h0=window.heightAt;window.heightAt=(x,z)=>R.floorAt(x,z)??h0(x,z);
-  const console=E('a-entity',{id:'rollerDJ',position:'0 1.2 66.5'},hall);
+  const console=E('a-entity',{id:'rollerDJ',position:'0 .4 66.5'},hall);
   box(console,0,.48,0,5.6,.96,1,'#1b1826');
   box(console,0,.99,0,5.7,.08,1.1,'#3f394b');
   box(console,0,.35,-.51,5.3,.045,.025,'#ff3cac',true);
@@ -142,21 +157,15 @@ AFRAME.registerComponent('roller-sparkle',{
   sign(change,'🛼 롤러 교체',0,2,-.05,2.6,'#00ffd5');
   for(const side of [-1,1]){const skate=makeRollerSkate(R.colours({}));skate.position.set(side*.35,.99,0);skate.scale.setScalar(1.6);change.object3D.add(skate);}
   OBSTACLES.push({x0:R.CHANGE.x-1.2,x1:R.CHANGE.x+1.2,z0:R.CHANGE.z-.325,z1:R.CHANGE.z+.325});
-  const disco=E('a-entity',{id:'rollerMirrorBall',position:'-1 5 59',spin:'speed:18'},hall);
+  const disco=E('a-entity',{id:'rollerMirrorBall',position:'-1 5 59',spin:'speed:18','roller-sparkle':''},hall);
   E('a-sphere',{radius:.65,'segments-width':16,'segments-height':12,
     material:'color:#f6fbff;emissive:#c9e5ff;emissiveIntensity:.75;metalness:.35;roughness:.1;flatShading:true'},disco);
-  for(let row=1;row<9;row++)for(let col=0;col<16;col++){
-    const theta=row/9*Math.PI,phi=col/16*Math.PI*2;
-    E('a-plane',{position:`${.66*Math.sin(theta)*Math.cos(phi)} ${.66*Math.cos(theta)} ${.66*Math.sin(theta)*Math.sin(phi)}`,
-      rotation:`${(theta-Math.PI/2)*180/Math.PI} ${(Math.PI/2-phi)*180/Math.PI} 0`,width:.105,height:.105,material:'shader:flat;color:#effaff;side:double',
-      'roller-sparkle':`phase:${row*16+col}`},disco);
-  }
   const colours=['#ff69b4','#39e1d1','#ffe184','#a57bff'];
   for(let i=0;i<12;i++){
     const a=i/12*Math.PI*2,x=-1+Math.cos(a)*8,z=59+Math.sin(a)*7;
     E('a-circle',{position:`${x} .025 ${z}`,rotation:'-90 0 0',radius:.35,
       material:`color:${colours[i%4]};emissive:${colours[i%4]};emissiveIntensity:.7`,blink:`i:${i%3}`},hall);
-    E('a-sphere',{position:`${x} 5.6 ${z}`,radius:.1,
+    E('a-sphere',{position:`${x} 5.6 ${z}`,radius:.1,'segments-width':8,'segments-height':6,
       material:`color:${colours[i%4]};emissive:${colours[i%4]};emissiveIntensity:1`},hall);
   }
   window.makeTickerBoard({id:'rollerTicker',position:'0 3.9 69.65',rotation:'0 180 0',scale:'.95 .75 1'},hall);

@@ -443,7 +443,7 @@ window.makeHuman=async function(holder,opts){const c=makeChibi(opts);holder.obje
     s.normalShoes.forEach(o=>o.visible=!on);
    });
   },
-  drink(type){if(this.cup){this.cup.parent.remove(this.cup);}this.cup=makeCup(type);c.arms[1].children[0].add(this.cup);this.dT=0;this.d0=performance.now();this.pouring=type==='pour';if(this.pouring||type==='eat'||type==='ramen'||type==='cider')return;const n=Date.now();this.drinks=this.drinks.filter(x=>n-x<1800000);this.drinks.push(n);},
+  drink(type){if(this.cup){this.cup.parent.remove(this.cup);}this.cup=makeCup(type);c.arms[1].children[0].add(this.cup);this.dT=0;this.d0=performance.now();this.pouring=type==='pour';if(this.pouring||type==='eat'||type==='ramen'||type==='cider'||type==='cola')return;const n=Date.now();this.drinks=this.drinks.filter(x=>n-x<1800000);this.drinks.push(n);},
   mixer:{timeScale:1,update(dt){t+=dt*h.mixer.timeScale;animateChibi(c,state,t,opts);if(h.after)h.after(t,c);
    if(h.dT>=0){h.dT=(performance.now()-h.d0)/1000;const q=h.dT/2,r=q<.3?q/.3:q<.75?1:Math.max(0,1-(q-.75)/.25),e=r*r*(3-2*r);
     const a=c.arms[1];if(h.pouring){a.rotation.x=a.rotation.x*(1-e)-1.5*e;a.rotation.z=a.rotation.z*(1-e)+.5*e;if(h.cup)h.cup.rotation.x=e*1.6;c.head.rotation.x+=.2*e;}else{a.rotation.x=a.rotation.x*(1-e)-2.3*e;a.rotation.z=a.rotation.z*(1-e)+.35*e;c.head.rotation.x+=-.4*e*(q>.25&&q<.8?1:.6);}
@@ -475,11 +475,11 @@ function makeCup(type){const g=new THREE.Group();g.position.set(0,-.3,.06);
   for(const x of [-.015,.015])g.add(mesh(new THREE.CylinderGeometry(.004,.004,.23,6),white,[x,.19,.015],null,[.3,0,0]));
   return g;
  }
- if(type==='cider'){
-  const green=new THREE.MeshStandardMaterial({color:'#1d9c68',transparent:true,opacity:.85,roughness:.15});
+ if(type==='cider'||type==='cola'){
+  const green=new THREE.MeshStandardMaterial({color:type==='cola'?'#3d1d12':'#1d9c68',transparent:true,opacity:.85,roughness:.15});
   g.add(mesh(new THREE.CylinderGeometry(.035,.04,.18,12),green,[0,.04,0]));
   g.add(mesh(new THREE.CylinderGeometry(.015,.025,.08,10),green,[0,.17,0]));
-  g.add(mesh(new THREE.BoxGeometry(.06,.06,.005),new THREE.MeshBasicMaterial({color:'#e6ffe0'}),[0,.04,.04]));
+  g.add(mesh(new THREE.BoxGeometry(.06,.06,.005),new THREE.MeshBasicMaterial({color:type==='cola'?'#df2c37':'#e6ffe0'}),[0,.04,.04]));
   return g;
  }
  if(type==='whiskey'||type==='rock'){return rockGlass(g);}
@@ -502,7 +502,7 @@ function cocktailGlass(g){const gl=new THREE.MeshStandardMaterial({color:'#eef6f
 // 포차 아이템 (병/접시) — 손에 들거나 테이블에 놓음
 const FOOD_COL={dakbal:'#b0281a',kkom:'#7a3a20',fish:'#c08a40',squid:'#d23a10',chicken:'#c8801e',hoe:'#f08060'};
 function makeItem(kind,inHand){const g=new THREE.Group();if(inHand)g.position.set(0,-.32,.08);
- if(kind==='ramen'||kind==='cider'){const item=makeCup(kind);item.position.set(0,.05,0);g.add(item);return g;}
+ if(kind==='ramen'||kind==='cider'||kind==='cola'){const item=makeCup(kind);item.position.set(0,.05,0);g.add(item);return g;}
  if(kind==='soju'||kind==='beer'){const m=new THREE.MeshStandardMaterial({color:kind==='soju'?'#2e9a4a':'#5a2c0c',transparent:true,opacity:.88,roughness:.15});
   g.add(mesh(G.cyl(.04,.04,.18,12),m,[0,.09,0]));g.add(mesh(G.cyl(.015,.03,.07,10),m,[0,.21,0]));g.add(mesh(G.box(.06,.05,.005),new THREE.MeshBasicMaterial({color:kind==='soju'?'#e8f4ff':'#f3c040'}),[0,.09,.041]));if(inHand)g.position.y=-.42;}
  else{g.add(makeFood(kind));if(inHand)g.position.y=-.36;}
@@ -511,7 +511,13 @@ function makeFood(kind){const g=new THREE.Group(),T=c=>new THREE.MeshToonMateria
  const R=(a,b)=>a+Math.random()*(b-a);let seed=kind.length*7;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};const r=(a,b)=>a+rnd()*(b-a);
  const sesame=(n,rad,y)=>{for(let i=0;i<n;i++){const a=r(0,6.28),d=r(0,rad);g.add(mesh(new THREE.SphereGeometry(.004,4,3),S('#fff7dc'),[Math.cos(a)*d,y+r(0,.02),Math.sin(a)*d],[1,.5,1]));}};
  const scal=(n,rad,y,c='#3fa83a')=>{for(let i=0;i<n;i++){const a=r(0,6.28),d=r(0,rad);g.add(mesh(new THREE.TorusGeometry(.009,.003,4,8),T(c),[Math.cos(a)*d,y,Math.sin(a)*d],null,[Math.PI/2,0,0]));}};
- if(kind==='fruit'){g.add(mesh(G.cyl(.18,.15,.025,24),S('#f4f4f0',.3),[0,.012,0]));
+ if(kind==='tteokbokki'){
+  g.add(mesh(G.cyl(.17,.13,.045,24),S('#fff0dd',.35),[0,.022,0]));
+  g.add(mesh(G.cyl(.15,.15,.015,24),S('#b62c16',.2),[0,.05,0]));
+  for(let i=0;i<12;i++){const a=r(0,6.28),d=r(0,.12);g.add(mesh(G.cyl(.013,.013,.07,8),S(i%3?'#e75b2a':'#f18a4e',.3),[Math.cos(a)*d,.071,Math.sin(a)*d],null,[Math.PI/2,a,.1]));}
+  sesame(15,.13,.085);scal(5,.1,.09);
+ }
+ else if(kind==='fruit'){g.add(mesh(G.cyl(.18,.15,.025,24),S('#f4f4f0',.3),[0,.012,0]));
   const wm=(x,z,ry)=>{const w=new THREE.Group();w.position.set(x,.03,z);w.rotation.y=ry;w.add(mesh(new THREE.CylinderGeometry(.07,.07,.025,12,1,false,0,Math.PI),T('#e8322a'),[0,.035,0],null,[Math.PI/2,0,0]));w.add(mesh(new THREE.CylinderGeometry(.075,.075,.02,12,1,false,0,Math.PI),T('#3a8a2a'),[0,.03,-.004],null,[Math.PI/2,0,0]));g.add(w);};wm(-.06,.05,.3);wm(.07,.06,-.4);
   [['#ff8a1a',.06,-.07],['#ffe04a',-.08,-.05],['#9a2a7a',.0,-.1],['#9a2a7a',.03,-.12],['#ff3a4a',-.02,.0]].forEach(([c,x,z])=>g.add(mesh(new THREE.SphereGeometry(.035,10,8),T(c),[x,.06,z])));}
  else if(kind==='dakbal'){g.add(mesh(G.cyl(.14,.12,.02,20),S('#f4f4f0',.35),[0,.01,0]));

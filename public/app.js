@@ -265,9 +265,9 @@ socket.on('seat',({id,seat})=>{const o=others[id];if(o)applySeatPose(o,seat);});
 function removeOther(id){const o=others[id];if(o){try{if(o.el._h){HUMANS.delete(o.el._h);o.el._h.dispose();}}catch(e){}o.el.remove();delete others[id];}}
 function clearOthers(){for(const id in others)removeOther(id);}
 socket.on('leave',removeOther);
-socket.on('drink',({id,type})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink(type);if(type!=='cider')setTimeout(()=>sfxNear('ka',id),2000);});
+socket.on('drink',({id,type})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink(type);setTimeout(()=>sfxNear('ka',id),2000);});
 const GLASS_EL={};let GLASSES={},TABLE_ITEMS={};const TABLE_EL={};
-const ITEM_NAME={soju:'🍶 소주',beer:'🍺 맥주',dakbal:'🍗 닭발',kkom:'🐍 꼼장어',fish:'🐟 생선구이',squid:'🦑 오징어볶음',chicken:'🍗 통닭',hoe:'🐟 모듬회',fruit:'🍉 과일안주',ramen:'🍜 컵라면',cider:'🥤 사이다'};
+const ITEM_NAME={soju:'🍶 소주',beer:'🍺 맥주',dakbal:'🍗 닭발',kkom:'🐍 꼼장어',fish:'🐟 생선구이',squid:'🦑 오징어볶음',chicken:'🍗 통닭',hoe:'🐟 모듬회',fruit:'🍉 과일안주',ramen:'🍜 컵라면',tteokbokki:'🍢 떡볶이',cola:'🥤 콜라',cider:'🥤 사이다'};
 function myTable(){const m=/^([YTR]\d)-/.exec(mySeat||'');return m?m[1]:null;}
 function isBarSeat(){return !!mySeat&&mySeat.startsWith('BAR-');}
 function canDrink(type){if(!mySeat)return false;if(isBarSeat())return GLASSES[mySeat]===type;if(type==='whiskey'||type==='cocktail')return false;const t=myTable();if(t)return (TABLE_ITEMS[t]||[]).includes(type);return false;}
@@ -279,7 +279,7 @@ function kya(){sfx('ka');}function chew(){sfx('yum');}
 /* 다른 사람 먹고 마시는 소리: 가까이(7m 안)만 들리고 멀수록 작게 */
 function sfxNear(k,id){const el=others[id]&&others[id].el;if(!el)return;const p=rig.object3D.position,q=el.object3D.position,d=Math.hypot(p.x-q.x,p.z-q.z);if(d>7)return;sfx(k,Math.pow(1-d/7,1.5)*.9);}
 window.kya=kya;window.chew=chew;window.sfx=sfx;
-function drink(type){if(!canDrink(type))return;const n=Date.now();if(n-(window._lastDrink||0)<2000)return;window._lastDrink=n;const m=$('myAvatar');if(m._h)m._h.drink(type);socket.emit('drink',type);if(type!=='cider')setTimeout(kya,2000);}
+function drink(type){if(!canDrink(type))return;const n=Date.now();if(n-(window._lastDrink||0)<2000)return;window._lastDrink=n;const m=$('myAvatar');if(m._h)m._h.drink(type);socket.emit('drink',type);setTimeout(kya,2000);}
 function eat(k){const t=myTable();if(!t||!(TABLE_ITEMS[t]||[]).includes(k))return;const n=Date.now();if(n-(window._lastEat||0)<2000)return;window._lastEat=n;const m=$('myAvatar');if(m._h)m._h.drink(k==='ramen'?'ramen':'eat');socket.emit('eat',k);setTimeout(chew,600);}
 window.eat=eat;
 socket.on('eat',({id,kind})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink(kind==='ramen'?'ramen':'eat');setTimeout(()=>sfxNear('yum',id),600);});
@@ -308,7 +308,7 @@ function actions(){const A=[];
  }
  if(near(ROLLER.ENTRY,2.5))A.push((window.ROLLER_OPEN||adminAccess)?['🛼 롤라장 입장',()=>rollerTravel('enter'),'roller-enter']:['🛼 롤라장 영업 종료',null,'roller-closed']);
 if(mySeat&&mySeat.startsWith('TAXI')){A.push(['🏠 집으로 돌아가기',()=>goHome(),'home'],['🚪 내리기',()=>stand(),'getoff']);return A;}if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.push([GLASSES[mySeat]==='cocktail'?'🍸 칵테일':'🥃 위스키',()=>drink(GLASSES[mySeat]),'d-'+GLASSES[mySeat]]);}
-  else{for(const k of ['soju','beer','cider'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit','ramen'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);if(t&&['Y','R'].includes(t[0])){A.push([t[0]==='R'?'🛎 컵라면·사이다 주문':'🛎 주문하기',()=>openOrder(),'order']);if(ORDER_NOTE)A.push([ORDER_NOTE,null,'lbl']);if(MY_ORDERS.length)A.push(['⏳ 주문: '+MY_ORDERS.map(o=>ITEM_NAME[o.kind]).join(', ')+' · 알바가 준비 중',null,'lbl']);}}
+  else{for(const k of ['soju','beer','cola','cider'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit','ramen','tteokbokki'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);if(t&&['Y','R'].includes(t[0])){A.push(['🛎 주문하기',()=>openOrder(),'order']);if(ORDER_NOTE)A.push([ORDER_NOTE,null,'lbl']);if(MY_ORDERS.length)A.push(['⏳ 주문: '+MY_ORDERS.map(o=>ITEM_NAME[o.kind]).join(', ')+' · 알바가 준비 중',null,'lbl']);}}
   return A;}
  if(inBarZone()){A.push(['🍸 바텐더 서빙:',null,'lbl'],['🥃 위스키',()=>serve('whiskey'),'s-whiskey'],['🍸 칵테일',()=>serve('cocktail'),'s-cocktail']);return A;}
  if(!mySeat&&((window.WAITERS||[]).some(w=>w.near)||(window.ALBA&&near(window.ALBA,2))))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
@@ -538,8 +538,9 @@ function renderOrder(){const m=$('orderMenu');m.querySelectorAll('.otab').forEac
  m.querySelector('.ohead').firstChild.textContent=roller?'🛎 롤라장 매점 주문 ':'🛎 야장 주문 ';
  m.querySelector('[data-tab="anju"]').textContent=roller?'🍜 컵라면':'🍢 안주';
  m.querySelector('[data-tab="drink"]').textContent=roller?'🥤 음료':'🍶 주류';
- const menu=roller?{anju:['ramen'],drink:['cider']}:ORDER_MENU;
- for(const k of menu[orderTab]){const b=document.createElement('button');b.textContent=ITEM_NAME[k];b.dataset.k=k;b.onclick=e=>{e.stopPropagation();placeOrder(k);};L.appendChild(b);}}
+ m.querySelector('.otabs').style.display=roller?'none':'';
+ const menu=roller?ROLLER.MENU:ORDER_MENU[orderTab];
+ for(const k of menu){const b=document.createElement('button');b.textContent=ITEM_NAME[k];b.dataset.k=k;b.onclick=e=>{e.stopPropagation();placeOrder(k);};L.appendChild(b);}}
 function openOrder(){const m=$('orderMenu');if(!m.classList.contains('hidden')){m.classList.add('hidden');return;}renderOrder();m.classList.remove('hidden');}
 function placeOrder(k){socket.emit('order',k,r=>{if(r&&r.ok){MY_ORDERS.push({id:r.id,kind:k});$('orderMenu').classList.add('hidden');refreshAct(true);}else orderNote('주문 실패: '+((r&&r.err)||'?'));});}
 document.querySelectorAll('#orderMenu .otab').forEach(b=>b.onclick=e=>{e.stopPropagation();orderTab=b.dataset.tab;renderOrder();});$('orderClose').onclick=e=>{e.stopPropagation();$('orderMenu').classList.add('hidden');};

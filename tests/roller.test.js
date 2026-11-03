@@ -52,6 +52,8 @@ assert(R.PALETTE.some(([c])=>c===R.colours({skateBoot:'#f5f5f5'}).skateBoot),'le
   assert.deepStrictEqual(observed.motion.slice(-2).map(x=>x.motion),['run','jump']);
   assert.strictEqual((await emit(a,'order','ramen')).ok,false,'must be seated at a dining table');
   assert(!R.seats.some(s=>s.table==='RB'),'wall benches removed');
+  assert.strictEqual(R.DJ.h,.6);assert.strictEqual(R.DJ.operatorH,1);
+  for(const seat of R.seats.filter(s=>s.table==='R1'))assert(((seat.x-9)/8.5)**2+((seat.z-40.7)/7.8)**2>1,'relocated seats clear roller track');
   const dining=R.seats.find(s=>s.table==='R1');a.emit('move',{pos:[dining.x,0,dining.z],rot:0});a.emit('seat',dining.id);await wait(100);
   assert.strictEqual((await emit(a,'order','soju')).ok,false,'roller menu is cup noodles and cider');
   assert.strictEqual((await emit(a,'order','ramen')).ok,true);await wait(750);
@@ -62,6 +64,13 @@ assert(R.PALETTE.some(([c])=>c===R.colours({skateBoot:'#f5f5f5'}).skateBoot),'le
   assert.strictEqual(observed.jobs[0].kind,'ramen');assert(observed.jobs[0].route2.length>=3,'roller staff uses a clear aisle');
   a.emit('eat','ramen');a.emit('drink','cider');await wait(150);
   assert.strictEqual(observed.eats[0].kind,'ramen');assert.strictEqual(observed.drinks[0].type,'cider');
+  assert.deepStrictEqual(R.MENU,['ramen','tteokbokki','cola','cider']);
+  assert.strictEqual((await emit(a,'order','tteokbokki')).ok,true);await wait(750);
+  assert.strictEqual((await emit(a,'order','cola')).ok,true);
+  const secondDeadline=Date.now()+30000;while(observed.done.filter(d=>d.table==='R1').length<4&&Date.now()<secondDeadline)await wait(100);
+  assert(observed.tables.R1.includes('tteokbokki')&&observed.tables.R1.includes('cola'));
+  a.emit('eat','tteokbokki');a.emit('drink','cola');await wait(150);
+  assert.strictEqual(observed.eats.at(-1).kind,'tteokbokki');assert.strictEqual(observed.drinks.at(-1).type,'cola');
   const sober=await emit(a,'join',{nick:'롤러'+unique,clientId:'roller-'+unique});assert.strictEqual(sober.resume.drinks.length,0,'cider is non-alcoholic');
   a.emit('seat',null);
   // Changing outfits keeps the chosen skate colours and equipped state.
@@ -108,6 +117,9 @@ assert(R.PALETTE.some(([c])=>c===R.colours({skateBoot:'#f5f5f5'}).skateBoot),'le
   const removed=io(U,{forceNew:true});await new Promise(resolve=>removed.on('connect',resolve));
   const unseated=await emit(removed,'join',{nick:'이전의자'+unique,clientId:'removed-bench-'+unique,last:{worldVersion:2,pos:[21.5,.03,40],rollerSkates:true,seat:'RB-2'}});
   assert.strictEqual(unseated.resume.seat,null,'deleted bench seats do not restore');assert.strictEqual(unseated.resume.pos[1],0);removed.close();
+  const moved=io(U,{forceNew:true});await new Promise(resolve=>moved.on('connect',resolve));
+  const relocated=await emit(moved,'join',{nick:'이전테이블'+unique,clientId:'moved-table-'+unique,last:{worldVersion:2,pos:[14.8,.03,32.85],rollerSkates:true,seat:'R1-0'}});
+  const target=R.seats.find(s=>s.id==='R1-0');assert.deepStrictEqual(relocated.resume.pos,[target.x,target.y,target.z],'saved seats follow moved table');moved.close();
   console.log('roller, legacy saves and closed-door admin access OK');
  }finally{a.close();b.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

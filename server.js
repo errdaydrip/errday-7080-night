@@ -108,11 +108,11 @@ setInterval(sweep,15000).unref();
 const chatHist=[];const GRACE_MS=+process.env.GRACE_MS||30000;
 const BZ={x0:10.55,x1:11.4,z0:-1.6,z1:6.75},BAR_Z={};for(let k=0;k<5;k++)BAR_Z['BAR-'+k]=3-3.5+k*1.4;
 const glasses={};const glassPub=()=>{const o={};for(const k in glasses)o[k]=glasses[k].type||'whiskey';return o;};
-const DRINKS=['soju','beer','whiskey','cocktail','cider'];
+const DRINKS=['soju','beer','whiskey','cocktail','cola','cider'];
 const TABLES={Y1:[-7.6,16.4],Y2:[-3,16.4],Y3:[-7.6,20.2],Y4:[-3,20.2],Y5:[2.2,19.6],T1:[-7,-4,2.4],T2:[-7,2,2.4],T3:[-7,7.5,2.4],T4:[4.5,6,2.4],T5:[0,8.5,2.4],T6:[-2.5,3.5,2.4]};for(const t of ROLLER.tables)TABLES[t.id]=[t.x,t.z,1.8];const tables={};for(const k in TABLES)tables[k]={items:[null,null,null,null],t:0};
 const PICK={soju:{x:-0.7,z:21.5,r:1.8},beer:{x:-0.7,z:21.5,r:1.8}};for(const f of ['dakbal','kkom','fish','squid'])PICK[f]={x:0.8,z:16.0,r:2.4};PICK.chicken={x:-11.6,z:20.5,r:2.4};PICK.hoe={x:-11.6,z:15,r:2.4};
 const usesPub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.u:0);return o;};const tablePub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.k:null);return o;};
-const FOODS=['dakbal','kkom','fish','squid','chicken','hoe','fruit','ramen'],MAX_ITEMS=4,USES=6; /* 음식·술 한 개당 6번 */
+const FOODS=['dakbal','kkom','fish','squid','chicken','hoe','fruit','ramen','tteokbokki'],MAX_ITEMS=4,USES=6; /* 음식·술 한 개당 6번 */
 function useItem(tb,kind){const t=tables[tb],i=t.items.findIndex(x=>x&&x.k===kind);if(i<0)return false;if(--t.items[i].u<=0)t.items[i]=null;t.t=Date.now();(io.emit('tableUses',usesPub()),io.emit('table',tablePub()));return true;}
 // 웨이터 리필: 서버가 일을 정하고 모두에게 같은 시각으로 알림 → 모든 화면에서 같은 웨이터가 같은 테이블로 감
 const {refill:wRefill,needs:wNeeds}=require('./waiter');const W_WALK=+process.env.WAITER_WALK_MS||5000,W_PLACE=+process.env.WAITER_PLACE_MS||1500,W_DELAY=process.env.REFILL_DELAY_MS!==undefined?+process.env.REFILL_DELAY_MS:20000;
@@ -269,7 +269,7 @@ io.on('connection',s=>{
   }
   if(ROLLER.inside(rp.pos[0],rp.pos[2])&&!rp.rollerSkates)rp.pos=[ROLLER.ARRIVE.x,0,ROLLER.ARRIVE.z];
   if(!clubOpen&&!isAdmin(s.data.adminToken)&&rp.pos[2]<12){rp.pos=[-3.3,0,14.5];rp.seat=null;}
-  if(typeof rp.seat==='string'&&rp.seat.startsWith('R')&&!ROLLER.seats.some(seat=>seat.id===rp.seat)){rp.seat=null;rp.pos=[Math.max(ROLLER.T.x0+1,Math.min(ROLLER.T.x1-1,rp.pos[0])),0,rp.pos[2]];}
+  if(typeof rp.seat==='string'&&rp.seat.startsWith('R')){const seat=ROLLER.seats.find(seat=>seat.id===rp.seat);if(seat)rp.pos=[seat.x,seat.y,seat.z];else{rp.seat=null;rp.pos=[Math.max(ROLLER.T.x0+1,Math.min(ROLLER.T.x1-1,rp.pos[0])),0,rp.pos[2]];}}
   base.seat=rp.seat;
   Object.assign(base,{pos:rp.pos,rollerSkates:rp.rollerSkates});
   if(prevId)io.emit('rekey',{old:prevId,id:s.id});io.emit('player',{id:s.id,...pub()[s.id]});
@@ -317,7 +317,7 @@ io.on('connection',s=>{
  s.emit('glasses',glassPub());
  s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));s.emit('tickerIdle',tickerIdle);s.emit('boards',boardsPub());s.emit('clubDoor',{open:clubOpen});s.emit('rollerDoor',{open:rollerOpen});if(rankData)s.emit('ranking',rankData);for(const [venue,worker] of Object.entries(albaWorkers))if(worker.job)s.emit(venue==='roller'?'rollerAlbaJob':'albaJob',worker.job);
  s.on('drink',type=>{const pl=players[s.id];if(!pl||!pl.seat||!DRINKS.includes(type))return;if(!canDrink(pl.seat,type))return;const n=Date.now();if(n-(pl.lastDrink||0)<2000)return;pl.lastDrink=n;
-  if(type!=='cider')pl.drinks=(pl.drinks||[]).filter(x=>n-x<1800000).concat(n).slice(-20);
+  if(!['cola','cider'].includes(type))pl.drinks=(pl.drinks||[]).filter(x=>n-x<1800000).concat(n).slice(-20);
   if(BAR_Z[pl.seat]!==undefined){delete glasses[pl.seat];io.emit('glasses',glassPub());}const tb=pochaTable(pl.seat);if(tb)useItem(tb,type);io.emit('drink',{id:s.id,type});});
  s.emit('presets',presets);
  s.on('getTicker',(tok,ack)=>{if(typeof ack==='function')ack(isAdmin(tok)?{ok:true,rankUrl}:{ok:false});});
@@ -410,7 +410,7 @@ io.on('connection',s=>{
   ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];if(!pl)return ack({ok:false,err:'입장 먼저'});
   const tb=pochaTable(pl.seat);if(!tb||!['Y','R'].includes(tb[0]))return ack({ok:false,err:'테이블에 앉아야 주문할 수 있어요'});
   const roller=tb[0]==='R',venue=roller?'roller':'pocha',worker=albaWorkers[venue];
-  const allowed=roller?['ramen','cider']:ORDER_ANJU.concat(ORDER_DRINK);
+  const allowed=roller?ROLLER.MENU:ORDER_ANJU.concat(ORDER_DRINK);
   if(!allowed.includes(kind))return ack({ok:false,err:'없는 메뉴'});
   if(roller&&!ROLLER.near(pl.pos,{x:TABLES[tb][0],z:TABLES[tb][1]},2.2))return ack({ok:false,err:'매점 테이블에 앉아 주세요'});
   const n=Date.now();if(n-(pl.lastOrder||0)<700)return ack({ok:false,err:'천천히 주문해 주세요'});
