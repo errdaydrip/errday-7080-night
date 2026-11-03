@@ -49,7 +49,7 @@ $('enter').onclick=()=>{if(window.enterFullscreenMobile&&!window.AUTO_JOIN)enter
 // 앱(설치 모드)이 백그라운드에서 종료됐다 다시 열려도 이어서: 위치·자리·들고있는 것까지 localStorage 에 (6시간)
 const RESUME_MS=6*3600*1000;
 function lastState(){try{const v=JSON.parse(localStorage.getItem('lastState')||sessionStorage.getItem('lastState')||'null');return v&&Date.now()-v.t<RESUME_MS?v:null;}catch(e){return null;}}
-function saveState(){if(!joined||window.BYE)return;try{const p=rig.object3D.position,m=$('myAvatar');localStorage.setItem('lastState',JSON.stringify({t:Date.now(),worldVersion:4,pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,rollerSkates:!!me.rollerSkates,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
+function saveState(){if(!joined||window.BYE)return;try{const p=rig.object3D.position,m=$('myAvatar');localStorage.setItem('lastState',JSON.stringify({t:Date.now(),worldVersion:5,pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,rollerSkates:!!me.rollerSkates,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
 setInterval(saveState,1000);addEventListener('pagehide',saveState);addEventListener('freeze',saveState);
 // 돌아왔을 때: 소켓 즉시 재연결 + 음악 위치 다시 맞춤
 function wake(){if(!socket.connected)socket.connect();if(joined){setTimeout(()=>{applyMusic(true);},300);}}
@@ -842,3 +842,5 @@ function applyArcadePosition(d){if(window.ARCADE_PLAYING)window.closeArcadeGame(
 function arcadeTravel(direction){if(arcadeTravelPending||window.ARCADE_PLAYING)return;arcadeTravelPending=true;const p=rig.object3D.position;socket.emit('move',{pos:[p.x,p.y,p.z],rot:myYaw});socket.timeout(5000).emit('arcadeTravel',direction,(err,r)=>{arcadeTravelPending=false;if(err||!r?.ok){sys(r?.err||'잠시 후 다시 시도해 주세요');return;}applyArcadePosition(r);});}
 socket.on('arcadePosition',applyArcadePosition);
 socket.on('disconnect',()=>{if(window.ARCADE_PLAYING)window.closeArcadeGame();});
+
+socket.on('arcadeRankings',rankings=>{window.ARCADE_RANKINGS=rankings;window.setArcadeRankings?.(rankings);});

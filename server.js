@@ -63,6 +63,7 @@ const durations={}; // videoId 또는 mp3 id -> 초 (클라이언트가 알려�
 const durOf=t=>t&&(t.dur||durations[t.type==='yt'?t.videoId:t.id]);
 const {clean:cleanText,isBad}=require('./filter');
 const STYLES=['basic','suit','disco','hanbok','aerobic'],HEX=/^#[0-9a-fA-F]{6}$/;const LOOKS=require('./public/looks.js');const look=p=>{const r=LOOKS.resolve(p);return{gender:r.gender,style:r.style,outfit:HEX.test(p.outfit)?p.outfit:'',top:r.top,bottom:r.bottom,acc:r.acc,hair:r.hair,face:r.face,beard:r.beard,...ROLLER.colours(p),skin:HEX.test(p.skin)?p.skin:''};};
+const arcadeScores=require('./arcade-rankings').createRankings(ARCADE.GAMES,cleanText);
 const players={}; // id -> {nick,gender,outfit,skin,style,pos,rot,seat}
 const music={playlist:[],index:-1,playing:false,startedAt:0,pausedAt:0,shuffle:false};
 let played=new Set(); // 랜덤 재생: 이미 튼 곡 id
@@ -81,8 +82,9 @@ app.post('/upload',(req,res,next)=>isAdmin(req.get('x-admin-token'))?next():res.
  music.playlist.push(t); if(music.index<0){music.index=music.playlist.length-1;music.playing=true;music.startedAt=Date.now();}
  broadcastMusic(); res.json(t);
 }));
-function save(){try{fs.mkdirSync(path.dirname(STATE),{recursive:true});fs.writeFileSync(STATE,JSON.stringify({music,durations,played:[...played],presets,tickerUrl,donList,tickerIdle,rankUrl,rankData,boards,clubOpen,rollerOpen}));}catch(e){}}
+function save(){try{fs.mkdirSync(path.dirname(STATE),{recursive:true});fs.writeFileSync(STATE,JSON.stringify({music,durations,played:[...played],presets,tickerUrl,donList,tickerIdle,rankUrl,rankData,boards,clubOpen,rollerOpen,arcadeScores:arcadeScores.export()}));}catch(e){}}
 function load(){try{const j=JSON.parse(fs.readFileSync(STATE,'utf8'));Object.assign(music,j.music);Object.assign(durations,j.durations||{});played=new Set(j.played||[]);if(Array.isArray(j.presets)&&j.presets.length===3)presets=j.presets;if(typeof j.tickerUrl==='string'&&DON.payloadOf(j.tickerUrl))tickerUrl=j.tickerUrl;if(typeof j.rankUrl==='string'&&DON.rankPayload(j.rankUrl))rankUrl=j.rankUrl;if(j.rankData&&Array.isArray(j.rankData.list))rankData=j.rankData;if(j.clubOpen===false)clubOpen=false;if(j.rollerOpen===false)rollerOpen=false;if(j.boards)boards={ticker:j.boards.ticker!==false,rank:j.boards.rank!==false};if(typeof j.tickerIdle==='string')tickerIdle=j.tickerIdle.slice(0,120);if(Array.isArray(j.donList))donList=j.donList.slice(0,10);
+ arcadeScores.restore(j.arcadeScores);
  music.playlist=music.playlist.filter(t=>t.type!=='mp3'||fs.existsSync(path.join(UP,t.id)));if(music.index>=music.playlist.length)music.index=music.playlist.length?0:-1;}catch(e){}}
 load();startRank(); /* 후원 티커 연결은 끔: 일반 LED 전광판으로 바뀜 */
 const DEFAULT_LIST='PL1cIIyrjZ9L3YEUl8DAz_R6uTf2-80wWY';let defLoading=false;
@@ -243,6 +245,7 @@ io.on('connection',s=>{
   if(so){so.emit('kicked',{min:Math.round(BAN_MS/60000)});setTimeout(()=>so.disconnect(true),200);}
   io.emit('leave',id);io.emit('chat',{sys:true,text:pl.nick+' 님이 강퇴되었습니다'});bcOnline();ack({ok:true});});
  s.on('adminList',(tok,ack)=>{if(typeof ack!=='function')return;if(!isAdmin(tok))return ack({ok:false});ack({ok:true,me:s.id,list:Object.entries(players).filter(([,p])=>!p.gone).map(([id,p])=>({id,nick:p.nick}))});});
+ s.emit('arcadeRankings',arcadeScores.publicScores());
  s.emit('init',{id:s.id,players:pub(),music:state()});s.emit('chatHistory',chatHist);
  const touch=()=>{const pl=players[s.id];if(pl)pl.seen=Date.now();};s.onAny(touch);s.conn.on('packet',touch);s.conn.on('heartbeat',touch);
  s.on('adminCleanup',(tok,ack)=>{if(typeof ack!=='function')ack=()=>{};if(!isAdmin(tok))return ack({ok:false,error:'관리자만 가능'});
@@ -275,6 +278,9 @@ io.on('connection',s=>{
   const inFormerApproach=(L?.worldVersion===2||L?.worldVersion===3)&&savedX<-12.35&&savedZ>=12&&savedZ<=18.3;
   if(!cur&&(inFormerHall||inFormerApproach)){
    rp.pos=[-3.3,0,13.4];rp.seat=null;rp.rollerSkates=false;
+  }
+  if(!cur&&L&&(L.worldVersion||0)>=2&&L.worldVersion<5&&rp.pos[0]>-22&&rp.pos[0]<-2.8&&rp.pos[2]>29.7&&rp.pos[2]<55.7&&!ARCADE.inside(rp.pos[0],rp.pos[2])){
+   rp.pos=[ARCADE.ARRIVE.x,0,ARCADE.ARRIVE.z];rp.seat=null;rp.rollerSkates=false;
   }
   if(ROLLER.inside(rp.pos[0],rp.pos[2])&&!rp.rollerSkates)rp.pos=[ROLLER.ARRIVE.x,0,ROLLER.ARRIVE.z];
   if(!clubOpen&&!isAdmin(s.data.adminToken)&&rp.pos[2]<12){rp.pos=[-3.3,0,14.5];rp.seat=null;}
@@ -382,6 +388,36 @@ io.on('connection',s=>{
   }else return ack({ok:false});
   pl.dance=0;pl.rollerMotion='idle';io.emit('player',{id:s.id,...pub()[s.id]});
   ack({ok:true,pos:pl.pos,rollerSkates:pl.rollerSkates});
+ });
+ s.on('arcadeStart', (request, ack) => {
+  if (typeof ack !== 'function') return;
+  const player = players[s.id];
+  const machine = ARCADE.machines.find(item => item.id === request?.machineId);
+  const nearMachine = player && machine && ARCADE.inside(player.pos[0], player.pos[2]) &&
+   Math.hypot(player.pos[0] - machine.spot.x, player.pos[2] - machine.spot.z) < 2.1;
+  if (!nearMachine || player.seat) return ack({ok:false, error:'게임기 앞에서 시작해 주세요'});
+  const token = require('crypto').randomBytes(16).toString('hex');
+  s.data.arcadeSession = {token, game:machine.game, startedAt:Date.now(), clientId:player.cid};
+  ack({ok:true, token});
+ });
+ s.on('arcadeFinish', (request, ack) => {
+  if (typeof ack !== 'function') return;
+  const player = players[s.id];
+  const session = s.data.arcadeSession;
+  if (!player || !session || session.clientId !== player.cid || request?.token !== session.token) {
+   return ack({ok:false, error:'플레이 기록을 확인할 수 없어요'});
+  }
+  const elapsed = Date.now() - session.startedAt;
+  const score = request.score;
+  const limits = {blocks:10000000, shooter:2000000, breaker:2000, racer:1200,
+   hoops:180, reflex:20000, rhythm:25200, ddr:25200, pingpong:7, hockey:7};
+  if (elapsed < 100 || elapsed > 3600000 || !Number.isSafeInteger(score) || score < 0 || score > limits[session.game]) {
+   return ack({ok:false, error:'유효한 점수가 아니에요'});
+  }
+  delete s.data.arcadeSession;
+  const result = arcadeScores.record(session.game, player.cid, player.nick, score);
+  if (result.changed) {save();io.emit('arcadeRankings',arcadeScores.publicScores());}
+  ack({ok:true, rank:result.rank});
  });
  s.on('arcadeTravel',(direction,ack)=>{ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];if(!pl||pl.seat)return ack({ok:false,err:'자리에서 일어나 주세요'});const near=(q,r)=>Math.hypot(pl.pos[0]-q.x,pl.pos[2]-q.z)<r;
   if(direction==='enter'){if(!near(ARCADE.ENTRY,2.5))return ack({ok:false,err:'빨간 자동차 앞 오락실 입구로 와 주세요'});pl.pos=[ARCADE.ARRIVE.x,0,ARCADE.ARRIVE.z];}

@@ -29,5 +29,7 @@ async function restore(version, pos, expected) {
   await restore(3, [-12.2, 0, 15], [-12.2, 0, 15]);
   await restore(3, [-7, 0, 40], [-7, 0, 40]);
   await restore(4, [-3.3, 0, 13.4], entrance);
+  const A = require('../public/arcade');
+  await restore(4, [-19, 0, 40], [A.ARRIVE.x, 0, A.ARRIVE.z]);
   console.log('retired sports saves relocate safely; street and arcade saves preserved');
 })().catch(error => { console.error(error); process.exitCode = 1; });
