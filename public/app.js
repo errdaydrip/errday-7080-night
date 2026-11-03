@@ -49,7 +49,7 @@ $('enter').onclick=()=>{if(window.enterFullscreenMobile&&!window.AUTO_JOIN)enter
 // 앱(설치 모드)이 백그라운드에서 종료됐다 다시 열려도 이어서: 위치·자리·들고있는 것까지 localStorage 에 (6시간)
 const RESUME_MS=6*3600*1000;
 function lastState(){try{const v=JSON.parse(localStorage.getItem('lastState')||sessionStorage.getItem('lastState')||'null');return v&&Date.now()-v.t<RESUME_MS?v:null;}catch(e){return null;}}
-function saveState(){if(!joined||window.BYE)return;try{const p=rig.object3D.position,m=$('myAvatar');localStorage.setItem('lastState',JSON.stringify({t:Date.now(),worldVersion:2,pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,rollerSkates:!!me.rollerSkates,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
+function saveState(){if(!joined||window.BYE)return;try{const p=rig.object3D.position,m=$('myAvatar');localStorage.setItem('lastState',JSON.stringify({t:Date.now(),worldVersion:3,pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,rollerSkates:!!me.rollerSkates,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
 setInterval(saveState,1000);addEventListener('pagehide',saveState);addEventListener('freeze',saveState);
 // 돌아왔을 때: 소켓 즉시 재연결 + 음악 위치 다시 맞춤
 function wake(){if(!socket.connected)socket.connect();if(joined){setTimeout(()=>{applyMusic(true);},300);}}
@@ -185,14 +185,18 @@ function camHit(ox,oy,oz,dr,max,bt){let t=max;const lim=[[dr.y,oy,.25,ROOM.y1-.1
   lim.push([dr.x,ox,ROLLER.T.x0+.35,ROLLER.T.x1-.35],[dr.z,oz,throughDoor?ROLLER.T.z0-6:ROLLER.T.z0+.35,ROLLER.T.z1-.35]);
  }
  if(window.IN_ARCADE){const d=dr.z<0?(ARCADE.DOOR.z-oz)/dr.z:Infinity,through=dr.z<0&&Math.abs(ox+dr.x*d-ARCADE.DOOR.x)<ARCADE.DOOR.half;lim.push([dr.x,ox,ARCADE.T.x0+.3,ARCADE.T.x1-.3],[dr.z,oz,through?ARCADE.T.z0-5:ARCADE.T.z0+.3,ARCADE.T.z1-.3]);}
- if(window.IN_SPORTS){const d=dr.x>0?(SPORTS.DOOR.x-ox)/dr.x:Infinity,through=dr.x>0&&Math.abs(oz+dr.z*d-SPORTS.DOOR.z)<SPORTS.DOOR.half;lim.push([dr.z,oz,SPORTS.T.z0+.3,SPORTS.T.z1-.3],[dr.x,ox,SPORTS.T.x0+.3,through?SPORTS.T.x1+5:SPORTS.T.x1-.3]);}
+ if(window.IN_SPORTS){
+  const d=dr.z>0?(SPORTS.DOOR.z-oz)/dr.z:Infinity;
+  const through=dr.z>0&&Math.abs(ox+dr.x*d-SPORTS.DOOR.x)<SPORTS.DOOR.half;
+  lim.push([dr.x,ox,SPORTS.T.x0+.3,SPORTS.T.x1-.3],[dr.z,oz,SPORTS.T.z0+.3,through?SPORTS.T.z1+5:SPORTS.T.z1-.3]);
+ }
  for(const [v,o,a,b] of lim){if(v>1e-6)t=Math.min(t,(b-o)/v);else if(v<-1e-6)t=Math.min(t,(a-o)/v);}
  const O=[ox,oy,oz],D=[dr.x,dr.y,dr.z];for(const bx of (window.IN_THEATER?CAM_OCC.concat(THEATER.camOcc):CAM_OCC)){if(bx===CAM_OCC[3]||(bt&&bx===CAM_OCC[0]))continue;let t0=0,t1=t,ok=true;for(let i=0;i<3&&ok;i++){const lo=bx[i],hi=bx[i+3];
   if(Math.abs(D[i])<1e-6){if(O[i]<lo||O[i]>hi)ok=false;}else{let a=(lo-O[i])/D[i],b=(hi-O[i])/D[i];if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);if(t0>t1)ok=false;}}
   if(ok&&t0>0)t=Math.min(t,t0);}return t;}
-const clampX=x=>window.IN_SPORTS?Math.max(SPORTS.T.x0+.5,Math.min(SPORTS.T.x1+1.3,x)):window.IN_ARCADE?Math.max(ARCADE.T.x0+.5,Math.min(ARCADE.T.x1-.5,x)):window.IN_ROLLER?Math.max(ROLLER.T.x0+.5,Math.min(ROLLER.T.x1-.5,x)):Math.max(window.OUTSIDE?(Math.abs(rig.object3D.position.z-SPORTS.DOOR.z)<2?SPORTS.T.x1-.5:-12.35):BOUND.x0,Math.min(window.OUTSIDE?THEATER.T.x1-.45:BOUND.x1,x)),clampZ=z=>window.IN_SPORTS?Math.max(SPORTS.T.z0+.5,Math.min(SPORTS.T.z1-.5,z)):window.IN_ARCADE?Math.max(ARCADE.T.z0-1,Math.min(ARCADE.T.z1-.5,z)):window.IN_ROLLER?Math.max(ROLLER.T.z0-1,Math.min(ROLLER.T.z1-.5,z)):Math.max(BOUND.z0,Math.min(BOUND.z1,z));
+const clampX=x=>window.IN_SPORTS?Math.max(SPORTS.T.x0+.5,Math.min(SPORTS.T.x1-.35,x)):window.IN_ARCADE?Math.max(ARCADE.T.x0+.5,Math.min(ARCADE.T.x1-.5,x)):window.IN_ROLLER?Math.max(ROLLER.T.x0+.5,Math.min(ROLLER.T.x1-.5,x)):Math.max(window.OUTSIDE?(SPORTS.onPromenade(SPORTS.ENTRY.x,rig.object3D.position.z)?SPORTS.T.x0+.35:-12.35):BOUND.x0,Math.min(window.OUTSIDE?THEATER.T.x1-.45:BOUND.x1,x)),clampZ=z=>window.IN_SPORTS?Math.max(SPORTS.T.z0+.5,Math.min(SPORTS.T.z1+1.4,z)):window.IN_ARCADE?Math.max(ARCADE.T.z0-1,Math.min(ARCADE.T.z1-.5,z)):window.IN_ROLLER?Math.max(ROLLER.T.z0-1,Math.min(ROLLER.T.z1-.5,z)):Math.max(BOUND.z0,Math.min(BOUND.z1,z));
 function blocked(x,z,ignoreSeatTable){
- if(!SPORTS.inside(x,z)&&x<-12.35&&z<29.7&&!(x>SPORTS.T.x1-.3&&Math.abs(z-SPORTS.DOOR.z)<1.8))return true;
+ if(!SPORTS.inside(x,z)&&x<-12.35&&z<29.7&&!SPORTS.onPromenade(x,z))return true;
  if(z>ROLLER.T.z0&&!ROLLER.inside(x,z)&&!ARCADE.inside(x,z))return true;
  if(!window.IN_ROLLER&&ROLLER.inside(x,z)&&!window.ROLLER_OPEN&&!adminAccess)return true;
  if(window.IN_ROLLER&&!me.rollerSkates)return true;const p0=rig.object3D.position;if(heightAt(x,z)-Math.max(p0.y,heightAt(p0.x,p0.z))>.2)return true;for(const o of OBSTACLES){if(o.r!==undefined){if(ignoreSeatTable&&Math.hypot(o.x-ignoreSeatTable.x,o.z-ignoreSeatTable.z)<.01)continue;if(Math.hypot(x-o.x,z-o.z)<o.r+.25)return true;}
@@ -322,7 +326,7 @@ window.serve=serve;window.drink=drink;
 function nearestSportsFacility(){const p=rig.object3D.position;return SPORTS.facilities.filter(m=>Math.hypot(m.spot.x-p.x,m.spot.z-p.z)<2.1).sort((a,b)=>Math.hypot(a.spot.x-p.x,a.spot.z-p.z)-Math.hypot(b.spot.x-p.x,b.spot.z-p.z))[0];}
 function nearestArcadeMachine(){const p=rig.object3D.position;return ARCADE.machines.filter(m=>Math.hypot(m.spot.x-p.x,m.spot.z-p.z)<2.1).sort((a,b)=>Math.hypot(a.spot.x-p.x,a.spot.z-p.z)-Math.hypot(b.spot.x-p.x,b.spot.z-p.z))[0];}
 function actions(){const A=[];
- if(window.IN_SPORTS){if(window.ARCADE_PLAYING)return A;const m=nearestSportsFacility();if(m)A.push(['🏅 '+SPORTS.GAMES[m.game].name+' 플레이'+(IS_MOBILE?'':' · E'),()=>window.openSportsGame(m.id),'sports-play']);if(near(SPORTS.ARRIVE,3))A.push(['🚪 거리로 나가기',()=>sportsTravel('exit'),'sports-exit']);const p=rig.object3D.position;if(SPORTS.vacancies.some(v=>Math.hypot(p.x+24.7,p.z-v.z)<2))A.push(['🔜 추가 스포츠 시설 오픈 예정',null,'lbl']);return A;}
+ if(window.IN_SPORTS){if(window.ARCADE_PLAYING)return A;const m=nearestSportsFacility();if(m)A.push(['🏅 '+SPORTS.GAMES[m.game].name+' 플레이'+(IS_MOBILE?'':' · E'),()=>window.openSportsGame(m.id),'sports-play']);if(near(SPORTS.ARRIVE,3))A.push(['🚪 거리로 나가기',()=>sportsTravel('exit'),'sports-exit']);const p=rig.object3D.position;if(SPORTS.vacancies.some(v=>Math.hypot(p.x-(v.x-3.7),p.z-v.z)<2))A.push(['🔜 추가 스포츠 시설 오픈 예정',null,'lbl']);return A;}
  if(!mySeat&&near(SPORTS.ENTRY,2.5))A.push(['🏟 스포츠센터 입장',()=>sportsTravel('enter'),'sports-enter']);
  if(window.IN_ARCADE){if(window.ARCADE_PLAYING)return A;const m=nearestArcadeMachine();if(m)A.push(['🎮 '+ARCADE.GAMES[m.game].name+' 플레이'+(IS_MOBILE?'':' · E'),()=>window.openArcadeGame(m.id),'arcade-play']);if(near(ARCADE.ARRIVE,3))A.push(['🚪 거리로 나가기',()=>arcadeTravel('exit'),'arcade-exit']);return A;}
  if(!mySeat&&near(ARCADE.ENTRY,2.5))A.push(['🎮 오락실 입장',()=>arcadeTravel('enter'),'arcade-enter']);
@@ -856,6 +860,6 @@ socket.on('arcadePosition',applyArcadePosition);
 socket.on('disconnect',()=>{if(window.ARCADE_PLAYING)window.closeArcadeGame();});
 
 let sportsTravelPending=false;
-function applySportsPosition(d){if(window.ARCADE_PLAYING)window.closeArcadeGame();applyRollerPosition(d);window.IN_SPORTS=SPORTS.inside(d.pos[0],d.pos[2]);camYaw=window.IN_SPORTS?Math.PI/2:-Math.PI/2;camPitch=.4;updateWhere();applyVolume();}
+function applySportsPosition(d){if(window.ARCADE_PLAYING)window.closeArcadeGame();applyRollerPosition(d);window.IN_SPORTS=SPORTS.inside(d.pos[0],d.pos[2]);camYaw=window.IN_SPORTS?0:Math.PI;camPitch=.4;updateWhere();applyVolume();}
 function sportsTravel(direction){if(sportsTravelPending||window.ARCADE_PLAYING)return;sportsTravelPending=true;const p=rig.object3D.position;socket.emit('move',{pos:[p.x,p.y,p.z],rot:myYaw});socket.timeout(5000).emit('sportsTravel',direction,(err,r)=>{sportsTravelPending=false;if(err||!r?.ok){sys(r?.err||'잠시 후 다시 시도해 주세요');return;}applySportsPosition(r);});}
 socket.on('sportsPosition',applySportsPosition);

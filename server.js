@@ -264,8 +264,13 @@ io.on('connection',s=>{
    :{pos:[0,0,4],rot:0,seat:null,carry:null,drinks:[]};
   const re=!!cur;players[s.id]={...(cur||{}),seen:Date.now(),joinedAt:Date.now(),cid,nick,...look(p),...base};
   const rp=players[s.id];rp.rollerSkates=ROLLER.inside(rp.pos[0],rp.pos[2])&&!!base.rollerSkates;
-  if(!cur&&L&&L.worldVersion!==2&&rp.pos[0]>-12&&rp.pos[0]<12&&rp.pos[2]>48&&rp.pos[2]<70){
+  if(!cur&&L&&(L.worldVersion||0)<2&&rp.pos[0]>-12&&rp.pos[0]<12&&rp.pos[2]>48&&rp.pos[2]<70){
    rp.pos=[rp.pos[0]+ROLLER.OFFSET.x,rp.pos[1],rp.pos[2]+ROLLER.OFFSET.z];rp.rollerSkates=!!base.rollerSkates;
+  }
+  // A guest saved in the previous sports hall resumes at the same facility.
+  if(!cur&&L&&L.worldVersion===2&&rp.pos[0]>-36&&rp.pos[0]<-18&&rp.pos[2]>-16&&rp.pos[2]<22){
+   const x=rp.pos[0]+5.5,z=rp.pos[2]-10;
+   rp.pos=SPORTS.walkable(x,z)?[x,0,z]:[SPORTS.ARRIVE.x,0,SPORTS.ARRIVE.z];
   }
   if(ROLLER.inside(rp.pos[0],rp.pos[2])&&!rp.rollerSkates)rp.pos=[ROLLER.ARRIVE.x,0,ROLLER.ARRIVE.z];
   if(!clubOpen&&!isAdmin(s.data.adminToken)&&rp.pos[2]<12&&!SPORTS.inside(rp.pos[0],rp.pos[2])){rp.pos=[-3.3,0,14.5];rp.seat=null;}
@@ -304,7 +309,7 @@ io.on('connection',s=>{
   const wasArcade=ARCADE.inside(pl.pos[0],pl.pos[2]),willArcade=ARCADE.inside(m.pos[0],m.pos[2]);
   if(wasArcade!==willArcade){const d=ARCADE.DOOR,through=Math.abs(m.pos[0]-d.x)<d.half-.2&&Math.abs(m.pos[2]-d.z)<1.2&&Math.hypot(pl.pos[0]-d.x,pl.pos[2]-d.z)<3.5;if(!through){s.emit('arcadePosition',{pos:pl.pos,rollerSkates:!!pl.rollerSkates});return;}}
   const wasSports=SPORTS.inside(pl.pos[0],pl.pos[2]),willSports=SPORTS.inside(m.pos[0],m.pos[2]);
-  if(wasSports!==willSports){const d=SPORTS.DOOR,through=Math.abs(m.pos[2]-d.z)<d.half-.2&&Math.abs(m.pos[0]-d.x)<1.4&&Math.hypot(pl.pos[0]-d.x,pl.pos[2]-d.z)<3.5;if(!through){s.emit('sportsPosition',{pos:pl.pos,rollerSkates:!!pl.rollerSkates});return;}}
+  if(wasSports!==willSports){const d=SPORTS.DOOR,through=Math.abs(m.pos[0]-d.x)<d.half-.2&&Math.abs(m.pos[2]-d.z)<1.4&&Math.hypot(pl.pos[0]-d.x,pl.pos[2]-d.z)<3.5;if(!through){s.emit('sportsPosition',{pos:pl.pos,rollerSkates:!!pl.rollerSkates});return;}}
   pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);
  });
  s.on('seat',seat=>{
