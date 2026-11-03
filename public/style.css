@@ -155,7 +155,7 @@ body:has(#poolUI) #keyHint,body:has(#poolUI) #runBtn,body:has(#poolUI) #jumpBtn,
 
 @media (max-width:700px),(pointer:coarse){#actBar{flex-direction:column!important;flex-wrap:nowrap!important;align-items:flex-end;max-height:55vh;overflow:visible}}
 
-#onlineCnt{text-decoration:underline dotted;padding:2px 4px}
+#onlineCnt{text-decoration:none;display:inline-block;margin-left:8px;padding:1px 9px;border-radius:999px;background:rgba(255,216,74,.18);border:1px solid #ffd84a;color:#ffd84a;font-size:13px;line-height:1.5;white-space:nowrap;vertical-align:middle}
 #userList{position:absolute;left:8px;bottom:calc(100% + 6px);width:220px;max-height:260px;overflow:auto;background:#14051c;border:2px solid #ffd84a;border-radius:10px;z-index:40;color:#fff;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.6)}
 #userList .ulh{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #4a2a5a;font-weight:800;color:#ffd84a;position:sticky;top:0;background:#14051c}
 #userList .ulh button{background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:2px 6px}#userList .ulb{padding:6px 10px;line-height:1.6}
@@ -174,3 +174,14 @@ body:has(#poolUI) #keyHint,body:has(#poolUI) #runBtn,body:has(#poolUI) #jumpBtn,
 @media (max-width:700px){#poolHud{font-size:12px;top:36px;padding:4px 8px}}
 #poolWin .w{color:#ffd84a;font-weight:800}
 #poolSpin{position:absolute;right:10px;bottom:110px;z-index:6;text-align:center;color:#fff;font-size:12px;background:rgba(10,4,16,.8);border:2px solid #3cd8ff;border-radius:10px;padding:4px}#poolSpin canvas{width:84px;height:84px;touch-action:none;display:block;cursor:crosshair}@media (max-width:700px){#poolSpin{bottom:96px;right:6px}#poolSpin canvas{width:64px;height:64px}}
+/* 당구 화면 배치: 위쪽 띠(점수판 왼쪽, 당점 오른쪽) 아래에 테이블 */
+#poolUI{justify-content:flex-start!important;padding-top:178px!important;gap:8px}
+#poolHud{top:8px!important;left:8px!important;max-width:calc(100% - 190px)!important}
+#poolSpin{top:8px!important;right:8px!important;bottom:auto!important;padding:6px!important}#poolSpin canvas{width:140px!important;height:140px!important}#poolSpin div{font-size:13px}
+#poolCv{width:min(96vw,calc((100vh - 345px)*1.818))!important;max-height:none!important}
+#poolUI .pbw{width:min(96vw,calc((100vh - 345px)*1.818),900px)!important}
+#poolBar span{font-size:13px!important;white-space:nowrap;overflow:hidden}
+#poolUI .pbtn{flex-wrap:wrap;justify-content:center;gap:8px;max-width:96vw}#poolUI .pbtn button{white-space:nowrap;padding:8px 12px;font-size:14px}
+#poolRules{top:50%!important;right:auto!important;left:50%!important;transform:translate(-50%,-50%);z-index:20!important;max-width:min(360px,90vw)!important}
+@media (max-width:700px){#poolUI{padding-top:150px!important}#poolSpin canvas{width:118px!important;height:118px!important}#poolHud{max-width:calc(100% - 160px)!important}#poolUI .pbtn button{font-size:13px;padding:7px 10px}#poolCv{width:96vw!important}#poolUI .pbw{width:96vw!important}}
+#poolHud .grp{margin-top:4px;border-top:1px solid #553;padding-top:4px}#poolHud .mb{display:inline-block;width:17px;height:17px;border-radius:50%;background:var(--c);color:#fff;font-size:10px;line-height:17px;text-align:center;margin:0 1px;font-weight:800;text-shadow:0 0 2px #000}#poolHud .mb.st{background:radial-gradient(circle,var(--c) 45%,#fff 47%)}#poolHud .e8{color:#ff5a5a}#poolHud .op{color:#ccc;font-size:12px}

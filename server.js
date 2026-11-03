@@ -150,8 +150,8 @@ const dartTopR=R=>dartRecs.flat().filter(r=>r.rounds===R).sort((p,q)=>q.score-p.
 const dartEmit=(b,extra)=>io.emit('dartState',{b,g:DG.pub(dartGames[b]),recs:dartRecs[b],top:dartTop(),...(extra||{})});
 /* 🎱 당구: 서버가 물리 계산(결정적) → 모두에게 샷(각도·세기·결과) 보내 같은 장면 재생 */
 const POOL=require('./public/pool.js');const poolMax=()=>pool.kind==='carom'?2:4;const POOL_POS=[[-9,-7.6],[-9,-10.4]],CAROM_GOAL=+(process.env.CAROM_GOAL||10);const pools=['pool','carom'].map(kind=>({kind,balls:kind==='carom'?POOL.rackCarom():POOL.rack(),players:[],turn:0,groups:{},scores:{},queue:[],forfeits:[],shots:0,votes:{},deadline:0,busy:0,msg:'',over:null,t:Date.now()}));let pool=pools[0];const useT=t=>{t=t===1?1:0;pool=pools[t];return t;};
-const poolPub=()=>({t:pools.indexOf(pool),kind:pool.kind,mode:pool.mode||'4',max:poolMax(),goal:CAROM_GOAL,balls:pool.balls,players:pool.players.map(p=>({id:p.id,nick:p.nick})),turn:pool.turn,scores:pool.scores,queue:pool.queue.map(q=>({id:q.id,nick:q.nick})),shots:pool.shots,forfeits:pool.forfeits,votes:Object.keys(pool.votes),left:pool.deadline?Math.max(0,pool.deadline-Date.now()):0,msg:pool.msg,over:pool.over});
-function poolReset(keep){pool.balls=pool.kind==='carom'?POOL.rackCarom(pool.mode):POOL.rack();pool.turn=0;pool.scores={};pool.forfeits=[];pool.shots=0;pool.votes={};pool.deadline=Date.now()+POOL_TURN;pool.msg='';pool.over=null;if(!keep)pool.players=[];}
+const poolPub=()=>({t:pools.indexOf(pool),kind:pool.kind,mode:pool.mode||(pool.kind==='carom'?'4':'8'),max:poolMax(),goal:CAROM_GOAL,balls:pool.balls,players:pool.players.map(p=>({id:p.id,nick:p.nick})),turn:pool.turn,scores:pool.scores,groups:pool.groups,queue:pool.queue.map(q=>({id:q.id,nick:q.nick})),shots:pool.shots,forfeits:pool.forfeits,votes:Object.keys(pool.votes),left:pool.deadline?Math.max(0,pool.deadline-Date.now()):0,msg:pool.msg,over:pool.over});
+function poolReset(keep){pool.balls=pool.kind==='carom'?POOL.rackCarom(pool.mode):POOL.rack();pool.turn=0;pool.scores={};pool.groups={};pool.forfeits=[];pool.shots=0;pool.votes={};pool.deadline=Date.now()+POOL_TURN;pool.msg='';pool.over=null;if(!keep)pool.players=[];}
 function poolLeave(id){let any=false;for(const P of pools){pool=P;if(poolLeave1(id)){any=true;io.emit('poolState',poolPub());}}return false&&any;}
 function poolLeave1(id){const qi=pool.queue.findIndex(p=>p.id===id);if(qi>=0)pool.queue.splice(qi,1);const i=pool.players.findIndex(p=>p.id===id);if(i<0)return qi>=0;const lf=pool.players[i];if(!pool.over)pool.forfeits.push({nick:lf.nick,score:pool.scores[lf.id]||0});pool.players.splice(i,1);if(pool.players.length<2){const o=pool.players[0];if(o&&!pool.over){pool.over={win:o.nick,forfeit:lf.nick};pool.deadline=0;pool.msg=`🏳 ${lf.nick} 기권패 · 🏆 ${o.nick} 우승`;io.emit('poolWin',poolPub());const P0=pool;setTimeout(()=>{pool=P0;if(pool.over&&pool.over.forfeit===lf.nick){poolNext(pool.players.slice());io.emit('poolState',poolPub());}},6000);}else if(!o)poolNext([]);}else{if(pool.turn>i)pool.turn--;pool.turn%=pool.players.length;pool.deadline=Date.now()+POOL_TURN;delete pool.votes[lf.id];pool.msg=`🏳 ${lf.nick} 기권패 · 차례: ${pool.players[pool.turn].nick}`;}return true;}
 const poolInv={},POOL_TURN=+(process.env.POOL_TURN_MS||15000);
@@ -166,7 +166,33 @@ function caromShot(id,a,p,sx,sy){const pl=pool.players[pool.turn];if(!pl||pl.id!
  pool.balls=r.balls;if(!keep&&!over)pool.turn=(pool.turn+1)%pool.players.length;if(!over&&!keep)msg=(msg?msg+' · ':'')+`다음: ${pool.players[pool.turn].nick}`;
  pool.msg=msg;pool.over=over;pool.shots++;pool.t=Date.now();pool.busy=Date.now()+r.steps/240*1000+300;pool.deadline=over?0:pool.busy+POOL_TURN;
  return{ok:true,shot:{by:id,nick:pl.nick,a,p,before,cue,carom:true,sx,sy},msg,over};}
-function poolShot(id,a,p,sx,sy){sx=Math.max(-1,Math.min(1,+sx||0));sy=Math.max(-1,Math.min(1,+sy||0));if(pool.kind==='carom')return caromShot(id,a,p,sx,sy);const pl=pool.players[pool.turn];if(!pl||pl.id!==id)return{ok:false,err:'내 차례가 아니에요'};if(pool.over)return{ok:false,err:'게임 끝'};if(Date.now()<pool.busy)return{ok:false,err:'공이 아직 움직여요'};
+function eightShot(id,a,p,sx,sy){const pl=pool.players[pool.turn];if(!pl||pl.id!==id)return{ok:false,err:'내 차례가 아니에요'};if(pool.over)return{ok:false,err:'게임 끝'};if(Date.now()<pool.busy)return{ok:false,err:'공이 아직 움직여요'};
+ a=+a;p=+p;if(!Number.isFinite(a)||!Number.isFinite(p))return{ok:false};p=Math.max(.05,Math.min(1,p));const before=POOL.clone(pool.balls);const r=POOL.simulate(before,a,p,{sx,sy});
+ const team=i=>i%2,T=team(pool.turn),G=pool.groups;const pk=r.pocketed,scratch=pk.includes(0),eight=pk.includes(8),objs=pk.filter(n=>n!==0&&n!==8);
+ const names=t=>pool.players.filter((q,i)=>team(i)===t).map(q=>q.nick).join(', ');const left=g=>r.balls.filter(o=>!o.in&&POOL.kind(o.n)===g).length;
+ if(G[T]===undefined&&objs.length&&!scratch&&pool.shots>0){const g=POOL.kind(objs[0]);G[T]=g;G[1-T]=g==='solid'?'stripe':'solid';}
+ const mine=G[T];const own=objs.filter(n=>mine?POOL.kind(n)===mine:true);for(const q of pool.players)pool.scores[q.id]=pool.scores[q.id]||0;pool.scores[id]+=own.length;
+ let keep=!scratch&&own.length>0,msg='',over=null;const gname=g=>g==='solid'?'솔리드(1~7)':'스트라이프(9~15)';
+ if(eight){const cleared=mine&&left(mine)===0&&!scratch;if(cleared){over={win:names(T)};msg=`🎱 8번 마무리! 🏆 ${over.win} 우승`;}else{over={win:names(1-T)||'없음'};msg=`💥 ${pl.nick} 8번 공 먼저 넣음 → 패배 · 🏆 ${over.win} 우승`;}}
+ else if(scratch)msg='⚠️ 흰 공 빠짐! 다시 놓고 차례 넘김';else if(own.length)msg=`👍 ${pl.nick} ${own.length}개 넣음 · 한 번 더!`;
+ if(!over&&G[T]&&objs.length&&own.length===objs.length&&!msg.includes('내 공'))msg+=` (내 공: ${gname(G[T])})`;
+ pool.balls=r.balls;if(scratch&&!over)POOL.spotCue(pool.balls);if(!keep&&!over)pool.turn=(pool.turn+1)%pool.players.length;
+ if(!over&&!keep&&!scratch)msg=(msg?msg+' · ':'')+`다음: ${pool.players[pool.turn].nick}`;
+ pool.msg=msg;pool.over=over;pool.shots++;pool.t=Date.now();pool.busy=Date.now()+r.steps/240*1000+300;pool.deadline=over?0:pool.busy+POOL_TURN;
+ return{ok:true,shot:{by:id,nick:pl.nick,a,p,before,sx,sy},msg,over};}
+const STRAIGHT_GOAL=+(process.env.STRAIGHT_GOAL||8);
+function straightShot(id,a,p,sx,sy){const pl=pool.players[pool.turn];if(!pl||pl.id!==id)return{ok:false,err:'내 차례가 아니에요'};if(pool.over)return{ok:false,err:'게임 끝'};if(Date.now()<pool.busy)return{ok:false,err:'공이 아직 움직여요'};
+ a=+a;p=+p;if(!Number.isFinite(a)||!Number.isFinite(p))return{ok:false};p=Math.max(.05,Math.min(1,p));const before=POOL.clone(pool.balls);const r=POOL.simulate(before,a,p,{sx,sy});
+ const pk=r.pocketed,scratch=pk.includes(0),objs=pk.filter(n=>n!==0),foul=scratch||r.firstHit===null;const sc=pool.scores;let keep=false,msg='',over=null;
+ if(foul){sc[id]=Math.max(0,(sc[id]||0)-1);msg=`❌ ${pl.nick} 파울 (${scratch?'흰 공 빠짐':'아무 공도 못 맞힘'}) -1`;}
+ else if(objs.length){sc[id]=(sc[id]||0)+objs.length;keep=true;msg=`👍 ${pl.nick} +${objs.length} (${sc[id]}점) · 한 번 더!`;}
+ pool.balls=r.balls;if(scratch)POOL.spotCue(pool.balls);const left=pool.balls.filter(o=>!o.in&&o.n!==0).length;
+ if((sc[id]||0)>=STRAIGHT_GOAL){over={win:pl.nick};msg=`🏆 ${pl.nick} ${STRAIGHT_GOAL}점 달성! 우승`;}
+ else if(!left){const best=Math.max(...pool.players.map(q=>sc[q.id]||0));over={win:pool.players.filter(q=>(sc[q.id]||0)===best).map(q=>q.nick).join(', ')};msg=`공이 다 들어감 · 🏆 ${over.win} 우승 (${best}점)`;}
+ if(!keep&&!over)pool.turn=(pool.turn+1)%pool.players.length;if(!over&&!keep)msg=(msg?msg+' · ':'')+`다음: ${pool.players[pool.turn].nick}`;
+ pool.msg=msg;pool.over=over;pool.shots++;pool.t=Date.now();pool.busy=Date.now()+r.steps/240*1000+300;pool.deadline=over?0:pool.busy+POOL_TURN;
+ return{ok:true,shot:{by:id,nick:pl.nick,a,p,before,sx,sy},msg,over};}
+function poolShot(id,a,p,sx,sy){sx=Math.max(-1,Math.min(1,+sx||0));sy=Math.max(-1,Math.min(1,+sy||0));if(pool.kind==='carom')return caromShot(id,a,p,sx,sy);if(pool.mode==='s')return straightShot(id,a,p,sx,sy);return eightShot(id,a,p,sx,sy);const pl=pool.players[pool.turn];if(!pl||pl.id!==id)return{ok:false,err:'내 차례가 아니에요'};if(pool.over)return{ok:false,err:'게임 끝'};if(Date.now()<pool.busy)return{ok:false,err:'공이 아직 움직여요'};
  a=+a;p=+p;if(!Number.isFinite(a)||!Number.isFinite(p))return{ok:false};p=Math.max(.05,Math.min(1,p));const before=POOL.clone(pool.balls);const r=POOL.simulate(before,a,p,{sx,sy});
  const pk=r.pocketed,scratch=pk.includes(0),eight=pk.includes(8),objs=pk.filter(n=>n!==0&&n!==8);pool.scores[id]=(pool.scores[id]||0)+objs.length;
  let keep=!scratch&&objs.length>0,msg='',over=null;
@@ -235,7 +261,7 @@ io.on('connection',s=>{
  s.on('poolChallenge',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};const T=useT(d&&d.t),me=players[s.id],to=d&&d.to,tp=players[to];if(!me)return ack({ok:false});
   const inT=pool.players.some(p=>p.id===s.id);if(pool.players.length&&!inT)return ack({ok:false,err:'게임 중이에요 — 대기열에 들어가세요'});if(inT&&pool.shots>0)return ack({ok:false,err:'게임이 이미 시작됐어요 — 다음 게임에 함께'});if(pool.players.length>=poolMax())return ack({ok:false,err:`만석 (${poolMax()}명)`});if(!inT&&pools.some(P=>P.players.some(p=>p.id===s.id)))return ack({ok:false,err:'다른 테이블에서 치는 중이에요'});if(!tp||to===s.id)return ack({ok:false,err:'상대가 없어요'});if(pools.some(P=>P.players.some(p=>p.id===to)))return ack({ok:false,err:'상대가 이미 치는 중이에요'});{const q=tp.pos||[0,0,0],dd=POOL_POS.map(TP=>Math.hypot(q[0]-TP[0],q[2]-TP[1]));if(dd[T]>3||dd.some((v,i)=>i!==T&&v<dd[T]))return ack({ok:false,err:'당구대 근처에 있는 사람만 신청할 수 있어요'});}if(poolInv[to])return ack({ok:false,err:'상대가 다른 신청을 받는 중'});
   const tm=setTimeout(()=>{if(poolInv[to]&&poolInv[to].from===s.id){delete poolInv[to];s.emit('poolChallengeResult',{ok:false,msg:`${tp.nick}님이 응답하지 않았어요 (시간 초과)`});io.to(to).emit('poolInviteGone');}},20000);
-  const MODE=pool.kind==='carom'?(d.mode==='3'?'3':'4'):null;poolInv[to]={from:s.id,tm,T,MODE};io.to(to).emit('poolInvite',{from:s.id,nick:me.nick,sec:20,t:T,mode:MODE,kind:pool.kind});ack({ok:true});});
+  const MODE=pool.kind==='carom'?(d.mode==='3'?'3':'4'):(d.mode==='s'?'s':'8');poolInv[to]={from:s.id,tm,T,MODE};io.to(to).emit('poolInvite',{from:s.id,nick:me.nick,sec:20,t:T,mode:MODE,kind:pool.kind});ack({ok:true});});
  s.on('poolAnswer',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};const inv=poolInv[s.id];if(!inv||!d||inv.from!==d.from)return ack({ok:false,err:'신청이 만료됐어요'});clearTimeout(inv.tm);delete poolInv[s.id];useT(inv.T);
   const ch=players[inv.from],me=players[s.id];if(!ch||!me)return ack({ok:false,err:'상대가 나갔어요'});
   if(!d.accept){io.to(inv.from).emit('poolChallengeResult',{ok:false,msg:`${me.nick}님이 같이 치기 신청을 거절했어요`});return ack({ok:true});}
