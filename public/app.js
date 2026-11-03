@@ -5,8 +5,12 @@ const COLORS=['#2b3352','#9a9cc0','#2a3f9e','#2fb8b0','#2f8f45','#e2525c','#c810
 const JOINT={basic:'#2f7bff',suit:'#1a1a1a',disco:'#ffd700',hanbok:'#ffffff',aerobic:'#ff2fa6'};
 let me={nick:'',gender:'m',style:'suit',outfit:'#2b3352',skin:'#f2c29a'},myId=null,joined=false,mySeat=null,adminToken=sessionStorage.getItem('adminToken');
 try{Object.assign(me,JSON.parse(localStorage.getItem('profile')||'{}'));}catch(e){}delete me.hat;if(!['basic','suit','disco','hanbok','aerobic'].includes(me.style))me.style='suit';
+me.rollerSkates=false;Object.assign(me,ROLLER.colours(me));
+let rollerSelectOpen=false,rollerOriginal=null,rollerTravelPending=false,lastRollerMotion='';
+window.ROLLER_OPEN=true;window.IN_ROLLER=false;
+const SKATE_ANIMATION={idle:'Idle_Loop',skate:'Skate_Loop',run:'Skate_Run',jump:'Skate_Jump'};
 const others={};const scene=document.querySelector('a-scene');
-const humanOpts=p=>({...LOOKS.resolve(p),outfit:p.outfit||null,skin:p.skin||'#f2c29a',gender:p.gender==='f'?'f':'m',style:['basic','suit','disco','hanbok','aerobic'].includes(p.style)?p.style:'suit'});
+const humanOpts=p=>({...LOOKS.resolve(p),...ROLLER.colours(p),rollerSkates:!!p.rollerSkates,outfit:p.outfit||null,skin:p.skin||'#f2c29a',gender:p.gender==='f'?'f':'m',style:['basic','suit','disco','hanbok','aerobic'].includes(p.style)?p.style:'suit'});
 const SKINS=['#f2c29a','#ffdcc0','#d9a074','#a8724a'];
 const STYLE_NAMES={m:{basic:'기본',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'},f:{basic:'기본',suit:'정장',disco:'디스코',hanbok:'한복',aerobic:'에어로빅'}};
 // 모바일 성능: 픽셀 비율 낮추기
@@ -29,21 +33,21 @@ let pv=null;function initPreview(){const cv=$('preview');const r=new THREE.WebGL
  const sc=new THREE.Scene();sc.add(new THREE.AmbientLight('#fff',1.4));const dl=new THREE.DirectionalLight('#fff',1.6);dl.position.set(1,2,3);sc.add(dl);
  const cm=new THREE.PerspectiveCamera(30,(cv.clientWidth||150)/(cv.clientHeight||162),.1,20);cm.position.set(0,.85,3.6);cm.lookAt(0,.75,0);pv={r,sc,cm,c:null,t:0};
  (function loop(){requestAnimationFrame(loop);if($('entry').classList.contains('hidden')||!pv.c)return;pv.t+=1/60;pv.c.root.rotation.y=Math.sin(pv.t*.8)*.6;animateChibi(pv.c,'idle',pv.t,{});r.render(sc,cm);})();}
-function updatePreview(){if(!pv)initPreview();if(pv.c)pv.sc.remove(pv.c.root);pv.c=makeChibi(humanOpts(me));pv.sc.add(pv.c.root);}
-function syncOpts(){fillLook();renderHairs();$('nick').value=me.nick;document.querySelectorAll('#swTop .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.top));document.querySelectorAll('#swBot .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.bottom));document.querySelectorAll('.opt.a').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.acc));document.querySelectorAll('.opt.g').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.gender));renderStyles();
+function updatePreview(){if(!pv)initPreview();if(pv.c)pv.sc.remove(pv.c.root);pv.c=makeChibi(humanOpts({...me,rollerSkates:rollerSelectOpen||me.rollerSkates}));pv.sc.add(pv.c.root);}
+function syncOpts(){for(const k of ['skateBoot','skateWheel','skateLace'])$(k).value=me[k];fillLook();renderHairs();$('nick').value=me.nick;document.querySelectorAll('#swTop .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.top));document.querySelectorAll('#swBot .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.bottom));document.querySelectorAll('.opt.a').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.acc));document.querySelectorAll('.opt.g').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.gender));renderStyles();
  document.querySelectorAll('#skins .swatch').forEach(b=>b.classList.toggle('sel',b.dataset.v===me.skin));updatePreview();}
 syncOpts();
 $('entry').addEventListener('click',e=>{const b=e.target;const resetCol=()=>{const d=LOOKS.DEF[me.gender==='f'?'f':'m'][me.style];me.top=d[0];me.bottom=d[1];delete me.outfit;};
  if(b.classList.contains('g')){const rb=()=>LOOKS.BEARDS[Math.floor(Math.random()*LOOKS.BEARDS.length)];if(me.gender===b.dataset.v){me.face=((+me.face||0)+1)%LOOKS.FACES;} /* 같은 성별 버튼 다시 누르면 다음 얼굴 */else{me.gender=b.dataset.v;me.hair='';me.face=0;resetCol();}me.beard=me.gender==='m'?rb():'';}if(b.classList.contains('s')){me.style=b.dataset.v;resetCol();} /* 의상 바꿔도 직접 고른 머리는 그대로 (안 고른 상태면 의상 기본 머리) */
  if(b.classList.contains('sk'))me.skin=b.dataset.v;else if(b.classList.contains('tp')){me.top=b.dataset.v;delete me.outfit;}else if(b.classList.contains('bt')){me.bottom=b.dataset.v;delete me.outfit;}
  if(b.classList.contains('h'))me.hair=b.dataset.v;if(b.classList.contains('a'))me.acc=b.dataset.v;me.nick=$('nick').value;syncOpts();});
-$('enter').onclick=()=>{if(window.enterFullscreenMobile&&!window.AUTO_JOIN)enterFullscreenMobile();me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
+$('enter').onclick=()=>{if(rollerSelectOpen){finishRollerSelection();return;}if(window.enterFullscreenMobile&&!window.AUTO_JOIN)enterFullscreenMobile();me.nick=$('nick').value.trim()||('손님'+Math.floor(Math.random()*1000));localStorage.setItem('profile',JSON.stringify(me));
  $('entry').classList.add('hidden');$('hud').classList.remove('hidden');chatBottom();
  const ev=joined?'profile':'join';socket.emit(ev,{...me,clientId:CID,last:lastState()},r=>{if(r&&!r.ok){nickErr(r.error);return;}joined=true;localStorage.setItem('joinedAt',Date.now());enterOk();if(r&&r.resume)setTimeout(()=>resumeState(r.resume),50);});};
 // 앱(설치 모드)이 백그라운드에서 종료됐다 다시 열려도 이어서: 위치·자리·들고있는 것까지 localStorage 에 (6시간)
 const RESUME_MS=6*3600*1000;
 function lastState(){try{const v=JSON.parse(localStorage.getItem('lastState')||sessionStorage.getItem('lastState')||'null');return v&&Date.now()-v.t<RESUME_MS?v:null;}catch(e){return null;}}
-function saveState(){if(!joined||window.BYE)return;try{const p=rig.object3D.position,m=$('myAvatar');localStorage.setItem('lastState',JSON.stringify({t:Date.now(),pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
+function saveState(){if(!joined||window.BYE)return;try{const p=rig.object3D.position,m=$('myAvatar');localStorage.setItem('lastState',JSON.stringify({t:Date.now(),pos:[p.x,p.y,p.z],rot:myYaw,seat:mySeat,rollerSkates:!!me.rollerSkates,carry:myCarry||null,drinks:(m._h&&m._h.drinks)||[]}));}catch(e){}}
 setInterval(saveState,1000);addEventListener('pagehide',saveState);addEventListener('freeze',saveState);
 // 돌아왔을 때: 소켓 즉시 재연결 + 음악 위치 다시 맞춤
 function wake(){if(!socket.connected)socket.connect();if(joined){setTimeout(()=>{applyMusic(true);},300);}}
@@ -51,7 +55,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)saveState()
 // 새로 열렸는데(앱이 OS에 의해 종료된 경우) 최근에 입장했었다면 입장 화면 없이 자동 입장
 function autoJoinOk(){try{const a=+localStorage.getItem('joinedAt')||0;return !!me.nick&&Date.now()-a<RESUME_MS&&!sessionStorage.getItem('noAuto');}catch(e){return false;}}
 if(autoJoinOk()){$('entry').classList.add('hidden');const tryAuto=()=>{if($('enter').disabled)return setTimeout(tryAuto,200);window.AUTO_JOIN=true;$('enter').onclick();};tryAuto();}
-function resumeState(r){const m=$('myAvatar');if(m._h&&r.drinks)m._h.drinks=r.drinks.slice();if(r.carry!==undefined){myCarry=r.carry;if(m._h)m._h.carry(r.carry);if(typeof refreshAct==='function')refreshAct(true);}
+function resumeState(r){me.rollerSkates=!!r.rollerSkates;const m=$('myAvatar');if(m._h)m._h.setSkates(me.rollerSkates);if(m._h&&r.drinks)m._h.drinks=r.drinks.slice();if(r.carry!==undefined){myCarry=r.carry;if(m._h)m._h.carry(r.carry);if(typeof refreshAct==='function')refreshAct(true);}
  const s=r.seat&&SEATS.find(x=>x.id===r.seat);if(s){for(const id in others)if(others[id].data&&others[id].data.nick===me.nick&&id!==myId)removeOther(id); /* 재접속 전 내 예전 접속이 자리를 쥔 것처럼 보이는 문제 */mySeat=null;sit(s);}else if(r.pos){rig.object3D.position.set(...r.pos);if(Number.isFinite(r.rot))myYaw=r.rot;}}
 function nickErr(why){if(why==='kicked')return;$('entry').classList.remove('hidden');$('hud').classList.add('hidden');alert(why==='bad'?'사용할 수 없는 닉네임이에요':'이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.');$('nick').focus();}
 function enterOk(){
@@ -87,11 +91,13 @@ async function buildAvatar(root,p,mine){if(root._h){HUMANS.delete(root._h);root.
  const h=await makeHuman(root,humanOpts(p));if(!h||root._tok!==token){if(h)h.dispose();return;}root._h=h;HUMANS.add(h);h.after=(t,c)=>dartPose(root,mine?myId:p.id,c);}
 function upsertOther(p){if(p.id===myId)return;let o=others[p.id];
  if(!o){const el=document.createElement('a-entity');$('others').appendChild(el);o=others[p.id]={el,target:new THREE.Vector3(...(p.pos||[0,0,4])),rot:p.rot||0};el.object3D.position.copy(o.target);}
- const key=[p.nick,p.gender,p.style,p.outfit,p.top,p.bottom,p.acc,p.hair,p.face,p.beard,p.skin].join('|');if(o.key!==key){o.key=key;buildAvatar(o.el,p);}if(p.drinks&&o.el._h&&!(o.el._h.drinks||[]).length)o.el._h.drinks=p.drinks.slice();o.data=p;o.dance=p.dance||0;applySeatPose(o,p.seat);}
+ const key=[p.nick,p.gender,p.style,p.outfit,p.top,p.bottom,p.acc,p.hair,p.face,p.beard,p.skin,p.skateBoot,p.skateWheel,p.skateLace,p.rollerSkates].join('|');if(o.key!==key){o.key=key;buildAvatar(o.el,p);}if(p.drinks&&o.el._h&&!(o.el._h.drinks||[]).length)o.el._h.drinks=p.drinks.slice();if(p.pos){if(ROLLER.inside(o.target.x,o.target.z)!==ROLLER.inside(p.pos[0],p.pos[2]))o.el.object3D.position.set(...p.pos);o.target.set(...p.pos);}o.data=p;o.dance=p.dance||0;applySeatPose(o,p.seat);}
 function applySeatPose(o,seat){o.seat=seat;const s=SEATS.find(x=>x.id===seat);if(s){o.target.set(s.x,s.y||0,s.z);o.rot=s.yaw;}}
 AFRAME.registerComponent('others-lerp',{tick(){for(const id in others){const o=others[id],p=o.el.object3D.position,d=p.distanceTo(o.target);p.lerp(o.target,.15);
  let r=o.rot-o.el.object3D.rotation.y;r=Math.atan2(Math.sin(r),Math.cos(r));o.el.object3D.rotation.y+=r*.2;
- const h=o.el._h;if(h)h.play(o.seat?'Sitting_Idle_Loop':(d>.03?'Walk_Loop':(o.dance?'Dance_'+o.dance:'Idle_Loop')));}}});
+ const h=o.el._h;if(!h)continue;
+ if(o.data&&o.data.rollerSkates&&!o.seat)h.play(SKATE_ANIMATION[o.data.rollerMotion]||'Idle_Loop');
+ else h.play(o.seat?'Sitting_Idle_Loop':(d>.03?'Walk_Loop':(o.dance?'Dance_'+o.dance:'Idle_Loop')));}}});
 scene.setAttribute('others-lerp','');
 function bubble(id,text){const el=id===myId?$('myAvatar'):others[id]&&others[id].el;if(!el)return;const b=el.querySelector('.bubble');if(!b)return;
  b.setAttribute('cbubble',{value:text.slice(0,200)});b.setAttribute('visible',true);
@@ -99,9 +105,9 @@ function bubble(id,text){const el=id===myId?$('myAvatar'):others[id]&&others[id]
 // ---------- 3인칭 카메라 · 이동 · 클릭 이동 · 자동 앉기 ----------
 const rig=$('rig'),cam=$('cam'),myAv=$('myAvatar'),marker=$('marker');
 const keys={};let camGoal=null,myDance=0,idleT=0,camYaw=0,camPitch=.4,camDist=IS_MOBILE?5.5:4.5,myYaw=Math.PI,goal=null,goalSeat=null,stillT=0,moving=false;
-let jumpV=null;function jump(){if(!joined||mySeat||jumpV!==null)return;jumpV=5;}window.jump=jump;
+let jumpV=null;function jump(){if(!joined||rollerSelectOpen||!$('entry').classList.contains('hidden')||mySeat||jumpV!==null)return;jumpV=5;}window.jump=jump;
 const typing=()=>document.activeElement&&document.activeElement.tagName==='INPUT';
-window.addEventListener('keydown',e=>{if(typing())return;keys[e.code]=true;if(/Key[WASD]|Arrow/.test(e.code)){route=[];goal=null;goalSeat=null;marker.setAttribute('visible',false);}
+window.addEventListener('keydown',e=>{if(typing()||!$('entry').classList.contains('hidden'))return;keys[e.code]=true;if(/Key[WASD]|Arrow/.test(e.code)){route=[];goal=null;goalSeat=null;marker.setAttribute('visible',false);}
  if(e.code==='Space'){e.preventDefault();jump();}
  if(e.code==='KeyE'){mySeat?stand():(()=>{const s=nearestSeat(1.6);if(s)sit(s);})();}if(e.code==='Escape')stand();});
 window.addEventListener('keyup',e=>{keys[e.code]=false;});window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
@@ -117,7 +123,7 @@ scene.addEventListener('loaded',()=>{const c=scene.canvas;
  c.addEventListener('pointerup',up);c.addEventListener('pointercancel',up);
  c.addEventListener('wheel',e=>{e.preventDefault();if(inThSeat()){thZoom=Math.max(.6,Math.min(1.8,thZoom*(1+e.deltaY*.001)));return;}camDist=Math.max(2,Math.min(10,camDist+e.deltaY*.004));},{passive:false});});
 const ray=new THREE.Raycaster(),v2=new THREE.Vector2(),floorPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
-function tapAt(x,y){if(!joined)return;const r=scene.canvas.getBoundingClientRect();v2.set((x-r.left)/r.width*2-1,-(y-r.top)/r.height*2+1);ray.setFromCamera(v2,scene.camera);
+function tapAt(x,y){if(!joined||!$('entry').classList.contains('hidden'))return;const r=scene.canvas.getBoundingClientRect();v2.set((x-r.left)/r.width*2-1,-(y-r.top)/r.height*2+1);ray.setFromCamera(v2,scene.camera);
  // 의자/소파를 눌렀나?
  const hits=ray.intersectObjects(SEATS.map(s=>s.el.object3D),true);
  if(hits.length){let o=hits[0].object;while(o&&!(o.el&&o.el.dataset&&o.el.dataset.seat))o=o.parent;const s=o&&SEATS.find(q=>q.id===o.el.dataset.seat);
@@ -136,19 +142,20 @@ function setRoute(x,z){const p=rig.object3D.position,onSt=(X,Z)=>X>=STAGE.x0-.3&
   if(inZ(x,z)&&!inZ(p.x,p.z))route.push(A,Bv);else if(!inZ(x,z)&&inZ(p.x,p.z))route.push(Bv,A);}
  route.push(new THREE.Vector3(x,0,z));goal=route.shift();showMarker(x,z,heightAt(x,z));}
 function showMarker(x,z,y=0){marker.object3D.position.set(x,y+.06,z);marker.setAttribute('visible',true);}
-const BOUND={x0:-11.4,x1:13.4,z0:-11.4,z1:25.4},ROOM_IN={x0:-11.8,x1:11.8,z0:-11.8,z1:11.8,y1:7.8},ROOM_OUT={x0:-13.5,x1:25.5,z0:12.2,z1:25.8,y1:14};let ROOM=ROOM_IN;
+const BOUND={x0:-11.4,x1:13.4,z0:-11.4,z1:29.4},ROOM_IN={x0:-11.8,x1:11.8,z0:-11.8,z1:11.8,y1:7.8},ROOM_ROLLER={x0:-12,x1:12,z0:48,z1:70,y1:5.8},ROOM_OUT={x0:-13.5,x1:25.5,z0:12.2,z1:30.2,y1:14};let ROOM=ROOM_IN;
 const isOut=z=>z>12;
 // 앞벽(문 구멍 제외)은 사각 장애물
 {const D=window.DOOR,dl=D.x-D.w/2,dr=D.x+D.w/2;OBSTACLES.push({x0:11.6,x1:14,z0:-12.5,z1:12.15},{x0:-12.5,x1:dl,z0:11.85,z1:12.15},{x0:dr,x1:THEATER.CLUB_DOOR.x-THEATER.CLUB_DOOR.w/2,z0:11.85,z1:12.15},{x0:THEATER.CLUB_DOOR.x+THEATER.CLUB_DOOR.w/2,x1:12.5,z0:11.85,z1:12.15});}
 // 카메라 충돌: 벽·바·무대 구조물을 상자(AABB)로 근사해 머리→카메라 광선 검사 (모바일에서도 가벼움)
 const CAM_OCC=[[10-.65,0,-1.65,10+.65,1.3,6.15],[9.4,1.2,6,10.6,2.3,6.15],[9.45,0,7.45,10.55,1.3,7.75],[11.4,0,-1.6,12.5,3.9,7.6],[-3.6,0,-11.8,3.6,4.9,-11.45],[-5.6,.7,-11.6,-3.5,5.5,-11.05],[3.5,.7,-11.6,5.6,5.5,-11.05],[-5.6,4.8,-11.4,5.6,5.5,-11],[1.65,.7,-9.45,4.35,1.95,-8.55],[TENT.x0-.1,TENT.e-.1,TENT.z0-.1,TENT.x1+.1,TENT.r+.2,TENT.z1+.1],[TENT.x0,.4,TENT.z1-.1,TENT.x1,TENT.e,TENT.z1+.1],[-.6,0,15.3,2.2,1.1,16.7],THEATER.camOcc[THEATER.camOcc.length-1]];const CAM_SKIP=new Set([3]); // 벽은 카메라를 막지 않음 (대신 가리는 벽을 숨김)
 function camHit(ox,oy,oz,dr,max,bt){let t=max;const lim=[[dr.y,oy,.25,ROOM.y1-.1]];
+ if(window.IN_ROLLER)lim.push([dr.x,ox,ROLLER.T.x0+.35,ROLLER.T.x1-.35],[dr.z,oz,ROLLER.T.z0+.35,ROLLER.T.z1-.35]);
  for(const [v,o,a,b] of lim){if(v>1e-6)t=Math.min(t,(b-o)/v);else if(v<-1e-6)t=Math.min(t,(a-o)/v);}
  const O=[ox,oy,oz],D=[dr.x,dr.y,dr.z];for(const bx of (window.IN_THEATER?CAM_OCC.concat(THEATER.camOcc):CAM_OCC)){if(bx===CAM_OCC[3]||(bt&&bx===CAM_OCC[0]))continue;let t0=0,t1=t,ok=true;for(let i=0;i<3&&ok;i++){const lo=bx[i],hi=bx[i+3];
   if(Math.abs(D[i])<1e-6){if(O[i]<lo||O[i]>hi)ok=false;}else{let a=(lo-O[i])/D[i],b=(hi-O[i])/D[i];if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);if(t0>t1)ok=false;}}
   if(ok&&t0>0)t=Math.min(t,t0);}return t;}
-const clampX=x=>Math.max(window.OUTSIDE?-12.35:BOUND.x0,Math.min(window.OUTSIDE?THEATER.T.x1-.45:BOUND.x1,x)),clampZ=z=>Math.max(BOUND.z0,Math.min(BOUND.z1,z));
-function blocked(x,z,ignoreSeatTable){const p0=rig.object3D.position;if(heightAt(x,z)-Math.max(p0.y,heightAt(p0.x,p0.z))>.2)return true;for(const o of OBSTACLES){if(o.r!==undefined){if(ignoreSeatTable&&Math.hypot(o.x-ignoreSeatTable.x,o.z-ignoreSeatTable.z)<.01)continue;if(Math.hypot(x-o.x,z-o.z)<o.r+.25)return true;}
+const clampX=x=>window.IN_ROLLER?Math.max(ROLLER.T.x0+.5,Math.min(ROLLER.T.x1-.5,x)):Math.max(window.OUTSIDE?-12.35:BOUND.x0,Math.min(window.OUTSIDE?THEATER.T.x1-.45:BOUND.x1,x)),clampZ=z=>window.IN_ROLLER?Math.max(ROLLER.T.z0+.5,Math.min(ROLLER.T.z1-.5,z)):Math.max(BOUND.z0,Math.min(BOUND.z1,z));
+function blocked(x,z,ignoreSeatTable){if(window.IN_ROLLER&&!me.rollerSkates)return true;const p0=rig.object3D.position;if(heightAt(x,z)-Math.max(p0.y,heightAt(p0.x,p0.z))>.2)return true;for(const o of OBSTACLES){if(o.r!==undefined){if(ignoreSeatTable&&Math.hypot(o.x-ignoreSeatTable.x,o.z-ignoreSeatTable.z)<.01)continue;if(Math.hypot(x-o.x,z-o.z)<o.r+.25)return true;}
  else if(x>o.x0-.25&&x<o.x1+.25&&z>o.z0-.25&&z<o.z1+.25)return true;}return false;}
 function seatTaken(s){return Object.values(others).some(o=>o.seat===s.id);}
 function nearestSeat(maxD){const p=rig.object3D.position;let best=null,bd=maxD;for(const s of SEATS){const d=Math.hypot(s.x-p.x,s.z-p.z);if(d<bd&&!seatTaken(s)){bd=d;best=s;}}return best;}
@@ -157,9 +164,9 @@ function sit(s){if(!s||seatTaken(s))return;mySeat=s.id;goal=null;goalSeat=null;m
  socket.emit('seat',s.id);socket.emit('move',{pos:[s.x,s.y||0,s.z],rot:myYaw});updateWhere();}
 function stand(){if(!mySeat)return;camGoal=null;const s=SEATS.find(x=>x.id===mySeat);mySeat=null;if(s.stand)rig.object3D.position.set(s.stand[0],0,s.stand[1]);else{const c=tableCenter(s.table);
  rig.object3D.position.set(clampX(s.x+(s.x-c.x)*.45),0,clampZ(s.z+(s.z-c.z)*.45));}route=[];socket.emit('seat',null);updateWhere();}
-function updateWhere(){document.body.classList.toggle('seated',!!mySeat);document.body.classList.toggle('thseat',!!(mySeat&&mySeat.startsWith('TH-')));const t=mySeat&&mySeat.split('-')[0];$('where').textContent=t==='BAR'?'🍸 바 스툴':t==='TH'?'🎬 극장':window.IN_THEATER?'🎬 극장':t&&t[0]==='Y'?'🏮 야장':t?'🛋 테이블':'🌐 로비';}
+function updateWhere(){document.body.classList.toggle('seated',!!mySeat);document.body.classList.toggle('thseat',!!(mySeat&&mySeat.startsWith('TH-')));const t=mySeat&&mySeat.split('-')[0];$('where').textContent=window.IN_ROLLER?'🛼 추억의 롤라장':t==='BAR'?'🍸 바 스툴':t==='TH'?'🎬 극장':window.IN_THEATER?'🎬 극장':t&&t[0]==='Y'?'🏮 야장':t?'🛋 테이블':'🌐 로비';}
 AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const p=rig.object3D.position;moving=false;
- if(joined){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),r=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
+ if(joined&&$('entry').classList.contains('hidden')){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),r=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
   let mx=0,mz=0,ignore=null,spd=1;if(joyX||joyY){f=-joyY;r=joyX;spd=Math.min(1,Math.hypot(f,r));}
   if(f||r){if(mySeat)stand();const fx=-Math.sin(camYaw),fz=-Math.cos(camYaw),rx=Math.cos(camYaw),rz=-Math.sin(camYaw);mx=fx*f+rx*r;mz=fz*f+rz*r;}
   else if(goal&&!mySeat){mx=goal.x-p.x;mz=goal.z-p.z;const d=Math.hypot(mx,mz);if(goalSeat&&!goalSeat.stand)ignore=tableCenter(goalSeat.table);
@@ -173,9 +180,19 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
   // 멈춘 채 의자 0.8m 이내면 자동으로 앉기
   if(!mySeat&&!moving&&!goal){stillT+=dt;if(stillT>.6){const s=nearestSeat(.8);if(s)sit(s);stillT=0;}}else stillT=0;
   {const ss=mySeat&&SEATS.find(q=>q.id===mySeat);const hy=mySeat?(ss.y||0):heightAt(p.x,p.z);if(mySeat)jumpV=null;else if(jumpV===null&&p.y-hy>.25)jumpV=0;if(jumpV!==null){jumpV-=14*dt;p.y+=jumpV*dt;if(p.y<=hy&&jumpV<0){p.y=hy;jumpV=null;}}else p.y+=(hy-p.y)*Math.min(1,dt*14);}if(!mySeat)$('prompt').classList.add('hidden');}
- if(!mySeat&&!moving&&!goal&&joined){idleT+=dt;if(idleT>3&&!myDance)myDance=1+Math.floor(Math.random()*3);}else{idleT=0;myDance=0;}
- myAv.object3D.rotation.y=myYaw;if(myAv._h)myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
- {if(window.CLUB_OPEN===false&&joined&&!isOut(p.z)){ejectFromClub();} /* 문 닫힘: 클럽 안이면 밖으로 */const out=isOut(p.z);ROOM=out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();applySubs();}}
+ if(!mySeat&&!moving&&!goal&&joined){idleT+=dt;if(idleT>3&&!myDance&&!me.rollerSkates)myDance=1+Math.floor(Math.random()*3);}else{idleT=0;myDance=0;}
+ let rollerMotion='idle';
+ if(moving)rollerMotion=(keys.ShiftLeft||window.RUN_HOLD)?'run':'skate';
+ if(jumpV!==null)rollerMotion='jump';
+ myAv.object3D.rotation.y=myYaw;
+ if(myAv._h){
+  if(me.rollerSkates&&!mySeat)myAv._h.play(SKATE_ANIMATION[rollerMotion]);
+  else myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
+ }
+ {const roller=ROLLER.inside(p.x,p.z);if(roller!==window.IN_ROLLER){window.IN_ROLLER=roller;applyVolume();updateWhere();}
+ if(roller&&joined&&!me.rollerSkates&&!rollerSelectOpen&&!rollerTravelPending)openRollerSelection();
+ if(me.rollerSkates&&rollerMotion!==lastRollerMotion){lastRollerMotion=rollerMotion;socket.emit('rollerMotion',rollerMotion);}
+ if(window.CLUB_OPEN===false&&joined&&!isOut(p.z)){ejectFromClub();} /* 문 닫힘: 클럽 안이면 밖으로 */const out=isOut(p.z);ROOM=roller?ROOM_ROLLER:out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();applySubs();}}
  const tx=p.x,ty=p.y+(mySeat?.95:1.1)+(mySeat&&mySeat.startsWith('TH-')?THEATER.CAM_LIFT:0),tz=p.z;let d=camDist;
  if(camGoal){let d=camGoal.yaw-camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));const k=1-Math.exp(-dt*5);camYaw+=d*k;camPitch+=(camGoal.pitch-camPitch)*k;if(Math.abs(d)<.002&&Math.abs(camGoal.pitch-camPitch)<.002)camGoal=null;}
  const dir=new THREE.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
@@ -259,7 +276,15 @@ socket.on('pour',({id,kind})=>{const el=others[id]&&others[id].el;if(el&&el._h)e
 function serve(kind){if(!inBarZone())return;const n=Date.now();if(n-(window._lastServe||0)<3000)return;window._lastServe=n;const m=$('myAvatar');if(m._h)m._h.drink('pour');
  const p=rig.object3D.position;socket.emit('serve',{x:p.x,z:p.z,kind});}
 window.serve=serve;window.drink=drink;
-function actions(){const A=[];if(mySeat&&mySeat.startsWith('TAXI')){A.push(['🏠 집으로 돌아가기',()=>goHome(),'home'],['🚪 내리기',()=>stand(),'getoff']);return A;}if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.push([GLASSES[mySeat]==='cocktail'?'🍸 칵테일':'🥃 위스키',()=>drink(GLASSES[mySeat]),'d-'+GLASSES[mySeat]]);}
+function actions(){const A=[];
+ if(window.IN_ROLLER){
+  if(near(ROLLER.ARRIVE,2.5))A.push(['🛼 롤러·캐릭터 꾸미기',()=>openRollerSelection(),'roller-style']);
+  if(near(ROLLER.ARRIVE,2.5)||near(ROLLER.EXIT,2.5))A.push(['🚪 거리로 나가기',()=>rollerTravel('exit'),'roller-exit']);
+  if(near(ROLLER.SHOP,2.5))A.push(['🍜 컵라면 먹기',()=>rollerSnack('ramen'),'roller-ramen'],['🥤 사이다 마시기',()=>rollerSnack('cider'),'roller-cider']);
+  return A;
+ }
+ if(near(ROLLER.ENTRY,2.5))A.push(window.ROLLER_OPEN?['🛼 롤라장 입장',()=>rollerTravel('enter'),'roller-enter']:['🛼 롤라장 영업 종료',null,'roller-closed']);
+if(mySeat&&mySeat.startsWith('TAXI')){A.push(['🏠 집으로 돌아가기',()=>goHome(),'home'],['🚪 내리기',()=>stand(),'getoff']);return A;}if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.push([GLASSES[mySeat]==='cocktail'?'🍸 칵테일':'🥃 위스키',()=>drink(GLASSES[mySeat]),'d-'+GLASSES[mySeat]]);}
   else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);if(t&&t[0]==='Y'){A.push(['🛎 주문하기',()=>openOrder(),'order']);if(ORDER_NOTE)A.push([ORDER_NOTE,null,'lbl']);if(MY_ORDERS.length)A.push(['⏳ 주문: '+MY_ORDERS.map(o=>ITEM_NAME[o.kind]).join(', ')+' · 알바가 준비 중',null,'lbl']);}}
   return A;}
  if(inBarZone()){A.push(['🍸 바텐더 서빙:',null,'lbl'],['🥃 위스키',()=>serve('whiskey'),'s-whiskey'],['🍸 칵테일',()=>serve('cocktail'),'s-cocktail']);return A;}
@@ -293,7 +318,7 @@ function curPos(){return music.playing?(Date.now()+offset-music.startedAt)/1000:
 const ICON={yt:'📺 ',sc:'☁️ ',vimeo:'🎬 ',url:'🔗 '};function renderMusic(){const cur=music.playlist[music.index];window.theaterScreen&&window.theaterScreen(cur,!!music.playing);typeof applySubs==='function'&&applySubs();$('shufBtn').textContent=music.shuffle?'🔀 랜덤 켬':'🔀 랜덤 끔';$('shufBtn').classList.toggle('sel',!!music.shuffle);$('now').textContent=cur?(music.shuffle?'🔀 ':'')+(music.playing?'▶ ':'⏸ ')+(ICON[cur.type]||'')+(cur.live?'📻 ':'')+cur.title:'재생목록이 비었어요 · 관리자가 곡을 추가하면 재생돼요';
  $('pl').classList.toggle('hidden',!adminToken);$('pl').innerHTML=!adminToken?'':music.playlist.map((t,i)=>`<li class="${i===music.index?'cur':''}">${ICON[t.type]||''}${esc(t.title)} <small>(${esc(t.by)})</small>${adminToken?` <button data-sel="${i}">▶</button><button data-del="${i}">🗑</button>`:''}</li>`).join('');
  $('adminCtl').classList.toggle('hidden',!adminToken);const fold=localStorage.getItem('admFold')==='1';$('admFold').classList.toggle('hidden',!adminToken);$('music').classList.toggle('fold',!!adminToken&&fold);$('admFold').textContent=fold?'⚙ 관리자 ▼':'⚙ 관리자 ▲';$('adminBtn').textContent=adminToken?'🔑ON':'🔑';$('muteBtn').textContent=muted?'🔇':'🔊';}
-function applyVolume(){const v=(window.OUTSIDE&&!window.IN_THEATER?volume*.5:volume)*(window.POOL_DUCK||1);audio.volume=v/100;audio.muted=muted;extVol();if(ytReady){yt.setVolume(v);muted?yt.mute():yt.unMute();}}
+function applyVolume(){const v=(window.OUTSIDE&&!window.IN_THEATER&&!window.IN_ROLLER?volume*.5:volume)*(window.POOL_DUCK||1);audio.volume=v/100;audio.muted=muted;extVol();if(ytReady){yt.setVolume(v);muted?yt.mute():yt.unMute();}}
 const isAud=c=>c&&(c.type==='mp3'||c.type==='url');let hls=null,hlsUrl=null;
 function loadScript(src){return new Promise((ok,no)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=no;document.head.appendChild(e);});}
 function setAudioSrc(cur){if(cur.type==='url'&&cur.hls&&!audio.canPlayType('application/vnd.apple.mpegurl')){if(hlsUrl===cur.url)return;hlsUrl=cur.url;
@@ -303,7 +328,7 @@ function setAudioSrc(cur){if(cur.type==='url'&&cur.hls&&!audio.canPlayType('appl
 // 외부 플레이어 (사운드클라우드 / 비메오): 숨은 iframe
 let ext=null; // {type,key,api,ready,el}
 function extStop(){if(!ext)return;try{ext.type==='sc'?ext.api.pause():ext.api.destroy();}catch(e){}if(ext.el)ext.el.remove();ext=null;}
-function extVol(){if(!ext||!ext.ready)return;const v=muted?0:(window.OUTSIDE&&!window.IN_THEATER?volume*.5:volume)*(window.POOL_DUCK||1);try{ext.type==='sc'?ext.api.setVolume(v):ext.api.setVolume(v/100);}catch(e){}}
+function extVol(){if(!ext||!ext.ready)return;const v=muted?0:(window.OUTSIDE&&!window.IN_THEATER&&!window.IN_ROLLER?volume*.5:volume)*(window.POOL_DUCK||1);try{ext.type==='sc'?ext.api.setVolume(v):ext.api.setVolume(v/100);}catch(e){}}
 async function extEnsure(cur){const key=cur.type+'|'+cur.url+'|'+cur.id;if(ext&&ext.key===key)return ext;extStop();
  const me_={type:cur.type,key,ready:false};ext=me_;const wrap=$('ytWrap');
  try{if(cur.type==='sc'){if(!window.SC)await loadScript('https://w.soundcloud.com/player/api.js');
@@ -656,3 +681,79 @@ function poolDraw(){const cv=document.getElementById('poolCv');if(!cv)return;con
  const close=()=>{const p=document.getElementById('userList');if(p)p.remove();clearInterval(tmr);};
  oc.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();if(document.getElementById('userList'))return close();const p=document.createElement('div');p.id='userList';p.innerHTML='<div class="ulh"><span></span><button type="button">✕</button></div><div class="ulb"></div>';
   ['pointerdown','touchstart','mousedown','click'].forEach(ev=>p.addEventListener(ev,stop,{passive:true}));p.querySelector('button').onclick=close;$('chat').appendChild(p);render();tmr=setInterval(render,1000);});}}
+
+
+// ---------- Roller rink entry, customization and shared snack animations ----------
+function resetRollerMovement(){
+ route=[];goal=null;goalSeat=null;jumpV=null;moving=false;joyX=joyY=0;
+ for(const k in keys)keys[k]=false;
+ marker.setAttribute('visible',false);lastRollerMotion='';
+}
+function applyRollerPosition(d){
+ if(!d||!Array.isArray(d.pos))return;
+ resetRollerMovement();rig.object3D.position.set(...d.pos);me.rollerSkates=!!d.rollerSkates;
+ if(myAv._h)myAv._h.setSkates(me.rollerSkates);
+ window.IN_ROLLER=ROLLER.inside(d.pos[0],d.pos[2]);window.OUTSIDE=isOut(d.pos[2]);
+ camYaw=window.IN_ROLLER?Math.PI:0;myYaw=window.IN_ROLLER?0:Math.PI;camPitch=.4;applyVolume();updateWhere();saveState();
+}
+function rollerTravel(direction){
+ if(rollerTravelPending)return;rollerTravelPending=true;
+ // Flush the latest position before the server checks entrance proximity.
+ const p=rig.object3D.position;socket.emit('move',{pos:[p.x,p.y,p.z],rot:myYaw});
+ socket.timeout(5000).emit('rollerTravel',direction,(err,r)=>{
+  rollerTravelPending=false;if(err||!r||!r.ok){sys((r&&r.err)||'연결을 확인하고 다시 시도해 주세요');return;}
+  applyRollerPosition(r);
+  if(direction==='enter')openRollerSelection();
+ });
+}
+function openRollerSelection(){
+ if(rollerSelectOpen||!joined)return;
+ resetRollerMovement();rollerOriginal={...me};rollerSelectOpen=true;
+ $('skateOptions').classList.remove('hidden');$('adultNote').classList.add('hidden');
+ $('entry').querySelector('h1').textContent='추억의 롤라장';
+ $('entry').querySelector('.sub').textContent='캐릭터 · 롤러스케이트 선택';
+ $('enter').textContent='🛼 스케이트 신고 입장';$('hud').classList.add('hidden');$('entry').classList.add('roller-select');$('entry').classList.remove('hidden');$('entry').scrollTop=0;syncOpts();
+}
+function closeRollerSelection(){
+ rollerSelectOpen=false;rollerOriginal=null;$('entry').classList.add('hidden');$('entry').classList.remove('roller-select');$('hud').classList.remove('hidden');
+ $('skateOptions').classList.add('hidden');$('adultNote').classList.remove('hidden');
+ $('entry').querySelector('h1').textContent='ERRDAY NIGHTCLUB';
+ $('entry').querySelector('.sub').textContent='ERRDAY 7080 나이트';$('enter').textContent='입장하기 (소리 켜짐)';
+}
+function finishRollerSelection(){
+ me.nick=$('nick').value.trim()||me.nick;
+ const b=$('enter');b.disabled=true;
+ socket.timeout(5000).emit('profile',{...me,clientId:CID},(err,r)=>{
+  if(err||!r||!r.ok){b.disabled=false;sys(r&&r.error==='nick'?'이미 사용 중인 닉네임이에요':'캐릭터 저장에 실패했어요');return;}
+  socket.timeout(5000).emit('rollerEquip',{on:true,...ROLLER.colours(me)},(err,r)=>{
+   b.disabled=false;if(err||!r||!r.ok){sys((r&&r.err)||'스케이트 착용에 실패했어요');return;}
+   me.rollerSkates=true;Object.assign(me,ROLLER.colours(r));localStorage.setItem('profile',JSON.stringify(me));
+   closeRollerSelection();buildAvatar(myAv,{...me,id:myId},true);saveState();applyMusic(true);refreshAct(true);
+   sys(IS_MOBILE?'🛼 입장 완료! 달리기·점프 버튼을 이용하세요':'🛼 입장 완료! Shift로 달리기 · Space로 점프');
+  });
+ });
+}
+for(const k of ['skateBoot','skateWheel','skateLace'])$(k).addEventListener('input',e=>{me[k]=e.target.value;updatePreview();});
+$('skateCancel').textContent='돌아가기';
+$('skateCancel').onclick=()=>{
+ if(rollerOriginal)me={...rollerOriginal};const leave=!me.rollerSkates;
+ closeRollerSelection();if(leave)rollerTravel('exit');
+};
+socket.on('rollerPosition',d=>applyRollerPosition(d));
+socket.on('rollerDoor',d=>{
+ window.ROLLER_OPEN=!!d.open;window.setRollerDoorVis&&window.setRollerDoorVis(d.open);
+ $('rollerDoorBtn').textContent='🛼 롤라장 문: '+(d.open?'열림':'닫힘');refreshAct(true);
+});
+$('rollerDoorBtn').onclick=()=>{
+ if(!adminToken)return;socket.emit('setRollerDoor',{token:adminToken,open:!window.ROLLER_OPEN},r=>{
+  if(!r||!r.ok)sys((r&&r.err)||'문 설정에 실패했어요');
+ });
+};
+socket.on('rollerMotion',d=>{const o=others[d.id];if(o&&o.data)o.data.rollerMotion=d.motion;});
+function rollerSnack(kind){socket.emit('rollerSnack',kind,r=>{if(!r||!r.ok)sys((r&&r.err)||'다시 시도해 주세요');});}
+socket.on('rollerSnack',d=>{
+ const el=d.id===myId?myAv:others[d.id]&&others[d.id].el;
+ if(el&&el._h)el._h.drink(d.kind);
+ if(d.kind==='ramen')setTimeout(()=>d.id===myId?chew():sfxNear('yum',d.id),600);
+ if(d.id===myId)sys(d.kind==='ramen'?'🍜 따끈한 컵라면!':'🥤 시원한 사이다!');
+});

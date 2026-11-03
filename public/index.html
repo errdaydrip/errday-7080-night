@@ -25,6 +25,13 @@
  <div class="row"><b>헤어</b><span id="hairs"></span></div>
  <div class="row"><b>안경</b><span id="accs"></span></div>
  <div class="row"><b>피부</b><span id="skins"></span></div>
+ <div id="skateOptions" class="hidden">
+ <h2>🛼 나만의 롤러스케이트</h2><p>부츠·바퀴·끈 색상을 고르고 입장하세요.</p>
+ <div class="row"><b>부츠</b><input id="skateBoot" type="color" value="#f5f5f5" aria-label="롤러 부츠 색상"></div>
+ <div class="row"><b>바퀴</b><input id="skateWheel" type="color" value="#ff69b4" aria-label="롤러 바퀴 색상"></div>
+ <div class="row"><b>끈</b><input id="skateLace" type="color" value="#2f7bff" aria-label="롤러 끈 색상"></div>
+ <button id="skateCancel" type="button">돌아가기</button>
+ </div>
  <div id="adultNote" style="display:flex;gap:10px;align-items:center;margin:10px auto;max-width:340px;padding:8px 12px;border:1px solid #ff4d6d;border-radius:10px;background:rgba(255,40,80,.12);color:#ffd6de;font-size:13px;line-height:1.45;text-align:left"><span style="flex:none;width:34px;height:34px;border-radius:50%;background:#e01e3c;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff">19</span><span>이 공간은 성인 테마의 가상 나이트클럽입니다.<br>19세 미만은 이용을 자제해 주시기 바랍니다.</span></div>
  <button id="enter" class="big" disabled>입장하기 (소리 켜짐)</button>
  <p class="hint">바닥 클릭/탭 = 그 자리로 걸어가기 · 의자 클릭/탭 = 가서 앉기 · WASD 이동 · 드래그 = 시점 회전 · 휠/두 손가락 = 줌</p>
@@ -37,7 +44,7 @@
  <div id="chat" class="panel"><div id="chatTitle">💬 전체 채팅<span id="onlineCnt"></span><button id="chatClear" type="button" title="채팅 기록 전체 삭제 (관리자)" style="display:none">🧹 채팅 지우기</button></div><div id="msgs"></div>
   <form id="chatForm"><input id="chatIn" maxlength="200" placeholder="메시지 입력 (Enter)" autocomplete="off"><button>전송</button></form></div>
  <div id="music" class="panel"><div>🎵 <b id="now">재생 중인 곡 없음</b> <button id="admFold" class="hidden" type="button" title="관리자 메뉴 접기/펴기">⚙ 관리자 ▲</button></div>
-  <div id="adminCtl" class="hidden"><button data-c="play">▶</button><button data-c="pause">⏸</button><button data-c="skip">⏭</button><button data-c="shuffleToggle" id="shufBtn" title="랜덤 재생 켜기/끄기">🔀 랜덤 끔</button><button id="cleanBtn" type="button">🔄 새로고침(유령 정리)</button><button id="clubDoorBtn" type="button">🚪 나이트 문: 열림</button><button data-c="shuffleNow" title="대기열 순서 섞기">섞기</button><button id="clearAllBtn" type="button" title="재생목록 전체삭제">🗑 재생목록 전체삭제</button><div id="presetBox"><div class="pbtns"></div><div class="presetEdit"></div></div>
+  <div id="adminCtl" class="hidden"><button data-c="play">▶</button><button data-c="pause">⏸</button><button data-c="skip">⏭</button><button data-c="shuffleToggle" id="shufBtn" title="랜덤 재생 켜기/끄기">🔀 랜덤 끔</button><button id="cleanBtn" type="button">🔄 새로고침(유령 정리)</button><button id="clubDoorBtn" type="button">🚪 나이트 문: 열림</button><button id="rollerDoorBtn" type="button">🛼 롤라장 문: 열림</button><button data-c="shuffleNow" title="대기열 순서 섞기">섞기</button><button id="clearAllBtn" type="button" title="재생목록 전체삭제">🗑 재생목록 전체삭제</button><div id="presetBox"><div class="pbtns"></div><div class="presetEdit"></div></div>
    <div class="arow">MP3: <input type="file" id="file" accept=".mp3,audio/mpeg"></div>
    <form id="ytForm" class="arow"><input id="ytUrl" placeholder="링크 추가 (유튜브·사운드클라우드·비메오·mp3/라디오 주소)"><button>링크 추가</button></form><span id="upMsg"></span></div>
   <ol id="pl" class="hidden"></ol></div>
@@ -48,6 +55,6 @@
 </div>
 <audio id="audio" preload="auto"></audio>
 <div id="ytWrap"><div id="yt"></div></div>
-<script src="looks.js"></script><script src="theater.js"></script><script src="pool.js"></script><script src="world.js"></script><script src="app.js"></script>
+<script src="looks.js"></script><script src="theater.js"></script><script src="pool.js"></script><script src="roller.js"></script><script src="world.js"></script><script src="roller-world.js"></script><script src="app.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
 </body></html>

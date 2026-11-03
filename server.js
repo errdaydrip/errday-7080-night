@@ -1,5 +1,6 @@
 const express=require('express'),http=require('http'),path=require('path'),fs=require('fs'),multer=require('multer');
 const {Server}=require('socket.io');
+const ROLLER=require('./public/roller.js');
 const PORT=process.env.PORT||8080, UP=path.join(__dirname,'uploads');
 fs.mkdirSync(UP,{recursive:true});
 const ADMIN_PW=String(process.env.ADMIN_PASSWORD||'6651'); // 제작자가 정한 고정 비밀번호
@@ -53,7 +54,7 @@ app.post('/link',addLink);app.post('/youtube',addLink);
 const {advance}=require('./playback');
 // 투네이션 후원 전광판: 최근 후원 목록을 모두에게
 const DON=require('./donations');let donList=[],tickerIdle='',tickerUrl=process.env.TOONATION_TICKER_URL||DON.DEFAULT_URL,donTicker=null;
-let clubOpen=true;let rankUrl=DON.RANK_URL,rankData=null,rankWs=null,boards={ticker:true,rank:true};
+let clubOpen=true,rollerOpen=true;let rankUrl=DON.RANK_URL,rankData=null,rankWs=null,boards={ticker:true,rank:true};
 const boardsPub=()=>({...boards,idle:tickerIdle});
 function startRank(){if(rankWs)rankWs.stop();rankWs=process.env.TICKER_OFF||!boards.rank?null:DON.startRank({url:rankUrl,clean:t=>cleanText(t),onRank:r=>{rankData=r;save();io.emit('ranking',rankData);},log:m=>console.log(m)});}
 function startTicker(){if(donTicker)donTicker.stop();donTicker=process.env.TICKER_OFF||!boards.ticker?null:DON.start({url:tickerUrl,clean:t=>cleanText(t),onDonation:(l,ds)=>{donList=[...ds,...donList].slice(0,10);save();io.emit('donations',donList);},log:m=>console.log(m)});}
@@ -61,7 +62,7 @@ const STATE=process.env.STATE_FILE||path.join(__dirname,'data','state.json');
 const durations={}; // videoId 또는 mp3 id -> 초 (클라이언트가 알려줌)
 const durOf=t=>t&&(t.dur||durations[t.type==='yt'?t.videoId:t.id]);
 const {clean:cleanText,isBad}=require('./filter');
-const STYLES=['basic','suit','disco','hanbok','aerobic'],HEX=/^#[0-9a-fA-F]{6}$/;const LOOKS=require('./public/looks.js');const look=p=>{const r=LOOKS.resolve(p);return{gender:r.gender,style:r.style,outfit:HEX.test(p.outfit)?p.outfit:'',top:r.top,bottom:r.bottom,acc:r.acc,hair:r.hair,face:r.face,beard:r.beard,skin:HEX.test(p.skin)?p.skin:''};};
+const STYLES=['basic','suit','disco','hanbok','aerobic'],HEX=/^#[0-9a-fA-F]{6}$/;const LOOKS=require('./public/looks.js');const look=p=>{const r=LOOKS.resolve(p);return{gender:r.gender,style:r.style,outfit:HEX.test(p.outfit)?p.outfit:'',top:r.top,bottom:r.bottom,acc:r.acc,hair:r.hair,face:r.face,beard:r.beard,...ROLLER.colours(p),skin:HEX.test(p.skin)?p.skin:''};};
 const players={}; // id -> {nick,gender,outfit,skin,style,pos,rot,seat}
 const music={playlist:[],index:-1,playing:false,startedAt:0,pausedAt:0,shuffle:false};
 let played=new Set(); // 랜덤 재생: 이미 튼 곡 id
@@ -80,8 +81,8 @@ app.post('/upload',(req,res,next)=>isAdmin(req.get('x-admin-token'))?next():res.
  music.playlist.push(t); if(music.index<0){music.index=music.playlist.length-1;music.playing=true;music.startedAt=Date.now();}
  broadcastMusic(); res.json(t);
 }));
-function save(){try{fs.mkdirSync(path.dirname(STATE),{recursive:true});fs.writeFileSync(STATE,JSON.stringify({music,durations,played:[...played],presets,tickerUrl,donList,tickerIdle,rankUrl,rankData,boards,clubOpen}));}catch(e){}}
-function load(){try{const j=JSON.parse(fs.readFileSync(STATE,'utf8'));Object.assign(music,j.music);Object.assign(durations,j.durations||{});played=new Set(j.played||[]);if(Array.isArray(j.presets)&&j.presets.length===3)presets=j.presets;if(typeof j.tickerUrl==='string'&&DON.payloadOf(j.tickerUrl))tickerUrl=j.tickerUrl;if(typeof j.rankUrl==='string'&&DON.rankPayload(j.rankUrl))rankUrl=j.rankUrl;if(j.rankData&&Array.isArray(j.rankData.list))rankData=j.rankData;if(j.clubOpen===false)clubOpen=false;if(j.boards)boards={ticker:j.boards.ticker!==false,rank:j.boards.rank!==false};if(typeof j.tickerIdle==='string')tickerIdle=j.tickerIdle.slice(0,120);if(Array.isArray(j.donList))donList=j.donList.slice(0,10);
+function save(){try{fs.mkdirSync(path.dirname(STATE),{recursive:true});fs.writeFileSync(STATE,JSON.stringify({music,durations,played:[...played],presets,tickerUrl,donList,tickerIdle,rankUrl,rankData,boards,clubOpen,rollerOpen}));}catch(e){}}
+function load(){try{const j=JSON.parse(fs.readFileSync(STATE,'utf8'));Object.assign(music,j.music);Object.assign(durations,j.durations||{});played=new Set(j.played||[]);if(Array.isArray(j.presets)&&j.presets.length===3)presets=j.presets;if(typeof j.tickerUrl==='string'&&DON.payloadOf(j.tickerUrl))tickerUrl=j.tickerUrl;if(typeof j.rankUrl==='string'&&DON.rankPayload(j.rankUrl))rankUrl=j.rankUrl;if(j.rankData&&Array.isArray(j.rankData.list))rankData=j.rankData;if(j.clubOpen===false)clubOpen=false;if(j.rollerOpen===false)rollerOpen=false;if(j.boards)boards={ticker:j.boards.ticker!==false,rank:j.boards.rank!==false};if(typeof j.tickerIdle==='string')tickerIdle=j.tickerIdle.slice(0,120);if(Array.isArray(j.donList))donList=j.donList.slice(0,10);
  music.playlist=music.playlist.filter(t=>t.type!=='mp3'||fs.existsSync(path.join(UP,t.id)));if(music.index>=music.playlist.length)music.index=music.playlist.length?0:-1;}catch(e){}}
 load();startRank(); /* 후원 티커 연결은 끔: 일반 LED 전광판으로 바뀜 */
 const DEFAULT_LIST='PL1cIIyrjZ9L3YEUl8DAz_R6uTf2-80wWY';let defLoading=false;
@@ -238,17 +239,22 @@ io.on('connection',s=>{
   let prev=null,prevId=null;for(const id in players){if(id!==s.id&&players[id].cid===cid){if(!prev){prev=players[id];prevId=id;}delete players[id];const os=io.sockets.sockets.get(id);if(os)os.disconnect(true);}}
   if(prev){clearTimeout(prev.timer);prev.timer=null;prev.gone=null;}
   const L=p.last&&typeof p.last==='object'?p.last:null,cur=players[s.id]||prev;
-  const base=cur?{pos:cur.pos,rot:cur.rot,seat:cur.seat,carry:cur.carry||null,drinks:cur.drinks||[]}
-   :L?{pos:Array.isArray(L.pos)&&L.pos.length===3&&L.pos.every(Number.isFinite)?L.pos:[0,0,4],rot:+L.rot||0,seat:typeof L.seat==='string'?L.seat.slice(0,16):null,carry:PICK[L.carry]?L.carry:null,drinks:Array.isArray(L.drinks)?L.drinks.filter(Number.isFinite).slice(-20):[]}
+  const base=cur?{pos:cur.pos,rot:cur.rot,seat:cur.seat,rollerSkates:!!cur.rollerSkates,carry:cur.carry||null,drinks:cur.drinks||[]}
+   :L?{pos:Array.isArray(L.pos)&&L.pos.length===3&&L.pos.every(Number.isFinite)?L.pos:[0,0,4],rot:+L.rot||0,rollerSkates:L.rollerSkates===true,seat:typeof L.seat==='string'?L.seat.slice(0,16):null,carry:PICK[L.carry]?L.carry:null,drinks:Array.isArray(L.drinks)?L.drinks.filter(Number.isFinite).slice(-20):[]}
    :{pos:[0,0,4],rot:0,seat:null,carry:null,drinks:[]};
   const re=!!cur;players[s.id]={...(cur||{}),seen:Date.now(),joinedAt:Date.now(),cid,nick,...look(p),...base};
+  const rp=players[s.id];rp.rollerSkates=ROLLER.inside(rp.pos[0],rp.pos[2])&&!!base.rollerSkates;
+  if(ROLLER.inside(rp.pos[0],rp.pos[2])&&!rp.rollerSkates)rp.pos=[0,0,ROLLER.ARRIVE.z];
+  Object.assign(base,{pos:rp.pos,rollerSkates:rp.rollerSkates});
   if(prevId)io.emit('rekey',{old:prevId,id:s.id});io.emit('player',{id:s.id,...pub()[s.id]});
   if(typeof ack==='function')ack(re||L?{ok:true,resume:base}:{ok:true});/* 유예시간이 지나도 앱이 기억한 위치/자리로 복원 */if(!re)io.emit('chat',{sys:true,text:nick+' 님 입장!'});bcOnline(true);});
  s.on('profile',(p,ack)=>{const pl=players[s.id];if(!pl)return;const nn=String(p.nick||pl.nick).trim().slice(0,16)||pl.nick;if(isBad(nn)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}if(nickTaken(nn,pl.cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nn);return;}if(typeof ack==='function')ack({ok:true});Object.assign(pl,{nick:nn,...look(p)});io.emit('player',{id:s.id,...pl});});
- s.on('move',m=>{const pl=players[s.id];if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);});
+ s.on('move',m=>{const pl=players[s.id];if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;const wasRoller=ROLLER.inside(pl.pos[0],pl.pos[2]),willRoller=ROLLER.inside(m.pos[0],m.pos[2]);
+  if(wasRoller!==willRoller||(willRoller&&!pl.rollerSkates)){s.emit('rollerPosition',{pos:pl.pos,rollerSkates:!!pl.rollerSkates});return;}
+  pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);});
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.emit('glasses',glassPub());
- s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));s.emit('tickerIdle',tickerIdle);s.emit('boards',boardsPub());s.emit('clubDoor',{open:clubOpen});if(rankData)s.emit('ranking',rankData);if(albaJob)s.emit('albaJob',albaJob);
+ s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));s.emit('tickerIdle',tickerIdle);s.emit('boards',boardsPub());s.emit('clubDoor',{open:clubOpen});s.emit('rollerDoor',{open:rollerOpen});if(rankData)s.emit('ranking',rankData);if(albaJob)s.emit('albaJob',albaJob);
  s.on('drink',type=>{const pl=players[s.id];if(!pl||!pl.seat||!DRINKS.includes(type))return;if(!canDrink(pl.seat,type))return;const n=Date.now();if(n-(pl.lastDrink||0)<2000)return;pl.lastDrink=n;
   pl.drinks=(pl.drinks||[]).filter(x=>n-x<1800000).concat(n).slice(-20);
   if(BAR_Z[pl.seat]!==undefined){delete glasses[pl.seat];io.emit('glasses',glassPub());}const tb=pochaTable(pl.seat);if(tb)useItem(tb,type);io.emit('drink',{id:s.id,type});});
@@ -283,6 +289,43 @@ io.on('connection',s=>{
  s.on('poolShoot',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d)return ack({ok:false});const T=useT(d.t);const r=poolShot(s.id,d.a,d.p,d.sx,d.sy);if(!r.ok)return ack(r);io.emit('poolShot',{...r.shot,state:poolPub()});ack({ok:true});
   if(r.over){const prev=pool.players.slice();setTimeout(()=>{useT(T);poolNext(prev);io.emit('poolState',poolPub());},6000);}});
  s.on('clearChat',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});chatHist.length=0;io.emit('chatCleared');ack({ok:true});});
+ // Roller access and food are validated on the server for every connected player.
+ s.on('setRollerDoor',(d,ack)=>{
+  ack=typeof ack==='function'?ack:()=>{};
+  if(!d||!isAdmin(d.token)||typeof d.open!=='boolean')return ack({ok:false,err:'관리자만 가능'});
+  rollerOpen=d.open;save();io.emit('rollerDoor',{open:rollerOpen});ack({ok:true,open:rollerOpen});
+ });
+ s.on('rollerTravel',(d,ack)=>{
+  ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];
+  if(!pl||pl.seat)return ack({ok:false,err:'자리에서 일어나 주세요'});
+  if(d==='enter'){
+   if(!rollerOpen)return ack({ok:false,err:'롤라장 문이 닫혀 있어요'});
+   if(!ROLLER.near(pl.pos,ROLLER.ENTRY,2.5))return ack({ok:false,err:'택시 옆 롤라장 입구로 와 주세요'});
+   pl.pos=[ROLLER.ARRIVE.x,0,ROLLER.ARRIVE.z];pl.rollerSkates=false;
+  }else if(d==='exit'){
+   if(!ROLLER.inside(pl.pos[0],pl.pos[2])||!(ROLLER.near(pl.pos,ROLLER.ARRIVE,2.8)||ROLLER.near(pl.pos,ROLLER.EXIT,2.8)))return ack({ok:false,err:'롤라장 출구로 와 주세요'});
+   pl.pos=[ROLLER.ENTRY.x,0,ROLLER.ENTRY.z-.8];pl.rollerSkates=false;
+  }else return ack({ok:false});
+  pl.dance=0;pl.rollerMotion='idle';io.emit('player',{id:s.id,...pub()[s.id]});
+  ack({ok:true,pos:pl.pos,rollerSkates:pl.rollerSkates});
+ });
+ s.on('rollerEquip',(d,ack)=>{
+  ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];
+  if(!pl||pl.seat||!ROLLER.near(pl.pos,ROLLER.ARRIVE,2.3))return ack({ok:false,err:'롤라장 입구에서 이용해 주세요'});
+  pl.rollerSkates=!!(d&&d.on);Object.assign(pl,ROLLER.colours(d||{}));pl.rollerMotion='idle';
+  io.emit('player',{id:s.id,...pub()[s.id]});ack({ok:true,rollerSkates:pl.rollerSkates,...ROLLER.colours(pl)});
+ });
+ s.on('rollerMotion',motion=>{
+  const pl=players[s.id];if(!pl||!pl.rollerSkates||!ROLLER.inside(pl.pos[0],pl.pos[2]))return;
+  if(!['idle','skate','run','jump'].includes(motion)||pl.rollerMotion===motion)return;
+  pl.rollerMotion=motion;io.emit('rollerMotion',{id:s.id,motion});
+ });
+ s.on('rollerSnack',(kind,ack)=>{
+  ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];
+  if(!pl||!['ramen','cider'].includes(kind)||!ROLLER.near(pl.pos,ROLLER.SHOP,2.5))return ack({ok:false,err:'롤라장 매점 앞에서 이용해 주세요'});
+  const n=Date.now();if(n-(pl.lastRollerSnack||0)<2200)return ack({ok:false,err:'천천히 드세요'});
+  pl.lastRollerSnack=n;io.emit('rollerSnack',{id:s.id,kind});ack({ok:true});
+ });
  s.on('setClubDoor',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token)||typeof d.open!=='boolean')return ack({ok:false,err:'관리자만'});clubOpen=d.open;save();io.emit('clubDoor',{open:clubOpen,by:true});ack({ok:true,open:clubOpen});});
  s.on('setBoards',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});const was={...boards};
   if(typeof d.ticker==='boolean')boards.ticker=d.ticker;if(typeof d.rank==='boolean')boards.rank=d.rank;save();if(was.rank!==boards.rank)startRank();io.emit('boards',boardsPub());ack({ok:true,boards});});

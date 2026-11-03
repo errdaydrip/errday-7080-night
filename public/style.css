@@ -219,3 +219,6 @@ body:has(#poolUI) #keyHint,body:has(#poolUI) #runBtn,body:has(#poolUI) #jumpBtn,
  #runBtn{right:calc(78px + env(safe-area-inset-right))!important;bottom:calc(12px + env(safe-area-inset-bottom))!important}
  #actBar{right:calc(10px + env(safe-area-inset-right))!important;bottom:calc(78px + env(safe-area-inset-bottom))!important;flex-direction:column!important;flex-wrap:nowrap!important;align-items:flex-end!important;max-height:calc(100vh - 150px);overflow-y:auto}
 }
+
+/* Keep the roller selection confirmation reachable while customizing on phones. */
+#entry.roller-select #enter { position:sticky; bottom:0; z-index:2; box-shadow:0 -8px 18px #18091e; }
