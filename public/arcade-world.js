@@ -56,7 +56,7 @@
   box(cx,5.98,z,1.05,.09,.5,'#ffe4ae',true);
  }
  for(let x=T.x0+.8;x<T.x1;x+=1.3)box(x,6.06,cz,.065,.06,depth-.3,'#34344c');
- for(const z of [34,42,51])E('a-entity',{position:`${cx} 4.8 ${z}`,light:'type:point;color:#ffffff;intensity:2;distance:13;decay:1'},root);
+ for(const z of [34,42,51])E('a-entity',{position:`${cx} 4.8 ${z}`,light:'type:point;color:#ffffff;intensity:.85;distance:13;decay:1'},root);
  const rankTextures=new Map();
  function rankTexture(game){
   if(rankTextures.has(game))return rankTextures.get(game);
@@ -124,7 +124,7 @@
    box(m.x,.91,m.z,.025,.02,3.4,'#ffffff',true);
    if(m.game==='pingpong'){box(m.x,1.02,m.z,2.9,.25,.025,'#b9edf0');for(let i=0;i<15;i++)box(m.x-1.4+i*.2,1.03,m.z,.012,.25,.03,'#ffffff');}
    else{for(const dx of [-1.47,1.47])box(m.x+dx,.98,m.z,.08,.18,3.6,'#aa8654',true);for(const dz of [-1.78,1.78])box(m.x,.98,m.z+dz,3,.18,.08,'#aa8654',true);for(const dz of [-1.25,1.25]){E('a-cylinder',{position:`${m.x} .99 ${m.z+dz}`,radius:.24,height:.12,material:`color:${dz<0?'#ff5798':'#5496eb'};roughness:.35`},root);E('a-cylinder',{position:`${m.x} 1.08 ${m.z+dz}`,radius:.12,height:.12,color:'#e8d9c4'},root);}}
-   text(g.name,m.x,2.25,m.z,3.7,g.colour,180);text(m.game==='hockey'?'PRACTICE / 1 vs 1':'VS COMPUTER',m.x,1.75,m.z,2.7,g.colour,180);continue;
+   text(g.name,m.x,2.25,m.z,3.7,g.colour,180);continue;
   }
   // Cabinet dimensions are symmetric; screen and controls face the central aisle.
   box(m.x,.66,m.z,1.25,1.32,1.5,'#968e9e');box(m.x,1.7,m.z,1.15,.85,1.4,'#454365');box(m.x,2.35,m.z,1.3,.35,1.5,g.colour);
