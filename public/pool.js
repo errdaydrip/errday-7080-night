@@ -11,7 +11,8 @@ function rack(){const b=[{n:0,x:HEAD[0],y:0,in:false}];/* 삼각 랙: 8번 가�
 function clone(b){return b.map(o=>({n:o.n,x:o.x,y:o.y,in:o.in}));}
 /* 샷 시뮬레이션: 큐볼에 각도 a(라디안), 세기 p(0..1) */
 function simulate(balls,a,p,opt){opt=opt||{};const B=clone(balls),v=B.map(()=>[0,0]);const CN=opt.cue||0,cue=B.findIndex(o=>o.n===CN);const hits=[];const sp=Math.max(.05,Math.min(1,p))*VMAX;
- v[cue]=[Math.cos(a)*sp,Math.sin(a)*sp];const pocketed=[];let firstHit=null,cushionAfter=false,steps=0;const frames=opt.frames?[]:null,ev=frames?[]:null,EV=(k,g)=>{if(ev&&g>.02)ev.push({f:frames.length,k,g:Math.min(1,g/VMAX)});};const FE=opt.every||4;
+ v[cue]=[Math.cos(a)*sp,Math.sin(a)*sp];let SX=Math.max(-1,Math.min(1,+opt.sx||0)),SY=Math.max(-1,Math.min(1,+opt.sy||0));const DX=Math.cos(a),DY=Math.sin(a);let cueHit=false,cc=0,c2=-1;
+ const spin=(i)=>{if(i!==cue)return;cc++;if(!SX)return;const w=v[i],an=SX*.32,c=Math.cos(an),s2=Math.sin(an);const x=w[0]*c-w[1]*s2,y=w[0]*s2+w[1]*c;w[0]=x;w[1]=y;SX*=.55;};const pocketed=[];let firstHit=null,cushionAfter=false,steps=0;const frames=opt.frames?[]:null,ev=frames?[]:null,EV=(k,g)=>{if(ev&&g>.02)ev.push({f:frames.length,k,g:Math.min(1,g/VMAX)});};const FE=opt.every||4;
  const live=()=>B.some((o,i)=>!o.in&&(v[i][0]!==0||v[i][1]!==0));
  while(live()&&steps<240*25){steps++;
   for(let i=0;i<B.length;i++){const o=B[i];if(o.in)continue;const w=v[i];if(w[0]===0&&w[1]===0)continue;
@@ -19,17 +20,18 @@ function simulate(balls,a,p,opt){opt=opt||{};const B=clone(balls),v=B.map(()=>[0
    /* 포켓 */if(!opt.carom)for(const q of POCKETS){if(Math.hypot(o.x-q[0],o.y-q[1])<PR){EV('pocket',Math.max(s,VMAX*.4));o.in=true;w[0]=0;w[1]=0;pocketed.push(o.n);break;}}
    if(o.in)continue;
    /* 쿠션 (포켓 입구 근처 제외) */const nearP=!opt.carom&&POCKETS.some(q=>Math.hypot(o.x-q[0],o.y-q[1])<PR*1.6);
-   if(!nearP){if(o.x<-L/2+R){o.x=-L/2+R;EV('cush',Math.abs(w[0]));w[0]=-w[0]*CR;if(firstHit!==null)cushionAfter=true;}if(o.x>L/2-R){o.x=L/2-R;EV('cush',Math.abs(w[0]));w[0]=-w[0]*CR;if(firstHit!==null)cushionAfter=true;}
-    if(o.y<-Wd/2+R){o.y=-Wd/2+R;EV('cush',Math.abs(w[1]));w[1]=-w[1]*CR;if(firstHit!==null)cushionAfter=true;}if(o.y>Wd/2-R){o.y=Wd/2-R;EV('cush',Math.abs(w[1]));w[1]=-w[1]*CR;if(firstHit!==null)cushionAfter=true;}}
+   if(!nearP){if(o.x<-L/2+R){o.x=-L/2+R;EV('cush',Math.abs(w[0]));w[0]=-w[0]*CR;if(firstHit!==null)cushionAfter=true;spin(i);}if(o.x>L/2-R){o.x=L/2-R;EV('cush',Math.abs(w[0]));w[0]=-w[0]*CR;if(firstHit!==null)cushionAfter=true;spin(i);}
+    if(o.y<-Wd/2+R){o.y=-Wd/2+R;EV('cush',Math.abs(w[1]));w[1]=-w[1]*CR;if(firstHit!==null)cushionAfter=true;spin(i);}if(o.y>Wd/2-R){o.y=Wd/2-R;EV('cush',Math.abs(w[1]));w[1]=-w[1]*CR;if(firstHit!==null)cushionAfter=true;spin(i);}}
    else{/* 포켓 입구에서 바깥으로 너무 나가면 안쪽으로 */o.x=Math.max(-L/2-R,Math.min(L/2+R,o.x));o.y=Math.max(-Wd/2-R,Math.min(Wd/2+R,o.y));}}
   /* 공끼리 충돌 (같은 질량, 탄성) */
   for(let i=0;i<B.length;i++){const a1=B[i];if(a1.in)continue;for(let j=i+1;j<B.length;j++){const b1=B[j];if(b1.in)continue;const dx=b1.x-a1.x,dy=b1.y-a1.y,d=Math.hypot(dx,dy);if(d>=2*R||d===0)continue;
    const nx=dx/d,ny=dy/d,ov=(2*R-d)/2;a1.x-=nx*ov;a1.y-=ny*ov;b1.x+=nx*ov;b1.y+=ny*ov;const rv=(v[j][0]-v[i][0])*nx+(v[j][1]-v[i][1])*ny;if(rv>=0)continue;
-   const imp=-(1+BR)/2*rv;EV('ball',-rv);v[i][0]-=imp*nx;v[i][1]-=imp*ny;v[j][0]+=imp*nx;v[j][1]+=imp*ny;if(B[i].n===CN||B[j].n===CN){const on=B[i].n===CN?B[j].n:B[i].n;if(firstHit===null)firstHit=on;if(!hits.includes(on))hits.push(on);}}}
+   const imp=-(1+BR)/2*rv;EV('ball',-rv);v[i][0]-=imp*nx;v[i][1]-=imp*ny;v[j][0]+=imp*nx;v[j][1]+=imp*ny;
+   if(!cueHit&&(i===cue||j===cue)&&SY){cueHit=true;const k=SY*.55*imp;v[cue][0]+=DX*k;v[cue][1]+=DY*k;SY=0;}if(i===cue||j===cue)SX*=.6;if(B[i].n===CN||B[j].n===CN){const on=B[i].n===CN?B[j].n:B[i].n;if(firstHit===null)firstHit=on;if(!hits.includes(on)){hits.push(on);if(hits.length===2)c2=cc;}}}}
   if(frames&&steps%FE===0)frames.push(B.map(o=>o.in?null:[o.x,o.y]));}
  if(frames)frames.push(B.map(o=>o.in?null:[o.x,o.y]));
- return{balls:B,pocketed,firstHit,cushionAfter,frames,steps,ev,hits};}
-function rackCarom(){return[{n:0,x:-L/4-.3,y:.16,in:false},{n:1,x:-L/4-.3,y:-.16,in:false},{n:2,x:L/4,y:0,in:false},{n:3,x:-L/4,y:0,in:false}];}
+ return{balls:B,pocketed,firstHit,cushionAfter,frames,steps,ev,hits,c2};}
+function rackCarom(m){const b=[{n:0,x:-L/4-.3,y:.16,in:false},{n:1,x:-L/4-.3,y:-.16,in:false},{n:2,x:L/4,y:0,in:false},{n:3,x:-L/4,y:0,in:false}];return m==='3'||m===3?b.slice(0,3):b;}
 function spotCue(balls){const c=balls.find(o=>o.n===0);c.in=false;let x=HEAD[0],y=0;for(let k=0;k<40;k++){if(!balls.some(o=>o.n!==0&&!o.in&&Math.hypot(o.x-x,o.y-y)<2*R+.002))break;y=((k%2)?1:-1)*Math.ceil((k+1)/2)*R*2.2;if(Math.abs(y)>Wd/2-R){x-=R*2.2;y=0;}}c.x=x;c.y=y;}
 const kind=n=>n===0?'cue':n===8?'eight':n<8?'solid':'stripe';
 const API={L,Wd,R,PR,POCKETS,rack,rackCarom,simulate,spotCue,kind,clone};

@@ -960,7 +960,7 @@ PTS.forEach(([CX,CZ,KIND],TI)=>{const P=window.POOL;if(!P)return;const TOP=.82,C
  const M={};RK().forEach(o=>{const el=E('a-entity',{},g);E('a-sphere',{radius:P.R,'segments-width':14,'segments-height':10,material:`color:${COL(o.n)};roughness:.25;metalness:.05`},el);
   if(!CAR&&o.n>8)E('a-sphere',{radius:P.R*1.01,'segments-width':14,'segments-height':4,'theta-start':0,'theta-length':50,material:'color:#fff;roughness:.3'},el),E('a-sphere',{radius:P.R*1.01,'segments-width':14,'segments-height':4,'theta-start':130,'theta-length':50,material:'color:#fff;roughness:.3'},el);
   M[o.n]=el;});
- RR[TI]=balls=>{for(const o of balls){const el=M[o.n];if(!el)continue;el.setAttribute('visible',!o.in);if(!o.in)el.object3D.position.set(o.x,TOP+P.R,o.y);}};
+ RR[TI]=balls=>{for(const k in M)if(!balls.some(o=>o.n==k))M[k].setAttribute('visible',false);for(const o of balls){const el=M[o.n];if(!el)continue;el.setAttribute('visible',!o.in);if(!o.in)el.object3D.position.set(o.x,TOP+P.R,o.y);}};
  RF[TI]=(balls,fr)=>{balls.forEach((o,i)=>{const el=M[o.n],q=fr[i];if(!el)return;el.setAttribute('visible',!!q);if(q)el.object3D.position.set(q[0],TOP+P.R,q[1]);});};
  RR[TI](RK());});
  let WIN=null;window.poolWinner=(txt,t=0)=>{if(WIN){WIN.remove();WIN=null;}if(!txt)return;const [x,z]=PTS[t]||PTS[0];WIN=E('a-entity',{position:`${x} 2.05 ${z}`,ktext:`value:${txt.replace(/;/g,' ')};color:#ffd84a;glow:#ff9a1a;size:64;width:2.6`,billboard:''});const w=WIN;setTimeout(()=>{if(WIN===w){w.remove();WIN=null;}},7000);};

@@ -173,3 +173,4 @@ body:has(#poolUI) #keyHint,body:has(#poolUI) #runBtn,body:has(#poolUI) #jumpBtn,
 #poolHud .on{color:#ffd84a;font-weight:800}#poolHud .tm{color:#3ee05a;font-weight:800}#poolHud .tm.hot{color:#ff4a4a}#poolHud .q{color:#bbb;font-size:12px}
 @media (max-width:700px){#poolHud{font-size:12px;top:36px;padding:4px 8px}}
 #poolWin .w{color:#ffd84a;font-weight:800}
+#poolSpin{position:absolute;right:10px;bottom:110px;z-index:6;text-align:center;color:#fff;font-size:12px;background:rgba(10,4,16,.8);border:2px solid #3cd8ff;border-radius:10px;padding:4px}#poolSpin canvas{width:84px;height:84px;touch-action:none;display:block;cursor:crosshair}@media (max-width:700px){#poolSpin{bottom:96px;right:6px}#poolSpin canvas{width:64px;height:64px}}
