@@ -13,7 +13,7 @@ const gentle = returnShot(.5, .89);
 const right = returnShot(.55, .85);
 const left = returnShot(.45, .85);
 assert(Math.abs(right.vy) > Math.abs(gentle.vy), 'a faster swipe produces a faster return');
-assert(right.vx > 0 && left.vx < 0, 'opposite swipes steer returns in opposite directions');
+assert(right.vx > .25 && left.vx < -.25, 'opposite swipes steer returns in opposite directions');
 assert(right.vz > 0 && gentle.vz > 0, 'both strokes lift the ball over the net');
 const state = tennis.create();
 for (let frame = 0; frame < 1800; frame++) {

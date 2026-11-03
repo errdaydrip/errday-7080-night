@@ -1,7 +1,7 @@
 // A bouncing ball and paddle contact, using table coordinates and metres for height.
 (function(root){
  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
- function create(){return {kind:'pingpong',t:0,score:0,opponent:0,over:false,won:false,event:0,serve:true,serveTime:0,x:.5,y:.94,strokeX:0,strokeY:0,ai:.5,swing:0,aiSwing:0,ball:{x:.5,y:.72,z:.35,vx:0,vy:0,vz:0},last:0,bounces:0};}
+ function create(){return {kind:'pingpong',t:0,score:0,opponent:0,over:false,won:false,event:0,serve:true,serveTime:0,x:.5,y:.94,strokeX:0,strokeY:0,ai:.5,aiTarget:.5,aiReaction:0,swing:0,aiSwing:0,ball:{x:.5,y:.72,z:.35,vx:0,vy:0,vz:0},last:0,bounces:0};}
  function point(s,player){if(player)s.score++;else s.opponent++;s.event++;s.serve=true;s.serveTime=0;s.ball={x:.5,y:.72,z:.35,vx:0,vy:0,vz:0};s.bounces=0;if(s.score>=7||s.opponent>=7){s.over=true;s.won=s.score>=7;}}
  function serve(s){s.serve=false;s.ball={x:s.x,y:.82,z:.38,vx:0,vy:-.72,vz:1.6};s.last=0;s.bounces=0;}
  function update(s,dt,input={}){
@@ -14,7 +14,9 @@
   const blend=1-Math.exp(-dt/.07);
   s.strokeX+=(clamp((s.x-oldX)/Math.max(dt,.001),-3,3)-s.strokeX)*blend;
   s.strokeY+=(clamp((s.y-oldY)/Math.max(dt,.001),-2,2)-s.strokeY)*blend;
-  s.ai+=clamp(s.ball.x-s.ai,-dt*.6,dt*.6);
+  s.aiReaction-=dt;
+  if(s.aiReaction<=0){s.aiTarget=s.ball.x;s.aiReaction=.16;}
+  s.ai+=clamp(s.aiTarget-s.ai,-dt*.55,dt*.55);
   if(s.serve){s.serveTime+=dt;if(s.serveTime>.9)serve(s);return;}
   const b=s.ball,steps=8,h=dt/steps;
   for(let i=0;i<steps&&!s.serve;i++){
@@ -36,10 +38,12 @@
      const speed=.65+force*.65;
      b.y=player?s.y-.045:.15;
      b.vy=player?-speed:.82;
-     b.vx=clamp(offset*.2+(player?s.strokeX*.2:0),-.48,.48);
+     const lateral=clamp(offset*.4+(player?s.strokeX*.85:0),-1.15,1.15);
      // Aim the arc at the opposing half, so harder shots still bounce on the table.
      const landing=player?.26:.74;
      const flight=Math.abs(landing-b.y)/Math.abs(b.vy);
+     const landingX=clamp(b.x+lateral*flight,.075,.925);
+     b.vx=(landingX-b.x)/flight;
      b.vz=clamp((2.9*flight*flight-b.z)/flight,.6,3);
      s.last=player?0:1;s.bounces=0;s.event++;if(player)s.swing=.22;else s.aiSwing=.22;
     }

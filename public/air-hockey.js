@@ -34,6 +34,30 @@
    }
    const drag=Math.exp(-.075*h);b.vx*=drag;b.vy*=drag;
   }
+  releaseCorner(s,dt);
+ }
+ function releaseCorner(s,dt){
+  const b=s.ball;
+  const nearX=b.x<K.left+.18||b.x>K.right-.18;
+  const nearY=b.y<K.top+.18/K.aspect||b.y>K.bottom-.18/K.aspect;
+  if(s.serve||!nearX||!nearY){s.cornerWatch=null;return;}
+  const watch=s.cornerWatch;
+  if(!watch||Math.hypot(b.x-watch.x,(b.y-watch.y)*K.aspect)>.025){
+   s.cornerWatch={x:b.x,y:b.y,time:0};return;
+  }
+  watch.time+=dt;
+  if(watch.time<.4)return;
+  const sx=b.x<.5?1:-1,sy=b.y<.5?1:-1;
+  const cx=sx>0?K.left+.13:K.right-.13;
+  const cy=sy>0?K.top+.13/K.aspect:K.bottom-.13/K.aspect;
+  // Paddle separation followed by wall clamping can pin the puck between both.
+  // Release along the inward diagonal to a point clear of both paddles.
+  for(let offset=.03;offset<=.3;offset+=.03){
+   const x=cx+sx*offset,y=cy+sy*offset/K.aspect;
+   if(s.paddles.some(p=>Math.hypot(x-p.x,(y-p.y)*K.aspect)<K.paddle+K.puck+.005))continue;
+   b.x=x;b.y=y;b.vx=sx*.45;b.vy=sy*.45;s.event++;break;
+  }
+  s.cornerWatch=null;
  }
  function ai(s,dt){const p=s.paddles[1],b=s.ball,attack=!s.serve&&b.y<.48;const tx=attack?b.x:.5+(b.x-.5)*.7,ty=attack?clamp(b.y-.055,.14,.4):.18;
   // A modest reaction speed leaves practice playable; the same collisions determine its shots.

@@ -15,3 +15,17 @@ for(const x of [.078,.922])for(const y of [.098,.902]){
  assert(Math.hypot(s.ball.vx,s.ball.vy)>.1,'stationary corner puck escapes');
 }
 console.log('impact, goals, rail and rounded-corner physics OK');
+// The old rounded cushion still pinned the puck against a stationary corner paddle.
+for (const x of [.077, .923]) for (const y of [.097, .903]) {
+ for (const speed of [0, .05, 1]) {
+  const state = H.create();
+  state.serve = false;
+  state.ball = {x, y, vx:(x < .5 ? -1 : 1)*speed, vy:(y < .5 ? -1 : 1)*speed};
+  const paddle = state.paddles[y < .5 ? 1 : 0];
+  paddle.x = x < .5 ? .125 : .875;
+  paddle.y = y < .5 ? .135 : .865;
+  for (let frame = 0; frame < 180; frame++) H.update(state, 1/60);
+  assert(Math.hypot(state.ball.x-x, (state.ball.y-y)*1.25) > .08, 'paddle-pinned corner puck escapes');
+  assert.strictEqual(state.score + state.opponent, 0, 'release does not award a point');
+ }
+}
