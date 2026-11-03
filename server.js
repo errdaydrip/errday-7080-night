@@ -1,6 +1,6 @@
 const express=require('express'),http=require('http'),path=require('path'),fs=require('fs'),multer=require('multer');
 const {Server}=require('socket.io');
-const ROLLER=require('./public/roller.js');const ARCADE=require('./public/arcade.js');const SPORTS=require('./public/sports.js');
+const ROLLER=require('./public/roller.js');const ARCADE=require('./public/arcade.js');
 const PORT=process.env.PORT||8080, UP=path.join(__dirname,'uploads');
 fs.mkdirSync(UP,{recursive:true});
 const ADMIN_PW=String(process.env.ADMIN_PASSWORD||'6651'); // 제작자가 정한 고정 비밀번호
@@ -110,7 +110,7 @@ const BZ={x0:10.55,x1:11.4,z0:-1.6,z1:6.75},BAR_Z={};for(let k=0;k<5;k++)BAR_Z['
 const glasses={};const glassPub=()=>{const o={};for(const k in glasses)o[k]=glasses[k].type||'whiskey';return o;};
 const DRINKS=['soju','beer','whiskey','cocktail','cola','cider'];
 const TABLES={Y1:[-7.6,16.4],Y2:[-3,16.4],Y3:[-7.6,20.2],Y4:[-3,20.2],Y5:[2.2,19.6],T1:[-7,-4,2.4],T2:[-7,2,2.4],T3:[-7,7.5,2.4],T4:[4.5,6,2.4],T5:[0,8.5,2.4],T6:[-2.5,3.5,2.4]};for(const t of ROLLER.tables)TABLES[t.id]=[t.x,t.z,1.8];const tables={};for(const k in TABLES)tables[k]={items:[null,null,null,null],t:0};
-const PICK={soju:{x:-0.7,z:21.5,r:1.8},beer:{x:-0.7,z:21.5,r:1.8}};for(const f of ['dakbal','kkom','fish','squid'])PICK[f]={x:0.8,z:16.0,r:2.4};PICK.chicken={x:-11.6,z:SPORTS.SHOPS.chicken.z,r:2.4};PICK.hoe={x:-11.6,z:SPORTS.SHOPS.hoe.z,r:2.4};
+const PICK={soju:{x:-0.7,z:21.5,r:1.8},beer:{x:-0.7,z:21.5,r:1.8}};for(const f of ['dakbal','kkom','fish','squid'])PICK[f]={x:0.8,z:16.0,r:2.4};PICK.chicken={x:-11.6,z:20.5,r:2.4};PICK.hoe={x:-11.6,z:15,r:2.4};
 const usesPub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.u:0);return o;};const tablePub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.k:null);return o;};
 const FOODS=['dakbal','kkom','fish','squid','chicken','hoe','fruit','ramen','tteokbokki'],MAX_ITEMS=4,USES=6; /* 음식·술 한 개당 6번 */
 function useItem(tb,kind){const t=tables[tb],i=t.items.findIndex(x=>x&&x.k===kind);if(i<0)return false;if(--t.items[i].u<=0)t.items[i]=null;t.t=Date.now();(io.emit('tableUses',usesPub()),io.emit('table',tablePub()));return true;}
@@ -125,7 +125,7 @@ function waiterTick(){const n=Date.now();for(let w=0;w<waiterJobs.length;w++){if
 // 야장 알바: 포차 테이블에 앉은 손님 주문 → 가져와서 테이블에 놓음 (서버 시계 기준, 한 명이 순서대로)
 const ALBA_HOME=[0.2,18.4],ALBA_SP=+process.env.ALBA_SPEED||1.6,ALBA_PICK=+process.env.ALBA_PICK_MS||800,ALBA_PLACE=+process.env.ALBA_PLACE_MS||1000;
 const ORDER_ANJU=['dakbal','kkom','fish','squid','chicken','hoe'],ORDER_DRINK=['soju','beer'];
-const ALBA_SRC=k=>k==='soju'||k==='beer'?[-0.7,20.7]:k==='chicken'?[-10.5,SPORTS.SHOPS.chicken.z]:k==='hoe'?[-10.5,SPORTS.SHOPS.hoe.z]:[0.8,16.9];
+const ALBA_SRC=k=>k==='soju'||k==='beer'?[-0.7,20.7]:k==='chicken'?[-10.5,20.5]:k==='hoe'?[-10.5,15]:[0.8,16.9];
 const albaWorkers={pocha:{queue:[],job:null},roller:{queue:[],job:null}};
 let albaSeq=0;
 function albaPending(tb){const worker=albaWorkers[tb[0]==='R'?'roller':'pocha'];return worker.queue.filter(o=>o.table===tb).length+(worker.job&&worker.job.table===tb&&!worker.job.done?1:0);}
@@ -267,13 +267,17 @@ io.on('connection',s=>{
   if(!cur&&L&&(L.worldVersion||0)<2&&rp.pos[0]>-12&&rp.pos[0]<12&&rp.pos[2]>48&&rp.pos[2]<70){
    rp.pos=[rp.pos[0]+ROLLER.OFFSET.x,rp.pos[1],rp.pos[2]+ROLLER.OFFSET.z];rp.rollerSkates=!!base.rollerSkates;
   }
-  // A guest saved in the previous sports hall resumes at the same facility.
-  if(!cur&&L&&L.worldVersion===2&&rp.pos[0]>-36&&rp.pos[0]<-18&&rp.pos[2]>-16&&rp.pos[2]<22){
-   const x=rp.pos[0]+5.5,z=rp.pos[2]-10;
-   rp.pos=SPORTS.walkable(x,z)?[x,0,z]:[SPORTS.ARRIVE.x,0,SPORTS.ARRIVE.z];
+  // Restore visitors from the retired west hall or its forecourt to the nightclub entrance.
+  const [savedX,,savedZ]=rp.pos;
+  const inFormerHall=L?.worldVersion===2
+   ? savedX>-36&&savedX<-18&&savedZ>-16&&savedZ<22
+   : L?.worldVersion===3&&savedX>=-30.5&&savedX<-12&&savedZ>=-26&&savedZ<=12;
+  const inFormerApproach=(L?.worldVersion===2||L?.worldVersion===3)&&savedX<-12.35&&savedZ>=12&&savedZ<=18.3;
+  if(!cur&&(inFormerHall||inFormerApproach)){
+   rp.pos=[-3.3,0,13.4];rp.seat=null;rp.rollerSkates=false;
   }
   if(ROLLER.inside(rp.pos[0],rp.pos[2])&&!rp.rollerSkates)rp.pos=[ROLLER.ARRIVE.x,0,ROLLER.ARRIVE.z];
-  if(!clubOpen&&!isAdmin(s.data.adminToken)&&rp.pos[2]<12&&!SPORTS.inside(rp.pos[0],rp.pos[2])){rp.pos=[-3.3,0,14.5];rp.seat=null;}
+  if(!clubOpen&&!isAdmin(s.data.adminToken)&&rp.pos[2]<12){rp.pos=[-3.3,0,14.5];rp.seat=null;}
   if(typeof rp.seat==='string'&&rp.seat.startsWith('R')){const seat=ROLLER.seats.find(seat=>seat.id===rp.seat);if(seat)rp.pos=[seat.x,seat.y,seat.z];else{rp.seat=null;rp.pos=[Math.max(ROLLER.T.x0+1,Math.min(ROLLER.T.x1-1,rp.pos[0])),0,rp.pos[2]];}}
   base.seat=rp.seat;
   Object.assign(base,{pos:rp.pos,rollerSkates:rp.rollerSkates});
@@ -282,14 +286,14 @@ io.on('connection',s=>{
  s.on('profile',(p,ack)=>{const pl=players[s.id];if(!pl)return;const nn=String(p.nick||pl.nick).trim().slice(0,16)||pl.nick;if(isBad(nn)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}if(nickTaken(nn,pl.cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nn);return;}if(typeof ack==='function')ack({ok:true});Object.assign(pl,{nick:nn,...look(p)});io.emit('player',{id:s.id,...pl});});
  s.on('adminAccess',(token,ack)=>{
   s.data.adminToken=isAdmin(token)?token:null;
-  const pl=players[s.id];if(!s.data.adminToken&&!clubOpen&&pl&&pl.pos[2]<12&&!SPORTS.inside(pl.pos[0],pl.pos[2]))ejectClubPlayer(s.id);
+  const pl=players[s.id];if(!s.data.adminToken&&!clubOpen&&pl&&pl.pos[2]<12)ejectClubPlayer(s.id);
   if(typeof ack==='function')ack({ok:!!s.data.adminToken});
  });
  s.on('move',m=>{
   const pl=players[s.id];
   if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;
   const admin=isAdmin(s.data.adminToken),wasRoller=ROLLER.inside(pl.pos[0],pl.pos[2]),willRoller=ROLLER.inside(m.pos[0],m.pos[2]);
-  if(!clubOpen&&!admin&&m.pos[2]<12&&!SPORTS.inside(m.pos[0],m.pos[2])){
+  if(!clubOpen&&!admin&&m.pos[2]<12){
    if(pl.pos[2]<12)ejectClubPlayer(s.id);
    else{pl.seat=null;io.emit('seat',{id:s.id,seat:null});s.emit('accessPosition',{pos:pl.pos,rollerSkates:!!pl.rollerSkates});}
    return;
@@ -308,8 +312,6 @@ io.on('connection',s=>{
   }
   const wasArcade=ARCADE.inside(pl.pos[0],pl.pos[2]),willArcade=ARCADE.inside(m.pos[0],m.pos[2]);
   if(wasArcade!==willArcade){const d=ARCADE.DOOR,through=Math.abs(m.pos[0]-d.x)<d.half-.2&&Math.abs(m.pos[2]-d.z)<1.2&&Math.hypot(pl.pos[0]-d.x,pl.pos[2]-d.z)<3.5;if(!through){s.emit('arcadePosition',{pos:pl.pos,rollerSkates:!!pl.rollerSkates});return;}}
-  const wasSports=SPORTS.inside(pl.pos[0],pl.pos[2]),willSports=SPORTS.inside(m.pos[0],m.pos[2]);
-  if(wasSports!==willSports){const d=SPORTS.DOOR,through=Math.abs(m.pos[0]-d.x)<d.half-.2&&Math.abs(m.pos[2]-d.z)<1.4&&Math.hypot(pl.pos[0]-d.x,pl.pos[2]-d.z)<3.5;if(!through){s.emit('sportsPosition',{pos:pl.pos,rollerSkates:!!pl.rollerSkates});return;}}
   pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);
  });
  s.on('seat',seat=>{
@@ -381,9 +383,6 @@ io.on('connection',s=>{
   pl.dance=0;pl.rollerMotion='idle';io.emit('player',{id:s.id,...pub()[s.id]});
   ack({ok:true,pos:pl.pos,rollerSkates:pl.rollerSkates});
  });
- s.on('sportsTravel',(direction,ack)=>{ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];if(!pl||pl.seat)return ack({ok:false,err:'자리에서 일어나 주세요'});const near=(q,r)=>Math.hypot(pl.pos[0]-q.x,pl.pos[2]-q.z)<r;
-  if(direction==='enter'){if(!near(SPORTS.ENTRY,2.5))return ack({ok:false,err:'횟집 옆 스포츠센터 유리문으로 와 주세요'});pl.pos=[SPORTS.ARRIVE.x,0,SPORTS.ARRIVE.z];}
-  else if(direction==='exit'){if(!SPORTS.inside(pl.pos[0],pl.pos[2])||!near(SPORTS.ARRIVE,3))return ack({ok:false,err:'출입문으로 와 주세요'});pl.pos=[SPORTS.ENTRY.x,0,SPORTS.ENTRY.z];}else return ack({ok:false});pl.rollerSkates=false;pl.dance=0;io.emit('player',{id:s.id,...pub()[s.id]});dirty.add(s.id);ack({ok:true,pos:pl.pos,rollerSkates:false});});
  s.on('arcadeTravel',(direction,ack)=>{ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];if(!pl||pl.seat)return ack({ok:false,err:'자리에서 일어나 주세요'});const near=(q,r)=>Math.hypot(pl.pos[0]-q.x,pl.pos[2]-q.z)<r;
   if(direction==='enter'){if(!near(ARCADE.ENTRY,2.5))return ack({ok:false,err:'빨간 자동차 앞 오락실 입구로 와 주세요'});pl.pos=[ARCADE.ARRIVE.x,0,ARCADE.ARRIVE.z];}
   else if(direction==='exit'){if(!ARCADE.inside(pl.pos[0],pl.pos[2])||!near(ARCADE.ARRIVE,3))return ack({ok:false,err:'출입문으로 와 주세요'});pl.pos=[ARCADE.ENTRY.x,0,ARCADE.ENTRY.z];}else return ack({ok:false});
@@ -405,7 +404,7 @@ io.on('connection',s=>{
   clubOpen=d.open;save();
   if(!clubOpen)for(const [id,pl] of Object.entries(players)){
    const client=io.sockets.sockets.get(id);
-   if(pl.pos[2]>=12||SPORTS.inside(pl.pos[0],pl.pos[2])||isAdmin(client&&client.data.adminToken))continue;
+   if(pl.pos[2]>=12||isAdmin(client&&client.data.adminToken))continue;
    ejectClubPlayer(id);
   }
   io.emit('clubDoor',{open:clubOpen,by:true});ack({ok:true,open:clubOpen});
