@@ -26,12 +26,41 @@ module.exports=function({io,players,arcade,onResult,now=Date.now}){
  let previous=now(),frames=0;
  const timer=setInterval(()=>{const t=now(),dt=Math.min(.05,(t-previous)/1000);previous=t;
   for(const r of rooms.values()){
-   if(r.ids.some(id=>!near(id,r.machine))){leave(r.ids[0],'참가자가 테이블을 떠났습니다');continue;}
+   if(r.ids.some(id=>id!==r.guest&&!near(id,r.machine))){leave(r.ids[0],'참가자가 테이블을 떠났습니다');continue;}
    if(t-r.created>1200000||r.last.some(v=>t-v>120000)){leave(r.ids[0],'대기 또는 연결 시간이 만료되었습니다');continue;}
    if(r.status==='playing'){H.update(r.state,dt,r.inputs);if(r.state.over){r.status='finished';onResult(r.ids,r.state);broadcast(r);dispose(r);continue;}}
    if(frames%2===0)broadcast(r);
   }frames++;
  },1000/60);timer.unref();
- function attach(s){s.on('hockeyJoin',(q,a)=>join(s,q,a));s.on('hockeyInput',q=>input(s,q));s.on('hockeyLeave',q=>{if(!q?.id||members.get(s.id)?.id===q.id)leave(s.id);});s.on('disconnect',()=>leave(s.id,'상대방의 연결이 끊겼습니다'));}
+ const invitations=new Map();
+ const table=arcade.machines.find(m=>m.game==='hockey');
+ function clearInvite(inv,message){
+  clearTimeout(inv.timer);invitations.delete(inv.from);invitations.delete(inv.to);
+  for(const id of [inv.from,inv.to])io.to(id).emit('hockeyInviteEnd',{message});
+ }
+ function inviteEvents(s){
+  s.on('hockeyPeers',(_,reply)=>{
+   if(typeof reply!=='function')return;
+   reply(Object.entries(players).filter(([id,p])=>id!==s.id&&!p.gone&&!p.seat&&!members.has(id)&&!invitations.has(id)).map(([id,p])=>({id,nick:p.nick})));
+  });
+  s.on('hockeyInvite',(to,reply)=>{
+   if(typeof reply!=='function')return;
+   if(!near(s.id,table)||to===s.id||!players[to]||players[to].gone||players[to].seat||[to,s.id].some(id=>members.has(id)||invitations.has(id))||rooms.has(table.id))return reply(false);
+   const inv={from:s.id,to,key:crypto.randomUUID()};invitations.set(s.id,inv);invitations.set(to,inv);
+   inv.timer=setTimeout(()=>clearInvite(inv,'초대 시간이 지났어요'),20000);
+   io.to(to).emit('hockeyOffer',{nick:players[s.id].nick,key:inv.key});reply(true);
+  });
+  s.on('hockeyAnswer',answer=>{
+   const inv=invitations.get(s.id);if(!inv||inv.to!==s.id||inv.key!==answer?.key)return;
+   if(!answer.accept)return clearInvite(inv,'대전 초대를 거절했어요');
+   if(!near(inv.from,table)||!players[s.id]||players[s.id].seat||rooms.has(table.id))return clearInvite(inv,'지금은 경기를 시작할 수 없어요');
+   clearInvite(inv,'');const ids=[inv.from,inv.to];
+   const room={id:crypto.randomUUID(),machine:table,ids,guest:s.id,state:H.create(),status:'playing',inputs:[{},{}],last:[now(),now()],seq:0,created:now()};
+   rooms.set(table.id,room);ids.forEach((id,i)=>{members.set(id,room);io.to(id).emit('hockeyAccepted',packet(room,i));});broadcast(room);
+  });
+  function cancel(){const inv=invitations.get(s.id);if(inv)clearInvite(inv,'초대가 취소되었어요');}
+  s.on('hockeyCancelInvite',cancel);s.on('disconnect',cancel);
+ }
+ function attach(s){inviteEvents(s);s.on('hockeyJoin',(q,a)=>join(s,q,a));s.on('hockeyInput',q=>input(s,q));s.on('hockeyLeave',q=>{if(!q?.id||members.get(s.id)?.id===q.id)leave(s.id);});s.on('disconnect',()=>leave(s.id,'상대방의 연결이 끊겼습니다'));}
  return {attach,leave,close:()=>clearInterval(timer)};
 };

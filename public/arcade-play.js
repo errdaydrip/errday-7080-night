@@ -1,7 +1,7 @@
 // Playable cabinet UI. World movement pauses while a game is open.
 (function(){
  const C=ARCADE_CORE,A=ARCADE,overlay=document.createElement('section');overlay.id='arcadeOverlay';overlay.className='hidden';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','arcadeTitle');
- overlay.innerHTML='<div class="arcade-shell"><header class="arcade-head"><div><div class="arcade-kicker">ERRDAY ARCADE / PLAYER ONE</div><h2 id="arcadeTitle"></h2></div><button type="button" class="arcade-close" id="arcadeClose" aria-label="게임 종료">나가기 ✕</button></header><div class="arcade-info"><span>점수 <strong id="arcadeScore">0</strong></span><span>내 최고 <strong id="arcadeBest">0</strong></span><span id="arcadeStatus"></span></div><p class="arcade-instructions" id="arcadeHelp"></p><div class="arcade-modes hidden" id="arcadeModes"><button type="button" id="hockeyPractice" aria-pressed="true">연습 · 컴퓨터 상대</button><button type="button" id="hockeyDuel" aria-pressed="false">실시간 1대1 대전</button></div><div class="arcade-stage"><canvas id="arcadeCanvas" width="480" height="600" tabindex="0" aria-label="오락실 게임 화면"></canvas><div class="arcade-cover" id="arcadeCover"><h3 id="arcadeCoverTitle">READY?</h3><p id="arcadeCoverText">준비되면 시작하세요</p><button type="button" class="arcade-start" id="arcadeStart">게임 시작</button></div></div><div class="arcade-controls" id="arcadeControls"></div><p class="arcade-footer">무료 플레이 · 게임별 개인 최고 기록으로 순위 집계</p></div>';
+ overlay.innerHTML='<div class="arcade-shell"><header class="arcade-head"><div><div class="arcade-kicker">ERRDAY ARCADE / PLAYER ONE</div><h2 id="arcadeTitle"></h2></div><button type="button" class="arcade-close" id="arcadeClose" aria-label="게임 종료">나가기 ✕</button></header><div class="arcade-info"><span>점수 <strong id="arcadeScore">0</strong></span><span>내 최고 <strong id="arcadeBest">0</strong></span><span id="arcadeStatus"></span></div><p class="arcade-instructions" id="arcadeHelp"></p><div class="arcade-modes hidden" id="arcadeModes"><button type="button" id="hockeyPractice" aria-pressed="true">연습 · 컴퓨터 상대</button><button type="button" id="hockeyDuel" aria-pressed="false">대전 초대</button></div><div class="arcade-stage"><canvas id="arcadeCanvas" width="480" height="600" tabindex="0" aria-label="오락실 게임 화면"></canvas><div class="arcade-cover" id="arcadeCover"><h3 id="arcadeCoverTitle">READY?</h3><p id="arcadeCoverText">준비되면 시작하세요</p><button type="button" class="arcade-start" id="arcadeStart">게임 시작</button></div></div><div class="arcade-controls" id="arcadeControls"></div><p class="arcade-footer">무료 플레이 · 게임별 개인 최고 기록으로 순위 집계</p></div>';
  document.body.appendChild(overlay);
  const $=id=>document.getElementById(id),canvas=$('arcadeCanvas'),ctx=canvas.getContext('2d'),W=480,H=600;
  let state=null,machine=null,gameMeta=null,input={},running=false,paused=false,frame=0,last=0,best=0,saved=false,focusBefore=null,repeat=0,audio=null,lastEvent=0,lastBeat=-99,sessionToken=null,startPending=false,openVersion=0;
@@ -39,7 +39,7 @@
   try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();audio.resume();}catch(e){}
   if(paused){togglePause();return;}
   if(startPending)return;
-  if(machine.game==='hockey'&&hockeyMode==='duel'){joinHockey();return;}
+  if(machine.game==='hockey'&&hockeyMode==='duel'){pickOpponent();return;}
   startPending=true;
   const version=openVersion,button=$('arcadeStart');
   button.disabled=true;
@@ -53,9 +53,9 @@
    last=performance.now();$('arcadeCover').classList.add('hidden');canvas.focus();
   });
  }
- function close(){if(!window.ARCADE_PLAYING)return;if(hockeyMatch)socket.emit('hockeyLeave',{id:hockeyMatch.id});save();hockeyMatch=null;hockeyJoining=false;window.ARCADE_HOCKEY_MATCH=null;openVersion++;startPending=false;cancelAnimationFrame(frame);frame=0;running=false;paused=false;input={};state=null;window.ARCADE_ACTIVE_STATE=null;window.ARCADE_PLAYING=false;overlay.classList.add('hidden');document.body.classList.remove('arcade-playing');scene.play();scene.renderer.setAnimationLoop(scene.render);window.ARCADE_DUCK=1;applyVolume();resetRollerMovement();if(focusBefore?.isConnected)focusBefore.focus();refreshAct(true);}
- function openGame(m){
-  if(!joined||!m||!A.inside(rig.object3D.position.x,rig.object3D.position.z)||Math.hypot(rig.object3D.position.x-m.spot.x,rig.object3D.position.z-m.spot.z)>2.1)return false;
+ function close(){if(!window.ARCADE_PLAYING)return;if(machine?.game==='hockey')socket.emit('hockeyCancelInvite');if(hockeyMatch)socket.emit('hockeyLeave',{id:hockeyMatch.id});save();hockeyMatch=null;hockeyJoining=false;window.ARCADE_HOCKEY_MATCH=null;openVersion++;startPending=false;cancelAnimationFrame(frame);frame=0;running=false;paused=false;input={};state=null;window.ARCADE_ACTIVE_STATE=null;window.ARCADE_PLAYING=false;overlay.classList.add('hidden');document.body.classList.remove('arcade-playing');scene.play();scene.renderer.setAnimationLoop(scene.render);window.ARCADE_DUCK=1;applyVolume();resetRollerMovement();if(focusBefore?.isConnected)focusBefore.focus();refreshAct(true);}
+ function openGame(m,invited=false){
+  if(!joined||!m||!invited&&(!A.inside(rig.object3D.position.x,rig.object3D.position.z)||Math.hypot(rig.object3D.position.x-m.spot.x,rig.object3D.position.z-m.spot.z)>2.1))return false;
   if(window.ARCADE_PLAYING)close();hockeyMode='practice';hockeyMatch=null;netFrom=null;netTo=null;openVersion++;sessionToken=null;startPending=false;$('arcadeStart').disabled=false;gameMeta=A.GAMES[m.game];machine=m;state=C.create(m.game);window.ARCADE_ACTIVE_STATE=state;focusBefore=document.activeElement;window.ARCADE_PLAYING=true;scene.pause();scene.renderer.setAnimationLoop(null);window.ARCADE_DUCK=.3;applyVolume();resetRollerMovement();window.RUN_HOLD=false;myDance=0;myYaw=m.yaw??Math.atan2(m.x-m.spot.x,m.z-m.spot.z);socket.emit('move',{pos:rig.object3D.position.toArray(),rot:myYaw,dance:0});input={};saved=false;running=false;paused=false;try{best=+localStorage.getItem('arcade-best-'+m.game)||0;}catch(e){best=0;}
   $('arcadeTitle').textContent=gameMeta.name;$('arcadeHelp').textContent=IS_MOBILE?({blocks:'← → 이동 · ↻ 회전 · ↓ 빠르게 · 내리기',shooter:'화면을 드래그하거나 ← →로 이동 · 발사 버튼 누르기',breaker:'화면을 드래그하거나 ← →로 패들 이동',racer:'← →로 차선을 바꿔 자동차를 피하세요',hoops:'슛 버튼을 눌러 움직이는 골대를 맞히세요',reflex:'빛나는 패널을 터치하세요',rhythm:'노트가 판정선에 닿을 때 방향 버튼을 터치하세요 · 125 BPM',ddr:'박자에 맞춰 아래 발판을 터치하세요 · 125 BPM',pingpong:'화면을 드래그해 라켓 이동 · 서브 버튼',hockey:'패들을 드래그해 밀어보세요 · 빠르게 밀수록 강타 · 서브 버튼'}[m.game]||gameMeta.controls):gameMeta.controls;$('arcadeBest').textContent=best;$('arcadeModes').classList.toggle('hidden',m.game!=='hockey');setHockeyMode('practice',false);controls();overlay.classList.remove('hidden');document.body.classList.add('arcade-playing');cover(gameMeta.name,gameMeta.subtitle,m.game==='hockey'?'연습게임 시작':'게임 시작');$('arcadeStart').focus();last=performance.now();cancelAnimationFrame(frame);frame=requestAnimationFrame(loop);return true;
  };
@@ -72,7 +72,36 @@
   $('arcadeStart').disabled=false;
   if(show)cover(mode==='practice'?'연습게임':'실시간 1대1 대전',mode==='practice'?'컴퓨터와 7점 승부 · 패들을 빠르게 밀어 강타하세요':'같은 테이블의 다른 참가자를 기다립니다 · 먼저 7점이면 승리',mode==='practice'?'연습게임 시작':'대전 참가');
  }
- $('hockeyPractice').onclick=()=>setHockeyMode('practice');$('hockeyDuel').onclick=()=>setHockeyMode('duel');
+ $('hockeyPractice').onclick=()=>setHockeyMode('practice');$('hockeyDuel').onclick=pickOpponent;
+ function invitePanel(title){
+  document.getElementById('hockeyInvitePanel')?.remove();
+  const panel=document.createElement('div');panel.id='hockeyInvitePanel';
+  const heading=document.createElement('strong');heading.textContent=title;panel.append(heading);
+  document.body.append(panel);return panel;
+ }
+ function choice(panel,label,action){
+  const button=document.createElement('button');button.textContent=label;
+  button.onclick=()=>{panel.remove();action();};panel.append(button);
+ }
+ function pickOpponent(){
+  if(hockeyMatch?.status==='playing')return;
+  socket.emit('hockeyPeers',{},peers=>{
+   if(!window.ARCADE_PLAYING||machine?.game!=='hockey')return;
+   const panel=invitePanel(peers.length?'대전할 상대를 선택하세요':'초대할 상대가 아직 없어요');
+   for(const peer of peers)choice(panel,peer.nick,()=>socket.emit('hockeyInvite',peer.id,ok=>sys(ok?'초대를 보냈어요 · 연습을 계속하세요':'현재 초대할 수 없어요')));
+   choice(panel,'닫기',()=>{});
+  });
+ }
+ socket.on('hockeyOffer',offer=>{
+  const panel=invitePanel(offer.nick+'님의 에어하키 대전 초대 · 20초');
+  for(const [label,accept] of [['수락',true],['거절',false]])choice(panel,label,()=>socket.emit('hockeyAnswer',{key:offer.key,accept}));
+ });
+ socket.on('hockeyInviteEnd',q=>{document.getElementById('hockeyInvitePanel')?.remove();if(q.message)sys(q.message);});
+ socket.on('hockeyAccepted',q=>{
+  if(!window.ARCADE_PLAYING||machine?.game!=='hockey')openGame(A.machines.find(m=>m.game==='hockey'),true);
+  save();sessionToken=null;hockeyMode='duel';hockeyMatch=null;hockeyJoining=true;netSeq=0;netSend=0;netServe=false;running=false;input={};
+  receiveHockey(q);hockeyJoining=false;canvas.focus();
+ });
  function viewHockey(q,side){const v=JSON.parse(JSON.stringify(q));if(side===1){[v.score,v.opponent]=[v.opponent,v.score];v.won=v.over&&v.score>=7;v.serveSide=1-v.serveSide;v.paddles.reverse();for(const p of [...v.paddles,v.ball]){p.x=1-p.x;p.y=1-p.y;p.vx=-p.vx;p.vy=-p.vy;}}return v;}
  function receiveHockey(q){
   if(!window.ARCADE_PLAYING||machine?.game!=='hockey'||hockeyMode!=='duel'||(!hockeyMatch&&!hockeyJoining))return;
@@ -80,18 +109,7 @@
   hockeyMatch=q;window.ARCADE_HOCKEY_MATCH=q;const v=viewHockey(q.state,q.side);netFrom=state;netTo=v;netAt=performance.now();state=JSON.parse(JSON.stringify(v));window.ARCADE_ACTIVE_STATE=state;saved=true;paused=false;
   if(q.status==='waiting'){running=false;cover('상대방 기다리는 중','같은 에어하키 테이블에서 대전 참가를 누르면 시작합니다','대기 중…');$('arcadeStart').disabled=true;}
   else if(q.status==='playing'){if(!running)netTarget={...v.paddles[0]};running=true;$('arcadeStart').disabled=false;$('arcadeCover').classList.add('hidden');}
-  else{running=false;input={};if(q.status==='finished'){best=Math.max(best,v.score);$('arcadeBest').textContent=best;try{localStorage.setItem('arcade-best-hockey',String(best));}catch(e){}}$('arcadeStart').disabled=false;cover(q.status==='finished'?(v.won?'승리!':'경기 종료'): '대전 종료',q.status==='finished'?v.score+' : '+v.opponent+' · 7점 승부 종료':q.reason,'다시 대전 참가');}
- }
- function joinHockey(){
-  if(hockeyMatch&&['waiting','playing'].includes(hockeyMatch.status))return;
-  hockeyMatch=null;hockeyJoining=true;startPending=true;netSeq=0;netSend=0;netServe=false;input={};const version=openVersion;$('arcadeStart').disabled=true;
-  socket.timeout(5000).emit('hockeyJoin',{machineId:machine.id},(error,q)=>{
-   if(version!==openVersion||!window.ARCADE_PLAYING){if(q?.ok)socket.emit('hockeyLeave',{id:q.id});return;}
-   hockeyJoining=false;startPending=false;
-   if(error||!q?.ok){if(hockeyMatch)return;$('arcadeStart').disabled=false;cover('대전 참가',q?.error||'연결을 확인하고 다시 참가해 주세요','다시 참가');return;}
-   // A room update can arrive before the acknowledgement.
-   if(!hockeyMatch){hockeyJoining=true;receiveHockey(q);hockeyJoining=false;}
-  });
+  else{running=false;input={};if(q.status==='finished'){best=Math.max(best,v.score);$('arcadeBest').textContent=best;try{localStorage.setItem('arcade-best-hockey',String(best));}catch(e){}}$('arcadeStart').disabled=false;cover(q.status==='finished'?(v.won?'승리!':'경기 종료'): '대전 종료',q.status==='finished'?v.score+' : '+v.opponent+' · 7점 승부 종료':q.reason,'다시 초대');}
  }
  socket.on('hockeyState',receiveHockey);
  socket.on('disconnect',()=>{if(!hockeyMatch)return;hockeyMatch.status='ended';running=false;input={};$('arcadeStart').disabled=false;cover('연결 끊김','다시 연결되면 대전에 재참가해 주세요','다시 참가');});
