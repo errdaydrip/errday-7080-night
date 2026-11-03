@@ -8,9 +8,10 @@ t=[{n:0,x:0,y:0,in:false}];r=P.simulate(t,0,.5);a.ok(!r.balls[0].in&&Math.abs(r.
 (async()=>{const PORT=+(process.env.PORT||8080)+37,U='http://localhost:'+PORT;const srv=spawn('node',['server.js'],{cwd:path.join(__dirname,'..'),env:{...process.env,PORT,STATE_FILE:path.join(os.tmpdir(),'pool-state.json'),WAITER_OFF:'1',TICKER_OFF:'1'},stdio:'ignore'});await W(1500);
  try{const c=io(U,{forceNew:true}),o=io(U,{forceNew:true}),sp=io(U,{forceNew:true});const S=[];sp.on('poolShot',d=>S.push(d));
  await new Promise(r=>c.emit('join',{nick:'큐1',clientId:'p1'},r));await new Promise(r=>o.emit('join',{nick:'큐2',clientId:'p2'},r));
- const E=(s,ev,d)=>new Promise(r=>s.emit(ev,d,r));const once=(s,ev)=>new Promise(r=>s.once(ev,r));
+ const E=(s,ev,d)=>new Promise(r=>s.emit(ev,d,r));const AT=s=>s.emit('move',{pos:[-9,0,-7.6],rot:0});const once=(s,ev)=>new Promise(r=>s.once(ev,r));
  await new Promise(r=>sp.emit('join',{nick:'구경',clientId:'p0'},r));
  const ids={};c.on('connect',()=>{});ids.o=o.id;ids.c=c.id;
+ a.strictEqual((await E(c,'poolChallenge',{t:0,to:o.id})).ok,false,'far target rejected');AT(c);AT(o);AT(sp);await W(150);
  // 초대 → 거절 알림
  let inv=once(o,'poolInvite');a.ok((await E(c,'poolChallenge',{t:0,to:o.id})).ok);let iv=await inv;a.strictEqual(iv.t,0);let res=once(c,'poolChallengeResult');await E(o,'poolAnswer',{from:c.id,accept:false});a.strictEqual((await res).ok,false,'declined');
  // 초대 → 수락 → 2인 게임 (TABLE 2)
@@ -24,6 +25,6 @@ t=[{n:0,x:0,y:0,in:false}];r=P.simulate(t,0,.5);a.ok(!r.balls[0].in&&Math.abs(r.
  a.strictEqual((await E(sp,'poolChallenge',{t:0,to:c.id})).ok,false,'busy table');a.strictEqual((await E(sp,'poolQueue',{join:true})).pos,2);let vv=await E(c,'poolNew',{t:0});a.deepStrictEqual([vv.n,vv.m],[1,2],'vote 1/2');
  // 나가면 남은 2명 계속
  sp3.emit('poolLeave');await W(300);a.strictEqual(gs.players.length,2);a.strictEqual(gs.queue.length,1);
- const ns=once(sp,'poolStart');c.disconnect();await W(400);await ns;a.deepStrictEqual(gs.players.map(p=>p.nick),['구경','큐2'],'next game from queue');a.strictEqual(gs.shots,0);
+ const ns=once(sp,'poolStart'),pw=once(sp,'poolWin');c.disconnect();const wst=await pw;a.strictEqual(wst.over.win,'큐2','remaining player wins');a.ok(/기권패/.test(wst.msg));await W(400);await ns;await W(200);a.deepStrictEqual(gs.players.map(p=>p.nick),['구경','큐2'],'next game from queue');a.strictEqual(gs.shots,0);
  const rep=P.simulate(S[0].before,S[0].a,S[0].p);a.deepStrictEqual(rep.balls.filter(x=>x.n!==0),S[0].state.balls.filter(x=>x.n!==0),'replay matches server');
  c.close();o.close();sp.close();sp3.close();console.log('pool OK');srv.kill();process.exit(0);}catch(e){console.error(e);srv.kill();process.exit(1);}})();

@@ -168,3 +168,8 @@ body:has(#poolUI) #keyHint,body:has(#poolUI) #runBtn,body:has(#poolUI) #jumpBtn,
 .pit{color:#aaa;font-size:13px;margin:6px 0}.pib{display:flex;gap:8px;justify-content:flex-end}.pib button{padding:8px 14px;border-radius:8px;border:none;font-weight:700;font-size:15px}.pib .ok{background:#3ee05a}.pib .no{background:#555;color:#fff}
 
 #poolWin{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:130;background:rgba(20,5,28,.95);border:3px solid #ffd84a;border-radius:14px;padding:16px 26px;color:#fff;font-size:17px;text-align:center;line-height:1.6;pointer-events:none}#poolWin .pw1{font-size:26px;font-weight:900;color:#ffd84a}#poolWin .pw2{font-size:13px;color:#ccc}
+
+#poolHud{position:absolute;left:10px;top:44px;z-index:5;background:rgba(10,4,16,.88);border:2px solid #ffd84a;border-radius:10px;padding:6px 10px;color:#fff;font-size:14px;line-height:1.5;max-width:min(300px,60vw);pointer-events:none}
+#poolHud .on{color:#ffd84a;font-weight:800}#poolHud .tm{color:#3ee05a;font-weight:800}#poolHud .tm.hot{color:#ff4a4a}#poolHud .q{color:#bbb;font-size:12px}
+@media (max-width:700px){#poolHud{font-size:12px;top:36px;padding:4px 8px}}
+#poolWin .w{color:#ffd84a;font-weight:800}

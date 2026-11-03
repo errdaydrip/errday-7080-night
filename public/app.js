@@ -269,7 +269,7 @@ function actions(){const A=[];if(mySeat&&mySeat.startsWith('TAXI')){A.push(['�
   A.push([`🎯 조준해서 던지기 (${DB+1}번)`,()=>dartAim(DB),'dart'+DB]);
   A.push(['하이스코어 (3R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:3},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi3'],['하이스코어 (8R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:8},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi8']);}}
  {const TS=SEATS.filter(q=>q.table==='TAXI');if(TS.length&&TS.some(q=>near({x:q.x,z:q.z-.9},1.9))){const f=TS.find(q=>!seatTaken(q));if(f)A.push(['🚕 택시 타기',()=>{const g=TS.find(q=>!seatTaken(q));g&&sit(g);},'taxi']);else A.push(['🚕 만석',null,'lbl']);}}
- if(window.POOLT&&!mySeat&&window.POOLT.some(q=>near(q,2.6)))A.push(['🎱 당구하기',()=>poolOpen(),'pool']);
+ if(window.POOLT&&!mySeat){const pp=rig.object3D.position;let bi=-1,bd=2.6;POOLT.forEach((q,i)=>{const d=Math.hypot(q.x-pp.x,q.z-pp.z);if(d<bd){bd=d;bi=i;}});if(bi>=0)A.push([POOLT[bi].kind==='carom'?'🔴 4구 치기':'🎱 포켓볼 치기',()=>poolOpen(bi),'pool']);}
  if(near(window.FRIDGE,1.6))for(const k of ['soju','beer'])A.push([ITEM_NAME[k]+' 꺼내기',()=>socket.emit('pickup',k),'p-'+k]);
  if(near(window.COOK,2.2))for(const k of ['dakbal','kkom','fish','squid'])A.push([ITEM_NAME[k],()=>socket.emit('pickup',k),'p-'+k]);
  if(near({x:-11.6,z:20.5},2.2))A.push(['🍗 통닭 가져가기',()=>socket.emit('pickup','chicken'),'p-chicken']);if(near({x:-11.6,z:15},2.2))A.push(['🐟 모듬회 가져가기',()=>socket.emit('pickup','hoe'),'p-hoe']);
@@ -293,7 +293,7 @@ function curPos(){return music.playing?(Date.now()+offset-music.startedAt)/1000:
 const ICON={yt:'📺 ',sc:'☁️ ',vimeo:'🎬 ',url:'🔗 '};function renderMusic(){const cur=music.playlist[music.index];window.theaterScreen&&window.theaterScreen(cur,!!music.playing);typeof applySubs==='function'&&applySubs();$('shufBtn').textContent=music.shuffle?'🔀 랜덤 켬':'🔀 랜덤 끔';$('shufBtn').classList.toggle('sel',!!music.shuffle);$('now').textContent=cur?(music.shuffle?'🔀 ':'')+(music.playing?'▶ ':'⏸ ')+(ICON[cur.type]||'')+(cur.live?'📻 ':'')+cur.title:'재생목록이 비었어요 · 관리자가 곡을 추가하면 재생돼요';
  $('pl').classList.toggle('hidden',!adminToken);$('pl').innerHTML=!adminToken?'':music.playlist.map((t,i)=>`<li class="${i===music.index?'cur':''}">${ICON[t.type]||''}${esc(t.title)} <small>(${esc(t.by)})</small>${adminToken?` <button data-sel="${i}">▶</button><button data-del="${i}">🗑</button>`:''}</li>`).join('');
  $('adminCtl').classList.toggle('hidden',!adminToken);const fold=localStorage.getItem('admFold')==='1';$('admFold').classList.toggle('hidden',!adminToken);$('music').classList.toggle('fold',!!adminToken&&fold);$('admFold').textContent=fold?'⚙ 관리자 ▼':'⚙ 관리자 ▲';$('adminBtn').textContent=adminToken?'🔑ON':'🔑';$('muteBtn').textContent=muted?'🔇':'🔊';}
-function applyVolume(){const v=window.OUTSIDE&&!window.IN_THEATER?volume*.5:volume;audio.volume=v/100;audio.muted=muted;extVol();if(ytReady){yt.setVolume(v);muted?yt.mute():yt.unMute();}}
+function applyVolume(){const v=(window.OUTSIDE&&!window.IN_THEATER?volume*.5:volume)*(window.POOL_DUCK||1);audio.volume=v/100;audio.muted=muted;extVol();if(ytReady){yt.setVolume(v);muted?yt.mute():yt.unMute();}}
 const isAud=c=>c&&(c.type==='mp3'||c.type==='url');let hls=null,hlsUrl=null;
 function loadScript(src){return new Promise((ok,no)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=no;document.head.appendChild(e);});}
 function setAudioSrc(cur){if(cur.type==='url'&&cur.hls&&!audio.canPlayType('application/vnd.apple.mpegurl')){if(hlsUrl===cur.url)return;hlsUrl=cur.url;
@@ -303,7 +303,7 @@ function setAudioSrc(cur){if(cur.type==='url'&&cur.hls&&!audio.canPlayType('appl
 // 외부 플레이어 (사운드클라우드 / 비메오): 숨은 iframe
 let ext=null; // {type,key,api,ready,el}
 function extStop(){if(!ext)return;try{ext.type==='sc'?ext.api.pause():ext.api.destroy();}catch(e){}if(ext.el)ext.el.remove();ext=null;}
-function extVol(){if(!ext||!ext.ready)return;const v=muted?0:(window.OUTSIDE&&!window.IN_THEATER?volume*.5:volume);try{ext.type==='sc'?ext.api.setVolume(v):ext.api.setVolume(v/100);}catch(e){}}
+function extVol(){if(!ext||!ext.ready)return;const v=muted?0:(window.OUTSIDE&&!window.IN_THEATER?volume*.5:volume)*(window.POOL_DUCK||1);try{ext.type==='sc'?ext.api.setVolume(v):ext.api.setVolume(v/100);}catch(e){}}
 async function extEnsure(cur){const key=cur.type+'|'+cur.url+'|'+cur.id;if(ext&&ext.key===key)return ext;extStop();
  const me_={type:cur.type,key,ready:false};ext=me_;const wrap=$('ytWrap');
  try{if(cur.type==='sc'){if(!window.SC)await loadScript('https://w.soundcloud.com/player/api.js');
@@ -527,18 +527,20 @@ function goHome(){if(!confirm('집으로 돌아갈까요? (게임에서 나가�
 window.goHome=goHome;
 
 /* ---------- 🎱 당구: 탑뷰 화면에서 직접 조준(큐볼 주위로 돌리기) + 파워바 드래그 → 놓으면 샷 ---------- */
-let SHARED=[0].map(t=>({t,balls:POOL.rack(),players:[],turn:0,scores:{},msg:''})),POOLT_I=0,PRAC=true,PRACS=null,POOLS=SHARED[0],poolAnim=null;
+let SHARED=[0,1].map(t=>({t,kind:t?'carom':'pool',goal:10,balls:t?POOL.rackCarom():POOL.rack(),players:[],turn:0,scores:{},msg:''})),POOLT_I=0,PRAC=true,PRACS=null,POOLS=SHARED[0],poolAnim=null;
 const poolMe=()=>PRAC?0:POOLS.players.findIndex(p=>p.id===myId),poolMyTurn=()=>{const i=poolMe();return i>=0&&POOLS.turn===i&&!POOLS.over&&!poolAnim;};
-const poolNewPrac=()=>({t:-1,balls:POOL.rack(),players:[{id:myId,nick:me.nick||'나'}],turn:0,scores:{},msg:'연습 중',practice:true});
+const isCar=()=>POOLS.kind==='carom',cueN=()=>isCar()&&!PRAC?POOLS.turn%2:0;
+const poolNewPrac=()=>({t:-1,tab:POOLT_I,kind:POOLT_I?'carom':'pool',sc:0,balls:POOLT_I?POOL.rackCarom():POOL.rack(),players:[{id:myId,nick:me.nick||'나'}],turn:0,scores:{},msg:'연습 중',practice:true});
 const poolIn=()=>SHARED.findIndex(S=>S.players.some(p=>p.id===myId));
-function poolPlay(before,a,p,final,mine,t){const fr=POOL.simulate(before,a,p,{frames:true}).frames;const anim={balls:before,fr:null};const vis=()=>document.getElementById('poolUI')&&((t<0&&PRAC)||(!PRAC&&t===POOLT_I));if(vis())poolAnim=anim;const t0=performance.now();
- const step=()=>{const i=Math.floor((performance.now()-t0)/1000*60);if(i>=fr.length){if(poolAnim===anim)poolAnim=null;if(t>=0){SHARED[t]=final;window.poolRender&&window.poolRender(final.balls,t);if(!PRAC&&t===POOLT_I)POOLS=final;}else PRACS=final,POOLS=PRAC?final:POOLS;poolDraw();
-   if(final.over&&t>=0){const best=final.over.win;window.poolWinner&&window.poolWinner('🏆 우승: '+best);if(mine)poolBanner(final);}else if(mine&&final.msg)sys('🎱 '+final.msg);return;}
+function poolPlay(before,a,p,final,mine,t,op){const SR=POOL.simulate(before,a,p,{frames:true,...(op||{})}),fr=SR.frames,EVS=SR.ev||[];let ei=0;if(document.getElementById('poolUI')&&((t<0&&PRAC)||(!PRAC&&t===POOLT_I)))poolSfx('cue',p);const anim={balls:before,fr:null};const vis=()=>document.getElementById('poolUI')&&((t<0&&PRAC)||(!PRAC&&t===POOLT_I));if(vis())poolAnim=anim;const t0=performance.now();
+ const step=()=>{const i=Math.floor((performance.now()-t0)/1000*60);{const ui=vis();let fac=ui?1:0;if(!ui&&t>=0&&window.POOLT){const q=POOLT[t]||POOLT[0],pp=rig.object3D.position,dd=Math.hypot(q.x-pp.x,q.z-pp.z);fac=dd<6?.5*(1-dd/6):0;}let n=0;while(ei<EVS.length&&EVS[ei].f<=i){const e=EVS[ei++];if(fac>0&&n<4){poolSfx(e.k,e.g*fac);n++;}}}if(i>=fr.length){if(poolAnim===anim)poolAnim=null;if(t>=0){SHARED[t]=final;window.poolRender&&window.poolRender(final.balls,t);if(!PRAC&&t===POOLT_I)POOLS=final;}else PRACS=final,POOLS=PRAC?final:POOLS;poolDraw();
+   if(final.over&&t>=0){const best=final.over.win;window.poolWinner&&window.poolWinner('🏆 우승: '+best,t);if(mine)poolBanner(final);}else if(mine&&final.msg)sys('🎱 '+final.msg);return;}
   anim.fr=fr[i];if(t>=0)window.poolRenderFrame&&window.poolRenderFrame(before,fr[i],t);if(poolAnim===anim)poolDraw();requestAnimationFrame(step);};step();}
 socket.on('poolState',st=>{const t=st.t||0;st._dl=st.left?performance.now()+st.left:0;SHARED[t]=st;if(!poolAnim)window.poolRender&&window.poolRender(st.balls,t);if(!PRAC&&t===POOLT_I&&!poolAnim)POOLS=st;
- if(!PRAC&&t===POOLT_I&&!st.players.some(p=>p.id===myId)&&document.getElementById('poolUI')){PRAC=true;PRACS=PRACS||poolNewPrac();POOLS=PRACS;}poolDraw();});
-socket.on('poolShot',d=>{const t=d.state.t||0;d.state._dl=d.state.left?performance.now()+d.state.left:0;poolPlay(d.before,d.a,d.p,d.state,d.state.players.some(p=>p.id===myId),t);});
+ if(!PRAC&&t===POOLT_I&&!st.players.some(p=>p.id===myId)&&document.getElementById('poolUI')){PRAC=true;if(!PRACS||PRACS.tab!==POOLT_I)PRACS=poolNewPrac();POOLS=PRACS;}poolDraw();});
+socket.on('poolShot',d=>{const t=d.state.t||0;d.state._dl=d.state.left?performance.now()+d.state.left:0;poolPlay(d.before,d.a,d.p,d.state,d.state.players.some(p=>p.id===myId),t,{cue:d.cue||0,carom:!!d.carom});});
 socket.on('poolStart',d=>{POOLT_I=(d&&d.t)||0;PRAC=false;POOLS=SHARED[POOLT_I];if(!document.getElementById('poolUI'))poolOpen(POOLT_I,true);poolDraw();});
+socket.on('poolWin',st=>{const t=st.t||0;SHARED[t]=st;if(!PRAC&&t===POOLT_I)POOLS=st;window.poolWinner&&window.poolWinner('🏆 우승: '+st.over.win,t);if(st.players.some(p=>p.id===myId))poolBanner(st);poolDraw();});
 socket.on('poolEnded',d=>{sys('🎱 '+(d&&d.msg||'같이 치기가 끝났어요'));});
 socket.on('poolChallengeResult',d=>{if(d&&d.msg)sys('🎱 '+d.msg);});
 socket.on('poolInvite',d=>{const old=document.getElementById('poolInv');if(old)old.remove();const o=document.createElement('div');o.id='poolInv';let left=d.sec||20;
@@ -549,58 +551,80 @@ socket.on('poolInvite',d=>{const old=document.getElementById('poolInv');if(old)o
 socket.on('poolInviteGone',()=>{const o=document.getElementById('poolInv');if(o)o.remove();});
 function poolInviteUI(){if(document.getElementById('poolPick'))return;const S=SHARED[POOLT_I];const mine=S.players.some(p=>p.id===myId);const room=4-Math.max(S.players.length,1);
  if(S.players.length&&!mine)return sys('🎱 게임 중이에요 — 대기열에 들어가세요');if(mine&&S.shots>0)return sys('🎱 게임이 이미 시작됐어요');if(room<=0)return sys('🎱 만석 (4명)');
- const busy=new Set(SHARED.flatMap(x=>x.players.map(p=>p.id).concat((x.queue||[]).map(q=>q.id))));const L=Object.entries(others).filter(([id,o])=>o.data&&o.data.nick&&!o.gone&&!busy.has(id));
- const o=document.createElement('div');o.id='poolPick';o.innerHTML=`<div class="pih">🎱 같이 치기 신청 <button type="button" class="x">✕</button></div><div class="pis">함께 칠 사람을 골라요 (최대 ${room}명 더)</div><div class="pil">${L.length?L.map(([id,q])=>`<label><input type="checkbox" value="${id}"> ${esc(q.data.nick)}</label>`).join(''):'<i>지금 신청할 수 있는 사람이 없어요</i>'}</div><div class="pib"><button type="button" class="ok">신청 보내기</button></div>`;
+ const busy=new Set(SHARED.flatMap(x=>x.players.map(p=>p.id).concat((x.queue||[]).map(q=>q.id))));const TQ=(window.POOLT||[])[POOLT_I]||{x:-9,z:-8.9};const L=Object.entries(others).filter(([id,o])=>{if(!o.data||!o.data.nick||o.gone||busy.has(id))return false;const q=o.el.object3D.position;const dd=(window.POOLT||[]).map(T=>Math.hypot(q.x-T.x,q.z-T.z));return dd[POOLT_I]<=3&&!dd.some((v,i)=>i!==POOLT_I&&v<dd[POOLT_I]);});
+ const o=document.createElement('div');o.id='poolPick';o.innerHTML=`<div class="pih">🎱 같이 치기 신청 <button type="button" class="x">✕</button></div><div class="pis">이 테이블 근처에 있는 사람만 보여요 · 최대 ${room}명 더</div><div class="pil">${L.length?L.map(([id,q])=>`<label><input type="checkbox" value="${id}"> ${esc(q.data.nick)}</label>`).join(''):'<i>이 테이블 근처에 신청할 수 있는 사람이 없어요</i>'}</div><div class="pib"><button type="button" class="ok">신청 보내기</button></div>`;
  document.getElementById('poolUI').appendChild(o);o.querySelector('.x').onclick=()=>o.remove();
  o.querySelectorAll('input').forEach(c=>c.onchange=()=>{const n=o.querySelectorAll('input:checked').length;if(n>room){c.checked=false;sys(`🎱 최대 ${room}명까지`);}});
  o.querySelector('.ok').onclick=()=>{const ids=[...o.querySelectorAll('input:checked')].map(c=>c.value);if(!ids.length)return sys('🎱 한 명 이상 골라 주세요');
   ids.forEach(to=>socket.emit('poolChallenge',{t:POOLT_I,to},r=>{if(r&&!r.ok&&r.err)sys('🎱 '+r.err);}));sys(`🎱 같이 치기 신청 보냄 (${ids.length}명) · 20초 기다려요`);o.remove();};}
-function poolBanner(f){const o=document.createElement('div');o.id='poolWin';o.innerHTML=`<div class="pw1">🏆 우승: ${esc(f.over.win)}</div>`+f.players.map(p=>`<div>${esc(p.nick)} — ${f.scores[p.id]||0}개</div>`).sort().join('')+`<div class="pw2">${esc(f.msg||'')}</div>`;document.body.appendChild(o);setTimeout(()=>o.remove(),5500);}
+function poolBanner(f){const W=new Set(String(f.over.win).split(', '));const rows=f.players.map(p=>({nick:p.nick,sc:f.scores[p.id]||0,r:W.has(p.nick)?'🏆 우승':'패'})).sort((x,y)=>(y.r==='🏆 우승')-(x.r==='🏆 우승')||y.sc-x.sc).concat((f.forfeits||[]).map(q=>({nick:q.nick,sc:q.score,r:'🏳 기권패'})));
+ const o=document.createElement('div');o.id='poolWin';o.innerHTML=`<div class="pw1">🏆 우승: ${esc(f.over.win)}</div>`+rows.map(x=>`<div class="${x.r==='🏆 우승'?'w':''}">${x.r} · ${esc(x.nick)} — ${x.sc}${f.kind==='carom'?'점':'개'}</div>`).join('')+`<div class="pw2">${esc(f.msg||'')}</div>`;document.body.appendChild(o);setTimeout(()=>o.remove(),6000);}
+const CAROM_RULES='· 2~4명이 차례대로 친다 (1·3번째 사람 흰 공, 2·4번째 노란 공)<br>· 내 공으로 빨간 공 2개를 한 번에 맞히면 +1점, 한 번 더<br>· 상대 공(흰/노랑)을 맞히면 파울 -1점, 차례 넘김<br>· 빨간 공 하나만 맞히거나 못 맞히면 차례 넘김<br>· 10점 먼저 내면 우승<br>· 한 차례 10초, 넘기면 다음 사람<br>· 새 게임은 모두 동의해야 시작<br>· 게임 중 나가면 기권패';
+const POOL_RULES='· 2~4명이 차례대로 친다<br>· 공을 넣으면 한 번 더<br>· 못 넣으면 다음 사람<br>· 흰 공이 빠지면 다시 놓고 차례 넘김<br>· 8번 공은 마지막에! 다른 공 남았는데 8번 넣으면 탈락<br>· 8번 공이 들어가면 게임 끝<br>· 공을 가장 많이 넣은 사람 승리<br>· 한 차례 10초, 넘기면 다음 사람<br>· 새 게임은 모두 동의해야 시작<br>· 게임 중 나가면 기권패';
+let PAC=null;function poolSfx(k,g=1){if(muted||g<=0)return;try{PAC=PAC||new (window.AudioContext||window.webkitAudioContext)();if(PAC.state==='suspended')PAC.resume();const A=PAC,t=A.currentTime,out=A.createGain();out.connect(A.destination);
+ const vol=Math.min(1,.15+.85*g)*(window.OUTSIDE?.7:1);const tone=(f,f2,d,type,v)=>{const o=A.createOscillator(),gg=A.createGain();o.type=type;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f2,t+d);gg.gain.setValueAtTime(v*vol,t);gg.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(gg);gg.connect(out);o.start(t);o.stop(t+d+.02);};
+ const noise=(d,fq,v)=>{const b=A.createBuffer(1,Math.ceil(A.sampleRate*d),A.sampleRate),c=b.getChannelData(0);for(let i=0;i<c.length;i++)c[i]=(Math.random()*2-1)*Math.pow(1-i/c.length,3);const s=A.createBufferSource();s.buffer=b;const f=A.createBiquadFilter();f.type='bandpass';f.frequency.value=fq;const gg=A.createGain();gg.gain.value=v*vol;s.connect(f);f.connect(gg);gg.connect(out);s.start(t);};
+ if(k==='cue'){noise(.05,2500,.9);tone(320,120,.08,'triangle',.5);}else if(k==='ball'){tone(2400,1900,.05,'sine',.55);noise(.03,4000,.6);}else if(k==='cush'){tone(140,70,.12,'sine',.6);noise(.06,500,.4);}else if(k==='pocket'){tone(220,70,.25,'triangle',.6);noise(.18,350,.5);setTimeout(()=>{try{tone(160,90,.12,'sine',.35);}catch(e){}},140);}}catch(e){}}
+window.poolSfx=poolSfx;
 let poolAim=0,poolPow=0,poolHold=false;
-function poolShootLocal(a,p){const before=POOL.clone(PRACS.balls);const r=POOL.simulate(POOL.clone(before),a,p);const pk=r.pocketed;const f={...PRACS,balls:r.balls,msg:'연습 중'};
+function poolShootLocal(a,p){if(PRACS.kind==='carom'){const before=POOL.clone(PRACS.balls);const r=POOL.simulate(POOL.clone(before),a,p,{carom:true,cue:0});const f={...PRACS,balls:r.balls};
+  if(r.hits.includes(1)){f.msg='노란 공 맞힘 (실전이면 파울 -1)';}else if(r.hits.includes(2)&&r.hits.includes(3)){f.sc=(PRACS.sc||0)+1;f.msg=`👍 빨간 공 둘 다! +1 (${f.sc}점)`;}else f.msg=r.hits.length?'빨간 공 하나만 맞음':'안 맞음';
+  poolPlay(before,a,p,f,false,-1,{carom:true,cue:0});return;}
+ const before=POOL.clone(PRACS.balls);const r=POOL.simulate(POOL.clone(before),a,p);const pk=r.pocketed;const f={...PRACS,balls:r.balls,msg:'연습 중'};
  if(pk.includes(0)){POOL.spotCue(f.balls);f.msg='흰 공 빠짐 → 다시 놓음';}else if(pk.length)f.msg=`${pk.length}개 들어감!`;
  if(pk.includes(8)||f.balls.filter(o=>!o.in&&o.n).length===0){f.msg+=' · 새로 배치';setTimeout(()=>{if(PRACS===f){PRACS=poolNewPrac();if(PRAC)POOLS=PRACS;poolDraw();}},2000);}
  poolPlay(before,a,p,f,false,-1);}
 function poolOpen(t,shared){if(document.getElementById('poolUI'))return;if(t===undefined){const ps=window.POOLT||[];let bi=0,bd=1e9;
   const rig=document.getElementById('rig');const pp=rig?rig.object3D.position:{x:0,z:0};ps.forEach((q,i)=>{const d=Math.hypot(q.x-pp.x,q.z-pp.z);if(d<bd){bd=d;bi=i;}});t=bi;}
- POOLT_I=t;const inT=poolIn();if(inT>=0){POOLT_I=inT;PRAC=false;POOLS=SHARED[inT];}else{PRAC=true;PRACS=PRACS||poolNewPrac();POOLS=PRACS;}
+ POOLT_I=t;const inT=poolIn();if(inT>=0){POOLT_I=inT;PRAC=false;POOLS=SHARED[inT];}else{PRAC=true;if(!PRACS||PRACS.tab!==POOLT_I)PRACS=poolNewPrac();POOLS=PRACS;}
  const o=document.createElement('div');o.id='poolUI';
- o.innerHTML='<div class="ph"><span id="poolStat"></span></div><canvas id="poolCv" width="1200" height="660"></canvas><div class="pbw"><div id="poolBar"><div id="poolFill"></div><span>⬅ 파워: 끌어서 세기 조절 → 손 떼면 샷</span></div></div><div class="pbtn"><button type="button" id="poolJoin">🎱 같이 치기</button><button type="button" id="poolRule">❓ 규칙</button><button type="button" id="poolNew">🔄 새로 배치</button><button type="button" id="poolClose">닫기</button></div><div id="poolRules"></div>';
- document.body.appendChild(o);const cv=o.querySelector('#poolCv');
- o.querySelector('#poolJoin').onclick=()=>{const S=SHARED[0],mine=S.players.some(p=>p.id===myId),qi=(S.queue||[]).findIndex(q=>q.id===myId);
-  if(qi>=0)return socket.emit('poolQueue',{join:false},()=>sys('🎱 대기 취소'));if(S.players.length&&!mine)return socket.emit('poolQueue',{join:true},r=>{if(r&&r.ok)sys(`🎱 대기 ${r.pos}번째 — 이번 게임 끝나면 시작`);else if(r&&r.err)sys('🎱 '+r.err);});poolInviteUI();};o.querySelector('#poolRule').onclick=()=>{o.querySelector('#poolRules').classList.toggle('on');poolDraw();};
+ o.innerHTML='<div class="ph"><span id="poolStat"></span></div><div id="poolHud"></div><canvas id="poolCv" width="1200" height="660"></canvas><div class="pbw"><div id="poolBar"><div id="poolFill"></div><span id="poolHint"></span></div></div><div class="pbtn"><button type="button" id="poolJoin">🎱 같이 치기</button><button type="button" id="poolRule">❓ 규칙</button><button type="button" id="poolNew">🔄 새로 배치</button><button type="button" id="poolClose">닫기</button></div><div id="poolRules"></div>';
+ document.body.appendChild(o);const cv=o.querySelector('#poolCv');window.POOL_DUCK=.3;applyVolume();
+ o.querySelector('#poolHint').textContent=matchMedia('(pointer:fine)').matches?'🖱 마우스로 조준 · 왼쪽 버튼 누르고 있으면 파워 ↑↓ · 떼면 샷 (아래 바를 끌어도 돼요)':'👆 테이블 끌어서 조준 · 이 바를 끌어 세기 → 손 떼면 샷';
+ o.querySelector('#poolJoin').onclick=()=>{const S=SHARED[POOLT_I],mine=S.players.some(p=>p.id===myId),qi=(S.queue||[]).findIndex(q=>q.id===myId);
+  if(qi>=0)return socket.emit('poolQueue',{t:POOLT_I,join:false},()=>sys('🎱 대기 취소'));if(S.players.length&&!mine)return socket.emit('poolQueue',{t:POOLT_I,join:true},r=>{if(r&&r.ok)sys(`🎱 대기 ${r.pos}번째 — 이번 게임 끝나면 시작`);else if(r&&r.err)sys('🎱 '+r.err);});poolInviteUI();};o.querySelector('#poolRule').onclick=()=>{o.querySelector('#poolRules').classList.toggle('on');poolDraw();};
  const toTable=e=>{const b=cv.getBoundingClientRect(),sx=(e.clientX-b.left)/b.width*1200,sy=(e.clientY-b.top)/b.height*660;return[(sx-600)/POOLK,(sy-330)/POOLK];};
- const aim=e=>{if(!poolMyTurn())return;const c=POOLS.balls.find(q=>q.n===0);const [x,y]=toTable(e);poolAim=Math.atan2(y-c.y,x-c.x);poolDraw();};
- cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);cv._d=true;aim(e);});cv.addEventListener('pointermove',e=>{if(cv._d||e.pointerType==='mouse')aim(e);});cv.addEventListener('pointerup',()=>{cv._d=false;});
+ const aim=e=>{if(!poolMyTurn())return;const c=POOLS.balls.find(q=>q.n===cueN());const [x,y]=toTable(e);poolAim=Math.atan2(y-c.y,x-c.x);poolDraw();};
+ cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);if(e.pointerType==='mouse'){if(e.button!==0)return;aim(e);if(!poolMyTurn())return sys('🎱 아직 차례가 아니에요');poolHold=true;cv._m=true;const t0=performance.now();const up=()=>{if(!cv._m)return;const ph=((performance.now()-t0)/1300)%2;poolPow=ph<1?ph:2-ph;poolDraw();requestAnimationFrame(up);};up();return;}cv._d=true;aim(e);});
+ cv.addEventListener('pointermove',e=>{if(cv._d||e.pointerType==='mouse')aim(e);});cv.addEventListener('pointerup',e=>{cv._d=false;if(cv._m){cv._m=false;rel();}});cv.addEventListener('pointercancel',()=>{cv._d=false;if(cv._m){cv._m=false;poolHold=false;poolPow=0;poolDraw();}});
  const bar=o.querySelector('#poolBar'),setP=e=>{const b=bar.getBoundingClientRect();poolPow=Math.max(0,Math.min(1,(e.clientX-b.left)/b.width));poolDraw();};
  bar.addEventListener('pointerdown',e=>{e.preventDefault();if(!poolMyTurn()){sys('🎱 아직 차례가 아니에요');return;}bar.setPointerCapture(e.pointerId);poolHold=true;setP(e);});
  bar.addEventListener('pointermove',e=>{if(poolHold)setP(e);});
  const rel=()=>{if(!poolHold)return;poolHold=false;const p=poolPow;poolPow=0;poolDraw();if(p<.03)return;if(PRAC)poolShootLocal(poolAim,p);else socket.emit('poolShoot',{t:POOLT_I,a:poolAim,p},r=>{if(r&&!r.ok&&r.err)sys('🎱 '+r.err);});};
  bar.addEventListener('pointerup',rel);bar.addEventListener('pointercancel',()=>{poolHold=false;poolPow=0;poolDraw();});
- o.querySelector('#poolClose').onclick=()=>poolClose();o.querySelector('#poolNew').onclick=()=>{if(!PRAC)return socket.emit('poolNew',{t:0},()=>{});PRACS=poolNewPrac();POOLS=PRACS;poolDraw();};poolDraw();}
-function poolClose(auto){const o=document.getElementById('poolUI');if(!o)return;o.remove();socket.emit('poolLeave');PRAC=true;poolAnim=null;}
+ o.querySelector('#poolClose').onclick=()=>poolClose();o.querySelector('#poolNew').onclick=()=>{if(!PRAC)return socket.emit('poolNew',{t:POOLT_I},()=>{});PRACS=poolNewPrac();POOLS=PRACS;poolDraw();};poolDraw();}
+function poolClose(auto){const o=document.getElementById('poolUI');if(!o)return;o.remove();window.POOL_DUCK=1;applyVolume();socket.emit('poolLeave');PRAC=true;poolAnim=null;}
 window.poolOpen=poolOpen;window.poolClose=poolClose;setInterval(()=>{if(!PRAC&&document.getElementById('poolUI')&&!poolAnim)poolDraw();},500);
 const POOLK=1200/(POOL.L+.3);
 function poolDraw(){const cv=document.getElementById('poolCv');if(!cv)return;const c=cv.getContext('2d'),K=POOLK,X=x=>600+x*K,Y=y=>330+y*K;
- c.fillStyle='#4a240c';c.fillRect(0,0,1200,660);c.fillStyle='#0f6b3a';c.fillRect(X(-POOL.L/2),Y(-POOL.Wd/2),POOL.L*K,POOL.Wd*K);
- c.fillStyle='#000';POOL.POCKETS.forEach(([x,y])=>{c.beginPath();c.arc(X(x),Y(y),POOL.PR*K,0,7);c.fill();});
+ c.fillStyle='#4a240c';c.fillRect(0,0,1200,660);c.fillStyle=isCar()?'#1d4fa8':'#0f6b3a';c.fillRect(X(-POOL.L/2),Y(-POOL.Wd/2),POOL.L*K,POOL.Wd*K);
+ c.fillStyle='#000';if(!isCar())POOL.POCKETS.forEach(([x,y])=>{c.beginPath();c.arc(X(x),Y(y),POOL.PR*K,0,7);c.fill();});
  c.strokeStyle='rgba(255,255,255,.15)';c.beginPath();c.moveTo(X(-POOL.L/4),Y(-POOL.Wd/2));c.lineTo(X(-POOL.L/4),Y(POOL.Wd/2));c.stroke();
- const COL=n=>['#f4f1e6','#f2c418','#1f4fd1','#d12a1f','#5a2a9a','#ff7a1a','#1f8a3a','#8a1a1a','#111'][n<=8?n:n-8];
+ const COL=n=>isCar()?['#f4f1e6','#f2c418','#d12a1f','#d12a1f'][n]:['#f4f1e6','#f2c418','#1f4fd1','#d12a1f','#5a2a9a','#ff7a1a','#1f8a3a','#8a1a1a','#111'][n<=8?n:n-8];
  const B=poolAnim&&poolAnim.fr?poolAnim.balls.map((o,i)=>({n:o.n,in:!poolAnim.fr[i],x:poolAnim.fr[i]?poolAnim.fr[i][0]:0,y:poolAnim.fr[i]?poolAnim.fr[i][1]:0})):POOLS.balls;
- const cue=B.find(o=>o.n===0);
- if(poolMyTurn()&&cue&&!cue.in){/* 조준선: 처음 맞는 공/쿠션까지 */const dx=Math.cos(poolAim),dy=Math.sin(poolAim);let tmin=3;
-  for(const o of B){if(o.n===0||o.in)continue;const ox=o.x-cue.x,oy=o.y-cue.y,t=ox*dx+oy*dy;if(t<=0)continue;const d2=ox*ox+oy*oy-t*t,rr=4*POOL.R*POOL.R;if(d2>rr)continue;const th=t-Math.sqrt(rr-d2);if(th<tmin)tmin=th;}
-  const tx=dx>0?(POOL.L/2-POOL.R-cue.x)/dx:dx<0?(-POOL.L/2+POOL.R-cue.x)/dx:9,ty=dy>0?(POOL.Wd/2-POOL.R-cue.y)/dy:dy<0?(-POOL.Wd/2+POOL.R-cue.y)/dy:9;tmin=Math.min(tmin,tx,ty);
-  c.setLineDash([10,8]);c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=3;c.beginPath();c.moveTo(X(cue.x),Y(cue.y));c.lineTo(X(cue.x+dx*tmin),Y(cue.y+dy*tmin));c.stroke();c.setLineDash([]);
-  c.strokeStyle='rgba(255,255,255,.6)';c.beginPath();c.arc(X(cue.x+dx*tmin),Y(cue.y+dy*tmin),POOL.R*K,0,7);c.stroke();
+ const cue=B.find(o=>o.n===cueN()&&!o.in);
+ if(poolMyTurn()&&cue&&!cue.in){/* 조준선: 처음 맞는 공/쿠션까지 + 맞은 뒤 갈 방향 (나만 보임) */const dx=Math.cos(poolAim),dy=Math.sin(poolAim);let tmin=3,hit=null;
+  for(const o of B){if(o===cue||o.in)continue;const ox=o.x-cue.x,oy=o.y-cue.y,t=ox*dx+oy*dy;if(t<=0)continue;const d2=ox*ox+oy*oy-t*t,rr=4*POOL.R*POOL.R;if(d2>rr)continue;const th=t-Math.sqrt(rr-d2);if(th<tmin){tmin=th;hit=o;}}
+  const tx=dx>0?(POOL.L/2-POOL.R-cue.x)/dx:dx<0?(-POOL.L/2+POOL.R-cue.x)/dx:9,ty=dy>0?(POOL.Wd/2-POOL.R-cue.y)/dy:dy<0?(-POOL.Wd/2+POOL.R-cue.y)/dy:9;let wall=null;if(Math.min(tx,ty)<tmin){tmin=Math.min(tx,ty);hit=null;wall=tx<ty?'x':'y';}
+  const gx=cue.x+dx*tmin,gy=cue.y+dy*tmin;const dl=(x0,y0,x1,y1,col,w)=>{c.setLineDash([8,8]);c.strokeStyle=col;c.lineWidth=w||3;c.beginPath();c.moveTo(X(x0),Y(y0));c.lineTo(X(x1),Y(y1));c.stroke();c.setLineDash([]);};
+  dl(cue.x,cue.y,gx,gy,'rgba(255,255,255,.75)');c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=2;c.beginPath();c.arc(X(gx),Y(gy),POOL.R*K,0,7);c.stroke();
+  const LN=.38;
+  if(hit){const nx=(hit.x-gx)/(2*POOL.R),ny=(hit.y-gy)/(2*POOL.R),dn=dx*nx+dy*ny;dl(hit.x,hit.y,hit.x+nx*LN*(.4+dn),hit.y+ny*LN*(.4+dn),'rgba(255,230,90,.9)');
+   const cx=dx-dn*nx,cy=dy-dn*ny,cl=Math.hypot(cx,cy);if(cl>.05)dl(gx,gy,gx+cx/cl*LN*cl,gy+cy/cl*LN*cl,'rgba(150,220,255,.85)');}
+  else if(wall){const rx=wall==='x'?-dx:dx,ry=wall==='y'?-dy:dy;dl(gx,gy,gx+rx*LN,gy+ry*LN,'rgba(150,220,255,.85)');}
   /* 큐대 (파워만큼 뒤로) */const back=POOL.R*1.5+.04+poolPow*.35;c.strokeStyle='#e0c090';c.lineWidth=10;c.lineCap='round';c.beginPath();c.moveTo(X(cue.x-dx*back),Y(cue.y-dy*back));c.lineTo(X(cue.x-dx*(back+1.1)),Y(cue.y-dy*(back+1.1)));c.stroke();
   c.strokeStyle='#2a6aff';c.lineWidth=10;c.beginPath();c.moveTo(X(cue.x-dx*back),Y(cue.y-dy*back));c.lineTo(X(cue.x-dx*(back+.03)),Y(cue.y-dy*(back+.03)));c.stroke();}
  for(const o of B){if(o.in)continue;const x=X(o.x),y=Y(o.y),r=POOL.R*K;c.fillStyle=o.n>8?'#fff':COL(o.n);c.beginPath();c.arc(x,y,r,0,7);c.fill();if(o.n>8){c.fillStyle=COL(o.n);c.fillRect(x-r,y-r*.5,r*2,r);}
   if(o.n){c.fillStyle='#fff';c.beginPath();c.arc(x,y,r*.45,0,7);c.fill();c.fillStyle='#000';c.font=`bold ${Math.round(r*.6)}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(o.n,x,y+1);}}
+ {const H=document.getElementById('poolHud');if(H){const B0=POOLS.balls,left=B0.filter(o=>!o.in&&o.n!==0),objL=left.filter(o=>o.n!==8).length,eightIn=!left.some(o=>o.n===8);
+  const CAR=isCar(),myB=CAR&&!PRAC?(POOLS.players.findIndex(p=>p.id===myId)%2?'노란':'흰'):'흰';const tgt=CAR?`🎯 목표: ${myB} 공으로 빨간 공 2개 한 번에 맞히기${PRAC?'':' · '+(POOLS.goal||10)+'점 먼저'}`:eightIn?'':objL?'🎯 목표: 8번 빼고 아무 공 ('+objL+'개 남음)':'🎯 목표: 8번 공만 남음!';
+  if(PRAC&&CAR){H.innerHTML=`<div>🔴 4구 연습 · 득점 <b>${POOLS.sc||0}</b></div><div>${tgt}</div>`;}else if(PRAC){H.innerHTML=`<div>🎱 연습 · 남은 공 <b>${left.length}</b> · 넣은 공 <b>${15-left.length}</b></div><div>${tgt}</div>`;}
+  else{const P=POOLS.players,sec=POOLS._dl&&!POOLS.over?Math.ceil(Math.max(0,POOLS._dl-performance.now())/1000):null;
+   H.innerHTML=P.map((p,i)=>`<div class="${i===POOLS.turn?'on':''}">${i===POOLS.turn?'▶ ':''}${CAR?(i%2?'🟡':'⚪'):''}${esc(p.nick)}${p.id===myId?' (나)':''} — <b>${POOLS.scores[p.id]||0}</b>${CAR?'점':'개'}</div>`).join('')+(CAR?`<div>${tgt}</div>`:`<div>남은 공 <b>${left.length}</b> · ${tgt}</div>`)+(sec!==null&&!poolAnim?`<div class="tm${sec<=3?' hot':''}">⏱ ${sec}초 · ${P[POOLS.turn]&&P[POOLS.turn].id===myId?'내 차례!':esc((P[POOLS.turn]||{}).nick||'')+' 차례'}</div>`:'')+((POOLS.queue||[]).length?`<div class="q">대기: ${POOLS.queue.map(q=>esc(q.nick)).join(', ')}</div>`:'');}}}
  const st=document.getElementById('poolStat');if(st){const P=POOLS.players,cur=P[POOLS.turn];
   st.textContent=PRAC?`혼자 연습 (나만 보여요)${POOLS.msg?' · '+POOLS.msg:''}`:``+P.map(p=>`${p.nick} ${POOLS.scores[p.id]||0}개`).join(' / ')+(cur?` · 차례: ${cur.nick}${cur.id===myId?' (나!)':''}`:'')+(!PRAC&&POOLS._dl&&!POOLS.over&&!poolAnim?` · ⏱ ${Math.ceil(Math.max(0,POOLS._dl-performance.now())/1000)}초`:'')+(POOLS.msg?` · ${POOLS.msg}`:'');}
  {const j=document.getElementById('poolJoin'),n=document.getElementById('poolNew'),S=SHARED[POOLT_I];if(j){const mine=S.players.some(p=>p.id===myId),qi=(S.queue||[]).findIndex(q=>q.id===myId),other=S.players.length&&!mine;j.disabled=!!(mine&&(S.shots>0||S.players.length>=4));j.textContent=qi>=0?`⏳ 대기 중 ${qi+1}번째 (취소)`:other?`🎱 같이 치기 (대기${(S.queue||[]).length?' '+S.queue.length+'명':''})`:mine?(S.players.length>=4?'🎱 만석':S.shots>0?'🎱 게임 중':'🎱 같이 치기'):'🎱 같이 치기';}if(n){const mine=S.players.some(p=>p.id===myId),vt=(S.votes||[]).includes(myId);n.style.display=PRAC||mine?'':'none';n.textContent=PRAC?'🔄 새로 배치':`🔄 새 게임 동의 ${(S.votes||[]).length}/${S.players.length}${vt?' (취소)':''}`;}
-  const R=document.getElementById('poolRules');if(R)R.innerHTML=(PRAC?'':'<b>규칙</b><br>· 차례대로 친다<br>· 공을 넣으면 한 번 더<br>· 못 넣으면 다음 사람<br>· 흰 공이 빠지면 다시 놓고 차례 넘김<br>· 8번 공은 마지막에, 들어가면 게임 끝<br>· 공을 가장 많이 넣은 사람 승리<br>· 한 차례 10초 — 넘기면 다음 사람<br>· 새 게임은 모두 동의해야 시작<br>')+'<b>조작</b><br>· 테이블을 끌어/눌러 방향 조준 → 아래 파워바를 끌어 세기 → 손 떼면 샷';}
+  const R=document.getElementById('poolRules');if(R)R.innerHTML=isCar()?(PRAC?'<b>4구 연습</b><br>· 나만 보이는 테이블<br>· 흰 공으로 빨간 공 2개를 한 번에 맞혀 보세요<br><br><b>같이 치기 규칙</b><br>':'<b>4구 규칙</b><br>')+CAROM_RULES:PRAC?'<b>연습 모드</b><br>· 나만 보이는 테이블, 자유롭게 연습<br>· 흰 공이 빠지면 다시 놓여요<br>· 공을 다 넣거나 8번이 들어가면 새로 배치<br><br><b>같이 치기 규칙</b><br>'+POOL_RULES:'<b>게임 규칙</b><br>'+POOL_RULES;}
  const f=document.getElementById('poolFill');if(f){f.style.width=(poolPow*100)+'%';f.style.background=poolPow>.75?'#ff3b3b':poolPow>.4?'#ffd23a':'#3ee05a';}}
 
 /* 👥 접속자 목록: 인원수 누르면 열고/닫기 */
