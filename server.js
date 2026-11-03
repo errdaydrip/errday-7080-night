@@ -108,11 +108,11 @@ setInterval(sweep,15000).unref();
 const chatHist=[];const GRACE_MS=+process.env.GRACE_MS||30000;
 const BZ={x0:10.55,x1:11.4,z0:-1.6,z1:6.75},BAR_Z={};for(let k=0;k<5;k++)BAR_Z['BAR-'+k]=3-3.5+k*1.4;
 const glasses={};const glassPub=()=>{const o={};for(const k in glasses)o[k]=glasses[k].type||'whiskey';return o;};
-const DRINKS=['soju','beer','whiskey','cocktail'];
-const TABLES={Y1:[-7.6,16.4],Y2:[-3,16.4],Y3:[-7.6,20.2],Y4:[-3,20.2],Y5:[2.2,19.6],T1:[-7,-4,2.4],T2:[-7,2,2.4],T3:[-7,7.5,2.4],T4:[4.5,6,2.4],T5:[0,8.5,2.4],T6:[-2.5,3.5,2.4]};const tables={};for(const k in TABLES)tables[k]={items:[null,null,null,null],t:0};
+const DRINKS=['soju','beer','whiskey','cocktail','cider'];
+const TABLES={Y1:[-7.6,16.4],Y2:[-3,16.4],Y3:[-7.6,20.2],Y4:[-3,20.2],Y5:[2.2,19.6],T1:[-7,-4,2.4],T2:[-7,2,2.4],T3:[-7,7.5,2.4],T4:[4.5,6,2.4],T5:[0,8.5,2.4],T6:[-2.5,3.5,2.4]};for(const t of ROLLER.tables)TABLES[t.id]=[t.x,t.z,1.8];const tables={};for(const k in TABLES)tables[k]={items:[null,null,null,null],t:0};
 const PICK={soju:{x:-0.7,z:21.5,r:1.8},beer:{x:-0.7,z:21.5,r:1.8}};for(const f of ['dakbal','kkom','fish','squid'])PICK[f]={x:0.8,z:16.0,r:2.4};PICK.chicken={x:-11.6,z:20.5,r:2.4};PICK.hoe={x:-11.6,z:15,r:2.4};
 const usesPub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.u:0);return o;};const tablePub=()=>{const o={};for(const k in tables)o[k]=tables[k].items.map(i=>i?i.k:null);return o;};
-const FOODS=['dakbal','kkom','fish','squid','chicken','hoe','fruit'],MAX_ITEMS=4,USES=6; /* 음식·술 한 개당 6번 */
+const FOODS=['dakbal','kkom','fish','squid','chicken','hoe','fruit','ramen'],MAX_ITEMS=4,USES=6; /* 음식·술 한 개당 6번 */
 function useItem(tb,kind){const t=tables[tb],i=t.items.findIndex(x=>x&&x.k===kind);if(i<0)return false;if(--t.items[i].u<=0)t.items[i]=null;t.t=Date.now();(io.emit('tableUses',usesPub()),io.emit('table',tablePub()));return true;}
 // 웨이터 리필: 서버가 일을 정하고 모두에게 같은 시각으로 알림 → 모든 화면에서 같은 웨이터가 같은 테이블로 감
 const {refill:wRefill,needs:wNeeds}=require('./waiter');const W_WALK=+process.env.WAITER_WALK_MS||5000,W_PLACE=+process.env.WAITER_PLACE_MS||1500,W_DELAY=process.env.REFILL_DELAY_MS!==undefined?+process.env.REFILL_DELAY_MS:20000;
@@ -126,17 +126,32 @@ function waiterTick(){const n=Date.now();for(let w=0;w<waiterJobs.length;w++){if
 const ALBA_HOME=[0.2,18.4],ALBA_SP=+process.env.ALBA_SPEED||1.6,ALBA_PICK=+process.env.ALBA_PICK_MS||800,ALBA_PLACE=+process.env.ALBA_PLACE_MS||1000;
 const ORDER_ANJU=['dakbal','kkom','fish','squid','chicken','hoe'],ORDER_DRINK=['soju','beer'];
 const ALBA_SRC=k=>k==='soju'||k==='beer'?[-0.7,20.7]:k==='chicken'?[-10.5,20.5]:k==='hoe'?[-10.5,15]:[0.8,16.9];
-let albaQ=[],albaJob=null,albaSeq=0;
-function albaPending(tb){return albaQ.filter(o=>o.table===tb).length+(albaJob&&albaJob.table===tb&&!albaJob.done?1:0);}
-function albaNext(){if(albaJob||!albaQ.length)return;const o=albaQ.shift(),n=Date.now(),src=ALBA_SRC(o.kind),c=TABLES[o.table];
- const dx=src[0]-c[0],dz=src[1]-c[1],l=Math.hypot(dx,dz)||1,to=[+(c[0]+dx/l*1.0).toFixed(2),+(c[1]+dz/l*1.0).toFixed(2)];
- const ms=(a,b)=>Math.round(Math.hypot(a[0]-b[0],a[1]-b[1])/ALBA_SP*1000);
- const j={...o,t0:n,home:ALBA_HOME,src,to,c:[c[0],c[1]],leg1:ms(ALBA_HOME,src),pick:ALBA_PICK,leg2:ms(src,to),place:ALBA_PLACE,leg3:ms(to,ALBA_HOME)};albaJob=j;io.emit('albaJob',j);
- setTimeout(()=>{const t=tables[j.table],i=t.items.indexOf(null);j.done=true;if(i>=0){t.items[i]={k:j.kind,u:USES};t.t=Date.now();io.emit('tableUses',usesPub());io.emit('table',tablePub());}
-  io.emit('albaDone',{id:j.id,by:j.by,ok:i>=0,kind:j.kind,table:j.table});},j.leg1+j.pick+j.leg2+j.place/2).unref();
- setTimeout(()=>{albaJob=null;albaNext();},j.leg1+j.pick+j.leg2+j.place).unref();} // 복귀 걸음은 화면에서만 (다음 주문은 바로 시작)
+const albaWorkers={pocha:{queue:[],job:null},roller:{queue:[],job:null}};
+let albaSeq=0;
+function albaPending(tb){const worker=albaWorkers[tb[0]==='R'?'roller':'pocha'];return worker.queue.filter(o=>o.table===tb).length+(worker.job&&worker.job.table===tb&&!worker.job.done?1:0);}
+function albaNext(venue='pocha'){
+ const worker=albaWorkers[venue];if(worker.job||!worker.queue.length)return;
+ const roller=venue==='roller',o=worker.queue.shift(),n=Date.now(),src=roller?ROLLER.STAFF.source:ALBA_SRC(o.kind),c=TABLES[o.table];
+ const home=roller?ROLLER.STAFF.home:ALBA_HOME,speed=roller?ALBA_SP*1.8:ALBA_SP;
+ const dx=src[0]-c[0],dz=src[1]-c[1],l=Math.hypot(dx,dz)||1;
+ const to=roller?ROLLER.tables.find(t=>t.id===o.table).service:[+(c[0]+dx/l).toFixed(2),+(c[1]+dz/l).toFixed(2)];
+ const ms=(a,b)=>Math.round(Math.hypot(a[0]-b[0],a[1]-b[1])/speed*1000);
+ const j={...o,t0:n,home,src,to,c:[c[0],c[1]],leg1:ms(home,src),pick:ALBA_PICK,leg2:ms(src,to),place:ALBA_PLACE,leg3:ms(to,home)};
+ if(roller){
+  j.route2=[src,[17,to[1]],to];j.route3=[to,[17,to[1]],[17,32],home];
+  j.leg2=j.route2.slice(1).reduce((sum,p,i)=>sum+ms(j.route2[i],p),0);
+  j.leg3=j.route3.slice(1).reduce((sum,p,i)=>sum+ms(j.route3[i],p),0);
+ }
+ worker.job=j;io.emit(roller?'rollerAlbaJob':'albaJob',j);
+ setTimeout(()=>{
+  const t=tables[j.table],i=t.items.indexOf(null);j.done=true;
+  if(i>=0){t.items[i]={k:j.kind,u:USES};t.t=Date.now();io.emit('tableUses',usesPub());io.emit('table',tablePub());}
+  io.emit('albaDone',{id:j.id,by:j.by,ok:i>=0,kind:j.kind,table:j.table});
+ },j.leg1+j.pick+j.leg2+j.place/2).unref();
+ setTimeout(()=>{worker.job=null;albaNext(venue);},j.leg1+j.pick+j.leg2+j.place+(roller?j.leg3:0)).unref();
+}
 if(!process.env.WAITER_OFF)setInterval(waiterTick,+process.env.WAITER_TICK_MS||4000).unref();
-const pochaTable=seat=>{const m=/^([YT]\d)-/.exec(seat||'');return m&&tables[m[1]]?m[1]:null;};
+const pochaTable=seat=>{const m=/^([YTR]\d)-/.exec(seat||'');return m&&tables[m[1]]?m[1]:null;};
 function canDrink(seat,type){if(BAR_Z[seat]!==undefined)return !!glasses[seat]&&(glasses[seat].type||'whiskey')===type;if(type==='whiskey'||type==='cocktail')return false;const tb=pochaTable(seat);if(tb)return tables[tb].items.some(i=>i&&i.k===type);return false;}
 setInterval(()=>{const n=Date.now();let ch=false;for(const k in tables)if(tables[k].items.some(Boolean)&&n-tables[k].t>1200000){tables[k].items=[null,null,null,null];ch=true;}if(ch)(io.emit('tableUses',usesPub()),io.emit('table',tablePub()));},10000).unref();
 setInterval(()=>{const n=Date.now();let ch=false;for(const k in glasses)if(n-glasses[k].t>60000){delete glasses[k];ch=true;}if(ch)io.emit('glasses',glassPub());},2000).unref();
@@ -287,11 +302,21 @@ io.on('connection',s=>{
   }
   pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);
  });
- s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
+ s.on('seat',seat=>{
+  const pl=players[s.id];if(!pl)return;
+  if(typeof seat==='string'&&/^R/.test(seat)){
+   const target=ROLLER.seats.find(s=>s.id===seat);
+   if(!target||!ROLLER.near(pl.pos,target,1.9)||Object.entries(players).some(([id,p])=>id!==s.id&&!p.gone&&p.seat===seat)){
+    s.emit('seatRejected',{seat,error:'자리에 가까이 오거나 비어 있는 의자를 골라 주세요'});return;
+   }
+   pl.pos=[target.x,target.y,target.z];dirty.add(s.id);
+  }
+  pl.seat=seat;io.emit('seat',{id:s.id,seat});
+ });
  s.emit('glasses',glassPub());
- s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));s.emit('tickerIdle',tickerIdle);s.emit('boards',boardsPub());s.emit('clubDoor',{open:clubOpen});s.emit('rollerDoor',{open:rollerOpen});if(rankData)s.emit('ranking',rankData);if(albaJob)s.emit('albaJob',albaJob);
+ s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));s.emit('tickerIdle',tickerIdle);s.emit('boards',boardsPub());s.emit('clubDoor',{open:clubOpen});s.emit('rollerDoor',{open:rollerOpen});if(rankData)s.emit('ranking',rankData);for(const [venue,worker] of Object.entries(albaWorkers))if(worker.job)s.emit(venue==='roller'?'rollerAlbaJob':'albaJob',worker.job);
  s.on('drink',type=>{const pl=players[s.id];if(!pl||!pl.seat||!DRINKS.includes(type))return;if(!canDrink(pl.seat,type))return;const n=Date.now();if(n-(pl.lastDrink||0)<2000)return;pl.lastDrink=n;
-  pl.drinks=(pl.drinks||[]).filter(x=>n-x<1800000).concat(n).slice(-20);
+  if(type!=='cider')pl.drinks=(pl.drinks||[]).filter(x=>n-x<1800000).concat(n).slice(-20);
   if(BAR_Z[pl.seat]!==undefined){delete glasses[pl.seat];io.emit('glasses',glassPub());}const tb=pochaTable(pl.seat);if(tb)useItem(tb,type);io.emit('drink',{id:s.id,type});});
  s.emit('presets',presets);
  s.on('getTicker',(tok,ack)=>{if(typeof ack==='function')ack(isAdmin(tok)?{ok:true,rankUrl}:{ok:false});});
@@ -348,7 +373,7 @@ io.on('connection',s=>{
  });
  s.on('rollerEquip',(d,ack)=>{
   ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];
-  if(!pl||pl.seat||!ROLLER.inside(pl.pos[0],pl.pos[2])||!ROLLER.near(pl.pos,ROLLER.ARRIVE,2.3))return ack({ok:false,err:'롤라장 입구에서 이용해 주세요'});
+  if(!pl||pl.seat||!ROLLER.inside(pl.pos[0],pl.pos[2])||!(ROLLER.near(pl.pos,ROLLER.ARRIVE,2.3)||ROLLER.near(pl.pos,ROLLER.CHANGE,2.2)))return ack({ok:false,err:'입구 또는 롤러 교체 코너에서 이용해 주세요'});
   pl.rollerSkates=!!(d&&d.on);Object.assign(pl,ROLLER.colours(d||{}));pl.rollerMotion='idle';
   io.emit('player',{id:s.id,...pub()[s.id]});ack({ok:true,rollerSkates:pl.rollerSkates,...ROLLER.colours(pl)});
  });
@@ -356,12 +381,6 @@ io.on('connection',s=>{
   const pl=players[s.id];if(!pl||!pl.rollerSkates||!ROLLER.inside(pl.pos[0],pl.pos[2]))return;
   if(!['idle','skate','run','jump'].includes(motion)||pl.rollerMotion===motion)return;
   pl.rollerMotion=motion;io.emit('rollerMotion',{id:s.id,motion});
- });
- s.on('rollerSnack',(kind,ack)=>{
-  ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];
-  if(!pl||!['ramen','cider'].includes(kind)||!ROLLER.near(pl.pos,ROLLER.SHOP,2.5))return ack({ok:false,err:'롤라장 매점 앞에서 이용해 주세요'});
-  const n=Date.now();if(n-(pl.lastRollerSnack||0)<2200)return ack({ok:false,err:'천천히 드세요'});
-  pl.lastRollerSnack=n;io.emit('rollerSnack',{id:s.id,kind});ack({ok:true});
  });
  s.on('setClubDoor',(d,ack)=>{
   ack=typeof ack==='function'?ack:()=>{};
@@ -386,10 +405,20 @@ io.on('connection',s=>{
   Object.assign(music,{index:0,playing:true,startedAt:Date.now(),pausedAt:0,isDefault:false,cleared:false,shuffle:false});played=new Set();
   io.emit('chat',{sys:true,text:`🎛 재생목록을 '${P.name}' (${items.length}곡)으로 바꿨어요`});broadcastMusic();ack({ok:true,count:items.length});
   if(items.some(it=>!it.title))(async()=>{for(const t of music.playlist){if(t.title==='YouTube'){t.title=await ytTitle(t.videoId);}}broadcastMusic();})();});
- s.on('order',(kind,ack)=>{ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];if(!pl)return ack({ok:false,err:'입장 먼저'});if(!ORDER_ANJU.includes(kind)&&!ORDER_DRINK.includes(kind))return ack({ok:false,err:'없는 메뉴'});
-  const tb=pochaTable(pl.seat);if(!tb||tb[0]!=='Y')return ack({ok:false,err:'포차 테이블에 앉아야 주문할 수 있어요'});const n=Date.now();if(n-(pl.lastOrder||0)<700)return ack({ok:false,err:'천천히 주문해 주세요'});
-  if(albaQ.filter(o=>o.by===s.id).length+(albaJob&&!albaJob.done&&albaJob.by===s.id?1:0)>=3)return ack({ok:false,err:'주문은 3개까지 기다릴 수 있어요'});
-  if(tables[tb].items.filter(i=>!i).length<=albaPending(tb))return ack({ok:false,err:'테이블이 꽉 찼어요'});pl.lastOrder=n;const o={id:++albaSeq,by:s.id,nick:pl.nick,table:tb,kind};albaQ.push(o);ack({ok:true,id:o.id,queue:albaQ.length+(albaJob?1:0)});io.emit('albaQueue',albaQ.length);albaNext();});
+ s.on('order',(kind,ack)=>{
+  ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];if(!pl)return ack({ok:false,err:'입장 먼저'});
+  const tb=pochaTable(pl.seat);if(!tb||!['Y','R'].includes(tb[0]))return ack({ok:false,err:'테이블에 앉아야 주문할 수 있어요'});
+  const roller=tb[0]==='R',venue=roller?'roller':'pocha',worker=albaWorkers[venue];
+  const allowed=roller?['ramen','cider']:ORDER_ANJU.concat(ORDER_DRINK);
+  if(!allowed.includes(kind))return ack({ok:false,err:'없는 메뉴'});
+  if(roller&&!ROLLER.near(pl.pos,{x:TABLES[tb][0],z:TABLES[tb][1]},2.2))return ack({ok:false,err:'매점 테이블에 앉아 주세요'});
+  const n=Date.now();if(n-(pl.lastOrder||0)<700)return ack({ok:false,err:'천천히 주문해 주세요'});
+  if(worker.queue.filter(o=>o.by===s.id).length+(worker.job&&!worker.job.done&&worker.job.by===s.id?1:0)>=3)return ack({ok:false,err:'주문은 3개까지 기다릴 수 있어요'});
+  if(tables[tb].items.filter(i=>!i).length<=albaPending(tb))return ack({ok:false,err:'테이블이 꽉 찼어요'});
+  pl.lastOrder=n;const order={id:++albaSeq,by:s.id,nick:pl.nick,table:tb,kind};worker.queue.push(order);
+  ack({ok:true,id:order.id,queue:worker.queue.length+(worker.job?1:0)});
+  if(!roller)io.emit('albaQueue',worker.queue.length);albaNext(venue);
+ });
  s.on('eat',kind=>{const pl=players[s.id];if(!pl||!FOODS.includes(kind))return;const tb=pochaTable(pl.seat);if(!tb||!tables[tb].items.some(i=>i&&i.k===kind))return;const n=Date.now();if(n-(pl.lastEat||0)<2000)return;pl.lastEat=n;useItem(tb,kind);io.emit('eat',{id:s.id,kind});});
  s.on('serve',q=>{const pl=players[s.id];if(!pl||pl.seat)return;const kind=q&&q.kind==='cocktail'?'cocktail':'whiskey';const x=+(q&&q.x),z=+(q&&q.z);if(!(x>=BZ.x0-.2&&x<=BZ.x1+.2&&z>=BZ.z0-.2&&z<=BZ.z1+.2))return;
   const n=Date.now();if(n-(pl.lastServe||0)<3000)return;pl.lastServe=n;s.broadcast.emit('pour',{id:s.id,kind});

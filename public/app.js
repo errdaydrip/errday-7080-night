@@ -5,8 +5,9 @@ const COLORS=['#2b3352','#9a9cc0','#2a3f9e','#2fb8b0','#2f8f45','#e2525c','#c810
 const JOINT={basic:'#2f7bff',suit:'#1a1a1a',disco:'#ffd700',hanbok:'#ffffff',aerobic:'#ff2fa6'};
 let me={nick:'',gender:'m',style:'suit',outfit:'#2b3352',skin:'#f2c29a'},myId=null,joined=false,mySeat=null,adminToken=sessionStorage.getItem('adminToken');
 try{Object.assign(me,JSON.parse(localStorage.getItem('profile')||'{}'));}catch(e){}delete me.hat;if(!['basic','suit','disco','hanbok','aerobic'].includes(me.style))me.style='suit';
+me.rollerConfigured=me.rollerConfigured===true||(me.rollerConfigured!==false&&['skateBoot','skateWheel','skateLace'].every(k=>/^#[0-9a-f]{6}$/i.test(me[k]||'')));
 me.rollerSkates=false;Object.assign(me,ROLLER.colours(me));
-let rollerSelectOpen=false,rollerDraft=null,rollerTravelPending=false,lastRollerMotion='';
+let rollerSelectOpen=false,rollerDraft=null,rollerTravelPending=false,lastRollerMotion='',rollerEquipPending=false;
 let adminAccess=false,adminAccessPending=!!adminToken,rollerPreview=null;
 window.ROLLER_OPEN=true;window.IN_ROLLER=false;
 const SKATE_ANIMATION={idle:'Idle_Loop',skate:'Skate_Loop',run:'Skate_Run',jump:'Skate_Jump'};
@@ -130,12 +131,25 @@ function tapAt(x,y){if(!joined||rollerSelectOpen||!$('entry').classList.contains
  if(hits.length){let o=hits[0].object;while(o&&!(o.el&&o.el.dataset&&o.el.dataset.seat))o=o.parent;const s=o&&SEATS.find(q=>q.id===o.el.dataset.seat);
   if(s){if(seatTaken(s)){sys('이미 누가 앉은 자리예요');return;}if(mySeat)stand();goalSeat=s;setRoute(s.x,s.z);return;}}
  const pt=new THREE.Vector3(),sp=new THREE.Vector3();let onStage=false;
- if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-STAGE.h),sp)&&heightAt(sp.x,sp.z)>=STAGE.h-.01){pt.copy(sp);onStage=true;}
- else if(!ray.ray.intersectPlane(floorPlane,pt))return;
+ if(window.IN_ROLLER){const rp=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-ROLLER.DJ.h),rp)&&ROLLER.floorAt(rp.x,rp.z)===ROLLER.DJ.h){pt.copy(rp);onStage=true;}}
+ if(!onStage&&ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-STAGE.h),sp)&&heightAt(sp.x,sp.z)>=STAGE.h-.01){pt.copy(sp);onStage=true;}
+ if(!onStage&&!ray.ray.intersectPlane(floorPlane,pt))return;
  if(mySeat)stand();goalSeat=null;setRoute(clampX(pt.x),clampZ(pt.z));}
 // 무대 ↔ 바닥 이동은 계단을 거쳐서
 let route=[];
-function setRoute(x,z){const p=rig.object3D.position,onSt=(X,Z)=>X>=STAGE.x0-.3&&X<=STAGE.x1+.3&&Z<=STAGE.sz1&&heightAt(X,Z)>.35,up=onSt(x,z),me_up=onSt(p.x,p.z);route=[];
+function setRoute(x,z){
+ const rp=rig.object3D.position;
+ if(window.IN_ROLLER){
+  const high=(X,Z)=>ROLLER.floorAt(X,Z)===ROLLER.DJ.h;
+  route=[];
+  if(high(x,z)!==high(rp.x,rp.z)){
+   const ramp=rp.x<10?4.5:15.5,low=ROLLER.DJ.rampZ0-.5,top=ROLLER.DJ.rampZ1+.2;
+   if(high(x,z))route.push(new THREE.Vector3(ramp,0,low),new THREE.Vector3(ramp,0,top));
+   else route.push(new THREE.Vector3(ramp,0,top),new THREE.Vector3(ramp,0,low));
+  }
+  route.push(new THREE.Vector3(x,0,z));goal=route.shift();showMarker(x,z,heightAt(x,z));return;
+ }
+ const p=rig.object3D.position,onSt=(X,Z)=>X>=STAGE.x0-.3&&X<=STAGE.x1+.3&&Z<=STAGE.sz1&&heightAt(X,Z)>.35,up=onSt(x,z),me_up=onSt(p.x,p.z);route=[];
  const bottom=new THREE.Vector3(0,0,STAGE.sz1+.35),top=new THREE.Vector3(0,0,STAGE.sz0-.35);
  if(up&&!me_up)route=[bottom,top];else if(!up&&me_up)route=[top,bottom];
  if(isOut(z)!==isOut(p.z)){const D0=window.DOOR,D1=THEATER.CLUB_DOOR,dd=d=>Math.abs(p.x-d.x)+Math.abs(x-d.x),D=dd(D1)<dd(D0)?D1:D0,a=new THREE.Vector3(D.x,0,11.1),b=new THREE.Vector3(D.x,0,12.9);if(isOut(z))route.push(a,b);else route.push(b,a);}
@@ -198,7 +212,7 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
   else myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
  }
  {const roller=ROLLER.inside(p.x,p.z);if(roller!==window.IN_ROLLER){window.IN_ROLLER=roller;applyVolume();updateWhere();}
- if(roller&&joined&&!me.rollerSkates&&!rollerSelectOpen&&!rollerTravelPending)openRollerSelection();
+ if(roller&&joined&&!me.rollerSkates&&!rollerSelectOpen&&!rollerTravelPending)ensureRollerEntry();
  if(me.rollerSkates&&rollerMotion!==lastRollerMotion){lastRollerMotion=rollerMotion;socket.emit('rollerMotion',rollerMotion);}
  if(window.CLUB_OPEN===false&&joined&&!adminAccess&&!adminAccessPending&&!isOut(p.z)){ejectFromClub();} /* 문 닫힘: 클럽 안이면 밖으로 */const out=isOut(p.z);ROOM=roller?ROOM_ROLLER:out?ROOM_OUT:ROOM_IN;if(out!==window.OUTSIDE){window.OUTSIDE=out;applyVolume();}const th=THEATER.inside(p.x,p.z);if(th!==!!window.IN_THEATER){window.IN_THEATER=th;applyVolume();updateWhere();applySubs();}}
  const tx=p.x,ty=p.y+(mySeat?.95:1.1)+(mySeat&&mySeat.startsWith('TH-')?THEATER.CAM_LIFT:0),tz=p.z;let d=camDist;
@@ -246,14 +260,15 @@ socket.on('player',upsertOther);
 socket.on('snapshot',ps=>{for(const id in others)if(!ps[id])removeOther(id);for(const id in ps)if(id!==myId)upsertOther({id,...ps[id]});});
 socket.on('m',a=>{for(let i=0;i<a.length;i+=6){const o=others[a[i]];if(o){o.dance=a[i+5]||0;if(!o.seat){o.target.set(a[i+1],a[i+2],a[i+3]);o.rot=a[i+4];}}}});
 socket.on('move',m=>{const o=others[m.id];if(o){o.dance=m.dance||0;if(!o.seat){o.target.set(...m.pos);o.rot=m.rot;}}});
+socket.on('seatRejected',d=>{if(mySeat===d.seat)stand();sys(d.error);});
 socket.on('seat',({id,seat})=>{const o=others[id];if(o)applySeatPose(o,seat);});
 function removeOther(id){const o=others[id];if(o){try{if(o.el._h){HUMANS.delete(o.el._h);o.el._h.dispose();}}catch(e){}o.el.remove();delete others[id];}}
 function clearOthers(){for(const id in others)removeOther(id);}
 socket.on('leave',removeOther);
-socket.on('drink',({id,type})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink(type);setTimeout(()=>sfxNear('ka',id),2000);});
+socket.on('drink',({id,type})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink(type);if(type!=='cider')setTimeout(()=>sfxNear('ka',id),2000);});
 const GLASS_EL={};let GLASSES={},TABLE_ITEMS={};const TABLE_EL={};
-const ITEM_NAME={soju:'🍶 소주',beer:'🍺 맥주',dakbal:'🍗 닭발',kkom:'🐍 꼼장어',fish:'🐟 생선구이',squid:'🦑 오징어볶음',chicken:'🍗 통닭',hoe:'🐟 모듬회',fruit:'🍉 과일안주'};
-function myTable(){const m=/^([YT]\d)-/.exec(mySeat||'');return m?m[1]:null;}
+const ITEM_NAME={soju:'🍶 소주',beer:'🍺 맥주',dakbal:'🍗 닭발',kkom:'🐍 꼼장어',fish:'🐟 생선구이',squid:'🦑 오징어볶음',chicken:'🍗 통닭',hoe:'🐟 모듬회',fruit:'🍉 과일안주',ramen:'🍜 컵라면',cider:'🥤 사이다'};
+function myTable(){const m=/^([YTR]\d)-/.exec(mySeat||'');return m?m[1]:null;}
 function isBarSeat(){return !!mySeat&&mySeat.startsWith('BAR-');}
 function canDrink(type){if(!mySeat)return false;if(isBarSeat())return GLASSES[mySeat]===type;if(type==='whiskey'||type==='cocktail')return false;const t=myTable();if(t)return (TABLE_ITEMS[t]||[]).includes(type);return false;}
 // "캬~" 효과음 (Web Audio 합성, 내 화면에서만)
@@ -264,10 +279,10 @@ function kya(){sfx('ka');}function chew(){sfx('yum');}
 /* 다른 사람 먹고 마시는 소리: 가까이(7m 안)만 들리고 멀수록 작게 */
 function sfxNear(k,id){const el=others[id]&&others[id].el;if(!el)return;const p=rig.object3D.position,q=el.object3D.position,d=Math.hypot(p.x-q.x,p.z-q.z);if(d>7)return;sfx(k,Math.pow(1-d/7,1.5)*.9);}
 window.kya=kya;window.chew=chew;window.sfx=sfx;
-function drink(type){if(!canDrink(type))return;const n=Date.now();if(n-(window._lastDrink||0)<2000)return;window._lastDrink=n;const m=$('myAvatar');if(m._h)m._h.drink(type);socket.emit('drink',type);setTimeout(kya,2000);}
-function eat(k){const t=myTable();if(!t||!(TABLE_ITEMS[t]||[]).includes(k))return;const n=Date.now();if(n-(window._lastEat||0)<2000)return;window._lastEat=n;const m=$('myAvatar');if(m._h)m._h.drink('eat');socket.emit('eat',k);setTimeout(chew,600);}
+function drink(type){if(!canDrink(type))return;const n=Date.now();if(n-(window._lastDrink||0)<2000)return;window._lastDrink=n;const m=$('myAvatar');if(m._h)m._h.drink(type);socket.emit('drink',type);if(type!=='cider')setTimeout(kya,2000);}
+function eat(k){const t=myTable();if(!t||!(TABLE_ITEMS[t]||[]).includes(k))return;const n=Date.now();if(n-(window._lastEat||0)<2000)return;window._lastEat=n;const m=$('myAvatar');if(m._h)m._h.drink(k==='ramen'?'ramen':'eat');socket.emit('eat',k);setTimeout(chew,600);}
 window.eat=eat;
-socket.on('eat',({id})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink('eat');setTimeout(()=>sfxNear('yum',id),600);});
+socket.on('eat',({id,kind})=>{if(id===myId)return;const el=others[id]&&others[id].el;if(el&&el._h)el._h.drink(kind==='ramen'?'ramen':'eat');setTimeout(()=>sfxNear('yum',id),600);});
 function inBarZone(){const B=window.BAR_ZONE,p=rig.object3D.position;return !mySeat&&B&&p.x>=B.x0&&p.x<=B.x1&&p.z>=B.z0&&p.z<=B.z1;}
 const near=(o,r)=>{const p=rig.object3D.position;return o&&!mySeat&&Math.hypot(p.x-o.x,p.z-o.z)<r;};
 function nearTable(){const p=rig.object3D.position;let best=null,bd=1e9;for(const k in (window.POCHA_TABLES||{})){const [x,z,,r]=POCHA_TABLES[k],d=Math.hypot(p.x-x,p.z-z);if(d<(r||1.7)&&d<bd){bd=d;best=k;}}return best;}
@@ -285,15 +300,14 @@ function serve(kind){if(!inBarZone())return;const n=Date.now();if(n-(window._las
  const p=rig.object3D.position;socket.emit('serve',{x:p.x,z:p.z,kind});}
 window.serve=serve;window.drink=drink;
 function actions(){const A=[];
- if(window.IN_ROLLER){
-  if(near(ROLLER.ARRIVE,2.5))A.push(['🛼 롤러 꾸미기',()=>openRollerSelection(),'roller-style']);
+ if(window.IN_ROLLER&&!mySeat){
+  if(near(ROLLER.CHANGE,2.2))A.push(['🛼 롤러 교체',()=>openRollerSelection(),'roller-style']);
   if(near(ROLLER.ARRIVE,2.5)||near(ROLLER.EXIT,2.5))A.push(['🚪 거리로 나가기',()=>rollerTravel('exit'),'roller-exit']);
-  if(near(ROLLER.SHOP,2.5))A.push(['🍜 컵라면 먹기',()=>rollerSnack('ramen'),'roller-ramen'],['🥤 사이다 마시기',()=>rollerSnack('cider'),'roller-cider']);
   return A;
  }
  if(near(ROLLER.ENTRY,2.5))A.push((window.ROLLER_OPEN||adminAccess)?['🛼 롤라장 입장',()=>rollerTravel('enter'),'roller-enter']:['🛼 롤라장 영업 종료',null,'roller-closed']);
 if(mySeat&&mySeat.startsWith('TAXI')){A.push(['🏠 집으로 돌아가기',()=>goHome(),'home'],['🚪 내리기',()=>stand(),'getoff']);return A;}if(mySeat){if(isBarSeat()){if(GLASSES[mySeat])A.push([GLASSES[mySeat]==='cocktail'?'🍸 칵테일':'🥃 위스키',()=>drink(GLASSES[mySeat]),'d-'+GLASSES[mySeat]]);}
-  else{for(const k of ['soju','beer'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);if(t&&t[0]==='Y'){A.push(['🛎 주문하기',()=>openOrder(),'order']);if(ORDER_NOTE)A.push([ORDER_NOTE,null,'lbl']);if(MY_ORDERS.length)A.push(['⏳ 주문: '+MY_ORDERS.map(o=>ITEM_NAME[o.kind]).join(', ')+' · 알바가 준비 중',null,'lbl']);}}
+  else{for(const k of ['soju','beer','cider'])if(canDrink(k))A.push([ITEM_NAME[k],()=>drink(k),'d-'+k,usesTxt(k)]);const t=myTable();if(t&&myCarry)A.push(['🍽 테이블에 놓기',()=>socket.emit('place'),'place']);if(t)for(const k of ['dakbal','kkom','fish','squid','chicken','hoe','fruit','ramen'])if((TABLE_ITEMS[t]||[]).includes(k))A.push([ITEM_NAME[k]+' 먹기',()=>eat(k),'e-'+k,usesTxt(k)]);if(t&&['Y','R'].includes(t[0])){A.push([t[0]==='R'?'🛎 컵라면·사이다 주문':'🛎 주문하기',()=>openOrder(),'order']);if(ORDER_NOTE)A.push([ORDER_NOTE,null,'lbl']);if(MY_ORDERS.length)A.push(['⏳ 주문: '+MY_ORDERS.map(o=>ITEM_NAME[o.kind]).join(', ')+' · 알바가 준비 중',null,'lbl']);}}
   return A;}
  if(inBarZone()){A.push(['🍸 바텐더 서빙:',null,'lbl'],['🥃 위스키',()=>serve('whiskey'),'s-whiskey'],['🍸 칵테일',()=>serve('cocktail'),'s-cocktail']);return A;}
  if(!mySeat&&((window.WAITERS||[]).some(w=>w.near)||(window.ALBA&&near(window.ALBA,2))))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
@@ -517,15 +531,20 @@ let _fovNow=0;function theaterFov(cx,cy,cz){const o=scene.camera;if(!o||!o.isPer
  if(Math.abs(want-o.fov)>.05){o.fov+= (want-o.fov)*.2;o.updateProjectionMatrix();}}
 
 // ---------- 야장 주문 (포차 테이블에 앉으면 🛎 주문하기 → 알바가 가져다 줌) ----------
-const ORDER_MENU={anju:['dakbal','kkom','fish','squid','chicken','hoe'],drink:['soju','beer']};var MY_ORDERS=[],ORDER_NOTE='';let _onT=0;/* 주문 관련 안내는 채팅창이 아니라 행동바에만 잠깐 표시 */function orderNote(t){ORDER_NOTE=t;clearTimeout(_onT);_onT=setTimeout(()=>{ORDER_NOTE='';refreshAct(true);},3000);refreshAct(true);}let orderTab='anju';window.ALBA_JOB=null;
+const ORDER_MENU={anju:['dakbal','kkom','fish','squid','chicken','hoe'],drink:['soju','beer']};var MY_ORDERS=[],ORDER_NOTE='';let _onT=0;/* 주문 관련 안내는 채팅창이 아니라 행동바에만 잠깐 표시 */function orderNote(t){ORDER_NOTE=t;clearTimeout(_onT);_onT=setTimeout(()=>{ORDER_NOTE='';refreshAct(true);},3000);refreshAct(true);}let orderTab='anju';window.ALBA_JOB=null;window.ROLLER_ALBA_JOB=null;
 function renderOrder(){const m=$('orderMenu');m.querySelectorAll('.otab').forEach(b=>b.classList.toggle('on',b.dataset.tab===orderTab));const L=m.querySelector('.olist');L.innerHTML='';
- for(const k of ORDER_MENU[orderTab]){const b=document.createElement('button');b.textContent=ITEM_NAME[k];b.dataset.k=k;b.onclick=e=>{e.stopPropagation();placeOrder(k);};L.appendChild(b);}}
+ const roller=!!(myTable()&&myTable()[0]==='R');
+ m.querySelector('.ohead').firstChild.textContent=roller?'🛎 롤라장 매점 주문 ':'🛎 야장 주문 ';
+ m.querySelector('[data-tab="anju"]').textContent=roller?'🍜 컵라면':'🍢 안주';
+ m.querySelector('[data-tab="drink"]').textContent=roller?'🥤 음료':'🍶 주류';
+ const menu=roller?{anju:['ramen'],drink:['cider']}:ORDER_MENU;
+ for(const k of menu[orderTab]){const b=document.createElement('button');b.textContent=ITEM_NAME[k];b.dataset.k=k;b.onclick=e=>{e.stopPropagation();placeOrder(k);};L.appendChild(b);}}
 function openOrder(){const m=$('orderMenu');if(!m.classList.contains('hidden')){m.classList.add('hidden');return;}renderOrder();m.classList.remove('hidden');}
 function placeOrder(k){socket.emit('order',k,r=>{if(r&&r.ok){MY_ORDERS.push({id:r.id,kind:k});$('orderMenu').classList.add('hidden');refreshAct(true);}else orderNote('주문 실패: '+((r&&r.err)||'?'));});}
 document.querySelectorAll('#orderMenu .otab').forEach(b=>b.onclick=e=>{e.stopPropagation();orderTab=b.dataset.tab;renderOrder();});$('orderClose').onclick=e=>{e.stopPropagation();$('orderMenu').classList.add('hidden');};
-socket.on('albaJob',j=>{window.ALBA_JOB=j;});
+socket.on('albaJob',j=>{window.ALBA_JOB=j;});socket.on('rollerAlbaJob',j=>{window.ROLLER_ALBA_JOB=j;});
 socket.on('albaDone',d=>{const i=MY_ORDERS.findIndex(o=>o.id===d.id);if(i>=0){MY_ORDERS.splice(i,1);orderNote(d.ok?`✅ ${ITEM_NAME[d.kind]} 나왔어요`:'자리가 꽉 차서 못 놨어요');refreshAct(true);}});
-setInterval(()=>{const t=mySeat&&myTable();if(!(t&&t[0]==='Y'))$('orderMenu').classList.add('hidden');},300);
+setInterval(()=>{const t=mySeat&&myTable();if(!(t&&['Y','R'].includes(t[0])))$('orderMenu').classList.add('hidden');},300);
 
 // ---------- 재생목록 프리셋 3개 (관리자) : 모바일=버튼만, PC=버튼+이름/주소 편집 ----------
 let PRESETS=[];
@@ -711,8 +730,12 @@ function rollerTravel(direction){
  socket.timeout(5000).emit('rollerTravel',direction,(err,r)=>{
   rollerTravelPending=false;if(err||!r||!r.ok){sys((r&&r.err)||'연결을 확인하고 다시 시도해 주세요');return;}
   applyRollerPosition(r);
-  if(direction==='enter')openRollerSelection();
+  if(direction==='enter')ensureRollerEntry();
  });
+}
+function ensureRollerEntry(){
+ if(rollerEquipPending||rollerSelectOpen||me.rollerSkates)return;
+ if(me.rollerConfigured)wearRollers(ROLLER.colours(me));else openRollerSelection();
 }
 function openRollerSelection(){
  if(rollerSelectOpen||!joined)return;
@@ -760,11 +783,12 @@ function updateRollerPreview(){
  };
  p.frame=requestAnimationFrame(draw);
 }
-function finishRollerSelection(){
- const b=$('rollerConfirm');b.disabled=true;
- socket.timeout(5000).emit('rollerEquip',{on:true,...rollerDraft},(err,r)=>{
-  b.disabled=false;if(err||!r||!r.ok){sys((r&&r.err)||'스케이트 착용에 실패했어요');return;}
-  me.rollerSkates=true;Object.assign(me,ROLLER.colours(r));localStorage.setItem('profile',JSON.stringify(me));
+function finishRollerSelection(){wearRollers(rollerDraft);}
+function wearRollers(colours){
+ if(rollerEquipPending)return;rollerEquipPending=true;const b=$('rollerConfirm');b.disabled=true;
+ socket.timeout(5000).emit('rollerEquip',{on:true,...colours},(err,r)=>{
+  rollerEquipPending=false;b.disabled=false;if(err||!r||!r.ok){sys((r&&r.err)||'스케이트 착용에 실패했어요');return;}
+  me.rollerSkates=true;me.rollerConfigured=true;Object.assign(me,ROLLER.colours(r));localStorage.setItem('profile',JSON.stringify(me));
   closeRollerSelection();buildAvatar(myAv,{...me,id:myId},true);saveState();applyMusic(true);refreshAct(true);
   sys(IS_MOBILE?'🛼 입장 완료! 달리기·점프 버튼을 이용하세요':'🛼 입장 완료! Shift로 달리기 · Space로 점프');
  });
@@ -795,10 +819,3 @@ $('rollerDoorBtn').onclick=()=>{
  });
 };
 socket.on('rollerMotion',d=>{const o=others[d.id];if(o&&o.data)o.data.rollerMotion=d.motion;});
-function rollerSnack(kind){socket.emit('rollerSnack',kind,r=>{if(!r||!r.ok)sys((r&&r.err)||'다시 시도해 주세요');});}
-socket.on('rollerSnack',d=>{
- const el=d.id===myId?myAv:others[d.id]&&others[d.id].el;
- if(el&&el._h)el._h.drink(d.kind);
- if(d.kind==='ramen')setTimeout(()=>d.id===myId?chew():sfxNear('yum',d.id),600);
- if(d.id===myId)sys(d.kind==='ramen'?'🍜 따끈한 컵라면!':'🥤 시원한 사이다!');
-});

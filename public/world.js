@@ -502,6 +502,7 @@ function cocktailGlass(g){const gl=new THREE.MeshStandardMaterial({color:'#eef6f
 // 포차 아이템 (병/접시) — 손에 들거나 테이블에 놓음
 const FOOD_COL={dakbal:'#b0281a',kkom:'#7a3a20',fish:'#c08a40',squid:'#d23a10',chicken:'#c8801e',hoe:'#f08060'};
 function makeItem(kind,inHand){const g=new THREE.Group();if(inHand)g.position.set(0,-.32,.08);
+ if(kind==='ramen'||kind==='cider'){const item=makeCup(kind);item.position.set(0,.05,0);g.add(item);return g;}
  if(kind==='soju'||kind==='beer'){const m=new THREE.MeshStandardMaterial({color:kind==='soju'?'#2e9a4a':'#5a2c0c',transparent:true,opacity:.88,roughness:.15});
   g.add(mesh(G.cyl(.04,.04,.18,12),m,[0,.09,0]));g.add(mesh(G.cyl(.015,.03,.07,10),m,[0,.21,0]));g.add(mesh(G.box(.06,.05,.005),new THREE.MeshBasicMaterial({color:kind==='soju'?'#e8f4ff':'#f3c040'}),[0,.09,.041]));if(inHand)g.position.y=-.42;}
  else{g.add(makeFood(kind));if(inHand)g.position.y=-.36;}
@@ -875,24 +876,36 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  E('a-box',{position:`${dr-.05} ${D.h/2-.05} 12.5`,rotation:'0 90 0',width:.95,height:D.h-.15,depth:.05,material:'color:#5a1010;roughness:.6'});
  E('a-entity',{position:`${D.x} ${D.h+.5} 11.9`,rotation:'0 180 0',ktext:'value:EXIT · 🎬 극장 →;color:#d6ffe0;glow:#00ff66;size:70;width:1.9'});})();
 // ---------- 야장 알바: 주문 들어오면 냉장고/주방에서 집어 테이블로 ----------
-(async function alba(){const holder=E('a-entity',{position:'0.2 0 18.4'});const h=await makeHuman(holder,{...LOOKS.resolve({gender:'f',style:'basic',top:'#f5f5f5',bottom:'#2f7bff',hair:'f2'}),gender:'f',style:'basic',skin:'#f6d2b0'});HUMANS.add(h);
+window.ALBA_LOOK={...LOOKS.resolve({gender:'f',style:'basic',top:'#f5f5f5',bottom:'#2f7bff',hair:'f2'}),gender:'f',style:'basic',skin:'#f6d2b0'};
+window.createAlba=async function({home,roller=false}){
+ const holder=E('a-entity',{position:`${home[0]} 0 ${home[1]}`});
+ const h=await makeHuman(holder,{...window.ALBA_LOOK,rollerSkates:roller,...ROLLER.colours({})});HUMANS.add(h);
  E('a-entity',{position:'0 1.85 0',billboard:'',ktext:'value:알바;color:#fff;glow:#ff8a00;size:30;width:.5'},holder);
- const A=window.ALBA={x:.2,z:18.4,job:null,holder,h};holder.object3D.rotation.y=-Math.PI/2;
+ const A={x:home[0],z:home[1],job:null,holder,h};if(roller)window.ROLLER_ALBA=A;else window.ALBA=A;holder.object3D.rotation.y=-Math.PI/2;
  const lerp=(a,b,k)=>[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k];
- AFRAME.registerComponent('alba-walk',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const J=window.ALBA_JOB,o=holder.object3D;let p=[A.x,A.z],face=null,anim='Idle_Loop';
+ const routePoint=(path,k)=>{
+  const lengths=path.slice(1).map((p,i)=>Math.hypot(p[0]-path[i][0],p[1]-path[i][1]));
+  let distance=lengths.reduce((a,b)=>a+b,0)*Math.max(0,Math.min(1,k));
+  for(let i=0;i<lengths.length;i++){if(distance<=lengths[i])return lerp(path[i],path[i+1],lengths[i]?distance/lengths[i]:0);distance-=lengths[i];}
+  return path[path.length-1];
+ };
+ const component=roller?'roller-alba-walk':'alba-walk';
+ AFRAME.registerComponent(component,{tick(t,dt){dt=Math.min(dt||16,50)/1000;const J=roller?window.ROLLER_ALBA_JOB:window.ALBA_JOB,o=holder.object3D;let p=[A.x,A.z],face=null,anim='Idle_Loop';
   if(J){const e=Date.now()+(window.SERVER_OFFSET||0)-J.t0,t1=J.leg1,t2=t1+J.pick,t3=t2+J.leg2,t4=t3+J.place,t5=t4+J.leg3;
    if(e<t1){p=lerp(J.home,J.src,Math.max(0,e/t1));face=[J.src,J.home];anim='Walk_Loop';if(A.carry){A.carry=null;h.carry&&h.carry(null);}}
    else if(e<t2){p=J.src;anim='Idle_Loop';if(A.carry!==J.kind&&e>t1+J.pick/2){A.carry=J.kind;h.carry&&h.carry(J.kind);}}
-   else if(e<t3){p=lerp(J.src,J.to,(e-t2)/J.leg2);face=[J.to,J.src];anim='Walk_Loop';if(A.carry!==J.kind){A.carry=J.kind;h.carry&&h.carry(J.kind);}}
+   else if(e<t3){const k=(e-t2)/J.leg2;p=J.route2?routePoint(J.route2,k):lerp(J.src,J.to,k);face=J.route2?[routePoint(J.route2,Math.min(1,k+.01)),p]:[J.to,J.src];anim='Walk_Loop';if(A.carry!==J.kind){A.carry=J.kind;h.carry&&h.carry(J.kind);}}
    else if(e<t4){p=J.to;face=[J.c,J.to];if(e>t3+J.place/2&&A.carry){A.carry=null;h.carry&&h.carry(null);}h.root.rotation.x=Math.sin(Math.min(1,(e-t3)/J.place)*Math.PI)*.4;}
-   else if(e<t5){p=lerp(J.to,J.home,(e-t4)/J.leg3);face=[J.home,J.to];anim='Walk_Loop';h.root.rotation.x=0;if(A.carry){A.carry=null;h.carry&&h.carry(null);}}
+   else if(e<t5){const k=(e-t4)/J.leg3;p=J.route3?routePoint(J.route3,k):lerp(J.to,J.home,k);face=J.route3?[routePoint(J.route3,Math.min(1,k+.01)),p]:[J.home,J.to];anim='Walk_Loop';h.root.rotation.x=0;if(A.carry){A.carry=null;h.carry&&h.carry(null);}}
    else{p=J.home;h.root.rotation.x=0;}}
   /* 손님과 겹치면 옆으로 살짝 비켜 감 (뚫고 지나가지 않게) */
   const rig=document.getElementById('rig'),pp=rig&&rig.object3D.position;let ox=0,oz=0;if(pp&&anim==='Walk_Loop'){const dx=p[0]-pp.x,dz=p[1]-pp.z,d=Math.hypot(dx,dz);if(d<.75&&d>1e-3){ox=dx/d*(.75-d);oz=dz/d*(.75-d);}}
   A.sx=(A.sx||0)+(ox-(A.sx||0))*Math.min(1,dt*6);A.sz=(A.sz||0)+(oz-(A.sz||0))*Math.min(1,dt*6);A.x=p[0];A.z=p[1];o.position.set(p[0]+A.sx,0,p[1]+A.sz);
   if(face){const y=Math.atan2(face[0][0]-face[1][0],face[0][1]-face[1][1]);let dy=y-o.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.rotation.y+=dy*Math.min(1,dt*8);}
-  h.play(anim);}});
- document.querySelector('a-scene').setAttribute('alba-walk','');})();
+  h.play(roller&&anim==='Walk_Loop'?'Skate_Loop':anim);}});
+ document.querySelector('a-scene').setAttribute(component,'');
+};
+window.createAlba({home:[.2,18.4]});
 // ---------- 💝 후원 전광판 (나이트 뒷벽, 네온 스크롤) ----------
 (function donationTicker(){const W=2048,H=128,cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
  const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace||tex.colorSpace;
