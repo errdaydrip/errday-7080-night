@@ -124,7 +124,10 @@
    box(m.x,.91,m.z,.025,.02,3.4,'#ffffff',true);
    if(m.game==='pingpong'){box(m.x,1.02,m.z,2.9,.25,.025,'#b9edf0');for(let i=0;i<15;i++)box(m.x-1.4+i*.2,1.03,m.z,.012,.25,.03,'#ffffff');}
    else{for(const dx of [-1.47,1.47])box(m.x+dx,.98,m.z,.08,.18,3.6,'#aa8654',true);for(const dz of [-1.78,1.78])box(m.x,.98,m.z+dz,3,.18,.08,'#aa8654',true);for(const dz of [-1.25,1.25]){E('a-cylinder',{position:`${m.x} .99 ${m.z+dz}`,radius:.24,height:.12,material:`color:${dz<0?'#ff5798':'#5496eb'};roughness:.35`},root);E('a-cylinder',{position:`${m.x} 1.08 ${m.z+dz}`,radius:.12,height:.12,color:'#e8d9c4'},root);}}
-   text(g.name,m.x,2.25,m.z,3.7,g.colour,180);continue;
+   const labelCanvas=document.createElement('canvas'),labelContext=labelCanvas.getContext('2d');
+   labelContext.font='bold 64px "Malgun Gothic",sans-serif';
+   const labelWidth=3.7*(labelContext.measureText(g.name).width+64)/(labelContext.measureText('에어하키').width+64);
+   text(g.name,m.x,2.25,m.z,labelWidth,g.colour,180);continue;
   }
   // Cabinet dimensions are symmetric; screen and controls face the central aisle.
   box(m.x,.66,m.z,1.25,1.32,1.5,'#968e9e');box(m.x,1.7,m.z,1.15,.85,1.4,'#454365');box(m.x,2.35,m.z,1.3,.35,1.5,g.colour);
