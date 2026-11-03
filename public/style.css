@@ -190,3 +190,17 @@ body:has(#poolUI) #keyHint,body:has(#poolUI) #runBtn,body:has(#poolUI) #jumpBtn,
 #poolSpin{top:auto!important;bottom:10px!important;right:10px!important}
 @media (min-width:701px){#poolCv{width:min(calc(100vw - 360px),calc((100vh - 345px)*1.818))!important}#poolUI .pbw{width:min(calc(100vw - 360px),calc((100vh - 345px)*1.818),900px)!important}#poolHud{max-width:min(320px,calc(50vw - 200px))!important}}
 @media (max-width:700px){#poolUI{padding-top:150px!important}#poolHud{max-width:calc(100% - 16px)!important}}
+#poolHud>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#poolUI.narrow .pbtn{flex-wrap:nowrap!important;gap:4px!important;max-width:100vw}#poolUI.narrow .pbtn button{font-size:12px!important;padding:6px 8px!important;border-radius:14px;flex:0 1 auto;min-width:0}
+#poolUI.narrow #poolBar span{font-size:12px!important}
+@media (max-width:700px){#poolUI .pbtn{flex-wrap:nowrap!important;gap:4px!important;max-width:100vw}#poolUI .pbtn button{font-size:12px!important;padding:6px 8px!important;border-radius:14px;flex:0 1 auto;min-width:0}#poolBar span{font-size:12px!important}}
+/* 가로 모바일: 가운데 테이블, 왼쪽 위 점수판, 오른쪽 버튼 세로 + 당점 오른쪽 아래 */
+@media (orientation:landscape) and (max-height:520px){
+ #poolUI{padding:6px 128px 6px 196px!important;justify-content:center!important;gap:4px!important}
+ #poolUI .ph{display:none}
+ #poolHud{top:6px!important;left:6px!important;max-width:182px!important;font-size:11px!important;padding:4px 6px!important;line-height:1.35}
+ #poolCv{width:min(calc(100vw - 334px),calc((100vh - 60px)*1.818))!important}
+ #poolUI .pbw{width:min(calc(100vw - 334px),calc((100vh - 60px)*1.818))!important}#poolBar{height:34px!important}#poolBar span{font-size:12px!important}
+ #poolUI .pbtn{position:absolute;right:6px;top:6px;flex-direction:column!important;flex-wrap:nowrap!important;gap:4px!important;width:114px}#poolUI .pbtn button{font-size:12px!important;padding:5px 6px!important;width:100%}
+ #poolSpin{bottom:6px!important;right:6px!important;padding:3px!important}#poolSpin canvas{width:84px!important;height:84px!important}#poolSpin div{font-size:11px}
+}
