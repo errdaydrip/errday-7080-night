@@ -362,7 +362,11 @@ $('ytForm').onsubmit=async e=>{e.preventDefault();const url=$('ytUrl').value.tri
  const r=await fetch('/link',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':adminToken},body:JSON.stringify({url,by:me.nick||'관리자'})});
  const j=await r.json();$('upMsg').textContent=r.ok?`✅ ${j.service} 인식 · ${j.added>1?j.added+'곡':'「'+(j.title||'')+'」'} 추가!`:(j.error||'실패');adminFail(r);if(r.ok)$('ytUrl').value='';};
 // 점프 버튼: 오른쪽 끝, 액션바 바로 위
-setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElementById('actBar'),rb=document.getElementById('runBtn');if(!j)return;let top=innerHeight-70;if(a&&!a.classList.contains('hidden')&&a.offsetHeight){top=Math.min(top,a.getBoundingClientRect().top);}const jb=innerHeight-top+10;j.style.bottom=jb+'px';if(rb)rb.style.bottom=(jb+(j.offsetHeight||60)+10)+'px';},200);
+/* 모바일: 점프·달리기 버튼은 항상 같은 자리, 다른 버튼들은 달리기 버튼 위로 쌓임 */
+setInterval(()=>{const j=document.getElementById('jumpBtn'),a=document.getElementById('actBar'),rb=document.getElementById('runBtn');if(!j)return;j.style.bottom='';if(rb)rb.style.bottom='';
+ const mob=getComputedStyle(j).display!=='none';if(!mob){if(a){a.style.bottom='';a.style.right='';}return;}const jr=j.getBoundingClientRect();let top=jr.top;
+ if(rb){rb.style.bottom=(innerHeight-jr.top+10)+'px';if(getComputedStyle(rb).display!=='none')top=rb.getBoundingClientRect().top;}
+ if(a){a.style.bottom=(innerHeight-top+10)+'px';a.style.right=getComputedStyle(j).right;}},200);
 {const rb=$('runBtn');if(rb){const on=e=>{e.preventDefault();e.stopPropagation();window.RUN_HOLD=true;rb.classList.add('on');},off=e=>{window.RUN_HOLD=false;rb.classList.remove('on');};rb.addEventListener('pointerdown',on);['pointerup','pointercancel','pointerleave'].forEach(ev=>rb.addEventListener(ev,off));window.addEventListener('blur',off);}}
 
 // ---------- 화면 비율별 시야각 / 전체화면 ----------

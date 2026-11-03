@@ -152,3 +152,5 @@ body.seated #keyHint,body.thseat #keyHint,body.typing #keyHint,body:has(#entry:n
 #poolFill{position:absolute;left:0;top:0;bottom:0;width:0}#poolBar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;text-shadow:0 1px 2px #000;pointer-events:none}
 #poolUI .pbtn{display:flex;gap:10px}#poolUI button{padding:8px 18px;border-radius:18px;border:2px solid #ff3cac;background:#2a0c1c;color:#fff;font-weight:700}
 body:has(#poolUI) #keyHint,body:has(#poolUI) #runBtn,body:has(#poolUI) #jumpBtn,body:has(#poolUI) #mob{display:none!important}
+
+@media (max-width:700px),(pointer:coarse){#actBar{flex-direction:column!important;flex-wrap:nowrap!important;align-items:flex-end;max-height:55vh;overflow:visible}}
