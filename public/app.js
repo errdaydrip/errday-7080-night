@@ -58,7 +58,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)saveState()
 function autoJoinOk(){try{const a=+localStorage.getItem('joinedAt')||0;return !!me.nick&&Date.now()-a<RESUME_MS&&!sessionStorage.getItem('noAuto');}catch(e){return false;}}
 if(autoJoinOk()){$('entry').classList.add('hidden');const tryAuto=()=>{if($('enter').disabled)return setTimeout(tryAuto,200);window.AUTO_JOIN=true;$('enter').onclick();};tryAuto();}
 function resumeState(r){me.rollerSkates=!!r.rollerSkates;const m=$('myAvatar');if(m._h)m._h.setSkates(me.rollerSkates);if(m._h&&r.drinks)m._h.drinks=r.drinks.slice();if(r.carry!==undefined){myCarry=r.carry;if(m._h)m._h.carry(r.carry);if(typeof refreshAct==='function')refreshAct(true);}
- const s=r.seat&&SEATS.find(x=>x.id===r.seat);if(s){for(const id in others)if(others[id].data&&others[id].data.nick===me.nick&&id!==myId)removeOther(id); /* 재접속 전 내 예전 접속이 자리를 쥔 것처럼 보이는 문제 */mySeat=null;sit(s);}else if(r.pos){rig.object3D.position.set(...r.pos);if(Number.isFinite(r.rot))myYaw=r.rot;}}
+ const s=r.seat&&SEATS.find(x=>x.id===r.seat);if(s){for(const id in others)if(others[id].data&&others[id].data.nick===me.nick&&id!==myId)removeOther(id); /* 재접속 전 내 예전 접속이 자리를 쥔 것처럼 보이는 문제 */mySeat=null;sit(s);}else if(r.pos){mySeat=null;updateWhere();rig.object3D.position.set(...r.pos);if(Number.isFinite(r.rot))myYaw=r.rot;}}
 function nickErr(why){if(why==='kicked')return;$('entry').classList.remove('hidden');$('hud').classList.add('hidden');alert(why==='bad'?'사용할 수 없는 닉네임이에요':'이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.');$('nick').focus();}
 function enterOk(){
  buildAvatar($('myAvatar'),{...me,id:myId},true);$('enter').textContent='입장하기 (소리 켜짐)';userGesture=true;applyMusic(true);
@@ -131,7 +131,7 @@ function tapAt(x,y){if(!joined||rollerSelectOpen||!$('entry').classList.contains
  if(hits.length){let o=hits[0].object;while(o&&!(o.el&&o.el.dataset&&o.el.dataset.seat))o=o.parent;const s=o&&SEATS.find(q=>q.id===o.el.dataset.seat);
   if(s){if(seatTaken(s)){sys('이미 누가 앉은 자리예요');return;}if(mySeat)stand();goalSeat=s;setRoute(s.x,s.z);return;}}
  const pt=new THREE.Vector3(),sp=new THREE.Vector3();let onStage=false;
- if(window.IN_ROLLER){const rp=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-ROLLER.DJ.h),rp)&&ROLLER.floorAt(rp.x,rp.z)===ROLLER.DJ.h){pt.copy(rp);onStage=true;}}
+ if(window.IN_ROLLER)for(const h of [ROLLER.DJ.operatorH,ROLLER.DJ.h]){const rp=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-h),rp)&&Math.abs((ROLLER.floorAt(rp.x,rp.z)??-1)-h)<.01){pt.copy(rp);onStage=true;break;}}
  if(!onStage&&ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-STAGE.h),sp)&&heightAt(sp.x,sp.z)>=STAGE.h-.01){pt.copy(sp);onStage=true;}
  if(!onStage&&!ray.ray.intersectPlane(floorPlane,pt))return;
  if(mySeat)stand();goalSeat=null;setRoute(clampX(pt.x),clampZ(pt.z));}
@@ -140,12 +140,12 @@ let route=[];
 function setRoute(x,z){
  const rp=rig.object3D.position;
  if(window.IN_ROLLER){
-  const high=(X,Z)=>ROLLER.floorAt(X,Z)===ROLLER.DJ.h;
+  const high=(X,Z)=>ROLLER.onDeck(X,Z);
   route=[];
   if(high(x,z)!==high(rp.x,rp.z)){
-   const ramp=rp.x<10?4.5:15.5,low=ROLLER.DJ.rampZ0-.5,top=ROLLER.DJ.rampZ1+.2;
-   if(high(x,z))route.push(new THREE.Vector3(ramp,0,low),new THREE.Vector3(ramp,0,top));
-   else route.push(new THREE.Vector3(ramp,0,top),new THREE.Vector3(ramp,0,low));
+   const ramp=ROLLER.ramps[rp.x<10?0:1],low=ramp.lowX+ramp.side*.45,top=ramp.topX-ramp.side*.35,z0=ROLLER.DJ.z0-.7;
+   if(high(x,z))route.push(new THREE.Vector3(low,0,z0),new THREE.Vector3(low,0,ramp.z),new THREE.Vector3(top,0,ramp.z));
+   else route.push(new THREE.Vector3(top,0,ramp.z),new THREE.Vector3(low,0,ramp.z),new THREE.Vector3(low,0,z0));
   }
   route.push(new THREE.Vector3(x,0,z));goal=route.shift();showMarker(x,z,heightAt(x,z));return;
  }
@@ -300,6 +300,7 @@ function serve(kind){if(!inBarZone())return;const n=Date.now();if(n-(window._las
  const p=rig.object3D.position;socket.emit('serve',{x:p.x,z:p.z,kind});}
 window.serve=serve;window.drink=drink;
 function actions(){const A=[];
+ if(window.IN_ROLLER&&window.ROLLER_ALBA&&near(window.ROLLER_ALBA,2))A.push(['💝 후원하기',()=>window.open('https://toon.at/donate/errdaydrip','_blank','noopener'),'donate']);
  if(window.IN_ROLLER&&!mySeat){
   if(near(ROLLER.CHANGE,2.2))A.push(['🛼 롤러 교체',()=>openRollerSelection(),'roller-style']);
   if(near(ROLLER.ARRIVE,2.5)||near(ROLLER.EXIT,2.5))A.push(['🚪 거리로 나가기',()=>rollerTravel('exit'),'roller-exit']);

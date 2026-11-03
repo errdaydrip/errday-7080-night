@@ -5,9 +5,13 @@ const R=require('../public/roller');
 const U='http://localhost:'+(process.env.PORT||8080);
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const emit=(s,event,data)=>new Promise((resolve,reject)=>s.timeout(3000).emit(event,data,(err,r)=>err?reject(err):resolve(r)));
-assert.strictEqual(R.floorAt(4.5,R.DJ.rampZ0),0);assert.strictEqual(R.floorAt(15.5,R.DJ.rampZ1),R.DJ.h);
-assert(Math.abs(R.floorAt(4.5,(R.DJ.rampZ0+R.DJ.rampZ1)/2)-R.DJ.h/2)<1e-8);
-assert.strictEqual(R.floorAt(10,50.8),R.DJ.h);assert.strictEqual(R.floorAt(10,40),null);
+for(const r of R.ramps){
+ assert.strictEqual(R.floorAt(r.lowX,r.z),0);
+ assert.strictEqual(R.floorAt(r.topX,r.z),R.DJ.operatorH);
+ assert(Math.abs(R.floorAt((r.lowX+r.topX)/2,r.z)-R.DJ.operatorH/2)<1e-8);
+ assert.strictEqual(R.floorAt((r.lowX+r.topX)/2,R.DJ.rampZ0-.1),null,'ramps enter from the side');
+}
+assert.strictEqual(R.floorAt(10,50.8),R.DJ.operatorH);assert.strictEqual(R.floorAt(10,40),null);
 assert.strictEqual(R.PALETTE.length,10);assert.strictEqual(new Set(R.PALETTE.map(p=>p[0])).size,10);
 assert(R.PALETTE.some(([c])=>c===R.colours({skateBoot:'#f5f5f5'}).skateBoot),'legacy colour normalized');
 (async()=>{
@@ -47,8 +51,7 @@ assert(R.PALETTE.some(([c])=>c===R.colours({skateBoot:'#f5f5f5'}).skateBoot),'le
   a.emit('rollerMotion','run');a.emit('rollerMotion','jump');await wait(100);
   assert.deepStrictEqual(observed.motion.slice(-2).map(x=>x.motion),['run','jump']);
   assert.strictEqual((await emit(a,'order','ramen')).ok,false,'must be seated at a dining table');
-  const bench=R.seats.find(s=>s.table==='RB');a.emit('move',{pos:[bench.x,0,bench.z],rot:0});a.emit('seat',bench.id);await wait(100);
-  assert.strictEqual((await emit(a,'order','ramen')).ok,false,'wall bench is for resting');a.emit('seat',null);
+  assert(!R.seats.some(s=>s.table==='RB'),'wall benches removed');
   const dining=R.seats.find(s=>s.table==='R1');a.emit('move',{pos:[dining.x,0,dining.z],rot:0});a.emit('seat',dining.id);await wait(100);
   assert.strictEqual((await emit(a,'order','soju')).ok,false,'roller menu is cup noodles and cider');
   assert.strictEqual((await emit(a,'order','ramen')).ok,true);await wait(750);
@@ -102,6 +105,9 @@ assert(R.PALETTE.some(([c])=>c===R.colours({skateBoot:'#f5f5f5'}).skateBoot),'le
   const restored=await emit(legacy,'join',{nick:'이전롤러'+unique,clientId:'legacy-roller-'+unique,last:{pos:[0,0,59],rollerSkates:true}});
   assert.deepStrictEqual(restored.resume.pos,[R.OFFSET.x,0,59+R.OFFSET.z],'saved old rink positions migrate');
   assert.strictEqual(restored.resume.rollerSkates,true);legacy.close();
+  const removed=io(U,{forceNew:true});await new Promise(resolve=>removed.on('connect',resolve));
+  const unseated=await emit(removed,'join',{nick:'이전의자'+unique,clientId:'removed-bench-'+unique,last:{worldVersion:2,pos:[21.5,.03,40],rollerSkates:true,seat:'RB-2'}});
+  assert.strictEqual(unseated.resume.seat,null,'deleted bench seats do not restore');assert.strictEqual(unseated.resume.pos[1],0);removed.close();
   console.log('roller, legacy saves and closed-door admin access OK');
  }finally{a.close();b.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -7,11 +7,14 @@
   const ARRIVE = {x:10, z:30.8};
   const EXIT = {x:10, z:30.5};
   const CHANGE = {x:1,z:31.4};
-  const DJ = {h:1.2,x0:3.5,x1:16.5,z0:46.7,z1:51.5,rampZ0:42.7,rampZ1:50.5};
+  const DJ = {h:1.2,operatorH:2,operatorZ0:48,operatorZ1:49,x0:5.5,x1:14.5,z0:46.7,z1:51.5,rampZ0:49.3,rampZ1:51.5,rampLength:5};
+  const ramps=[-1,1].map(side=>({side,lowX:side<0?.5:19.5,topX:side<0?DJ.x0:DJ.x1,z:50.4}));
+  const onDeck=(x,z)=>x>=DJ.x0&&x<=DJ.x1&&z>=DJ.z0&&z<=DJ.z1;
   const floorAt=(x,z)=>{
-    if(x>=5.5&&x<=14.5&&z>=DJ.z0&&z<=DJ.z1)return DJ.h;
-    if(x>=DJ.x0&&x<=DJ.x1&&z>=DJ.rampZ1&&z<=DJ.z1)return DJ.h;
-    if(((x>=3.5&&x<=5.5)||(x>=14.5&&x<=16.5))&&z>=DJ.rampZ0&&z<DJ.rampZ1)return DJ.h*(z-DJ.rampZ0)/(DJ.rampZ1-DJ.rampZ0);
+    if(onDeck(x,z))return DJ.h+(DJ.operatorH-DJ.h)*Math.max(0,Math.min(1,(z-DJ.operatorZ0)/(DJ.operatorZ1-DJ.operatorZ0)));
+    if(z>=DJ.rampZ0&&z<=DJ.rampZ1)for(const r of ramps){
+      const k=(x-r.lowX)/(r.topX-r.lowX);if(k>=0&&k<=1)return DJ.operatorH*Math.max(0,k);
+    }
     return null;
   };
   const SHOP = {x:18.5, z:31.1};
@@ -21,12 +24,7 @@
     {id:'R2',x:19.2,z:34,service:[18.25,33.05]},
     {id:'R3',x:19.2,z:38,service:[18.25,37.05]}
   ];
-  const benches=[];
-  for(let z=51;z<68;z+=3.4)for(const side of [-1,1])benches.push({x:side*11.5+OFFSET.x,z:z+OFFSET.z,side});
   const seats=[];
-  benches.forEach((b,i)=>[-.45,.45].forEach((offset,j)=>seats.push({
-    id:`RB-${i*2+j}`,table:'RB',x:b.x,z:b.z+offset,y:.03,yaw:-b.side*Math.PI/2,stand:[b.x-b.side*.95,b.z+offset]
-  })));
   tables.forEach(t=>[[0,-1.15,0],[1.15,0,-Math.PI/2],[0,1.15,Math.PI],[-1.15,0,Math.PI/2]].forEach(([dx,dz,yaw],i)=>seats.push({
     id:`${t.id}-${i}`,table:t.id,x:t.x+dx,z:t.z+dz,y:.03,yaw,stand:[t.x+dx*1.45,t.z+dz*1.45]
   })));
@@ -59,7 +57,7 @@
     {x0:6,x1:11,z0:48.9,z1:49.9}, {x0:-2.8,x1:2.8,z0:66,z1:67}
   ].map(o=>({x0:o.x0+OFFSET.x,x1:o.x1+OFFSET.x,z0:o.z0+OFFSET.z,z1:o.z1+OFFSET.z}));
   obstacles.push(...tables.map(t=>({x0:t.x-.78,x1:t.x+.78,z0:t.z-.78,z1:t.z+.78})));
-  const api = {CHANGE,DJ,floorAt,STAFF,tables,benches,seats,T,DOOR,OFFSET,PALETTE,ENTRY,ARRIVE,EXIT,SHOP,inside,near,colours,obstacles};
+  const api = {CHANGE,DJ,ramps,onDeck,floorAt,STAFF,tables,seats,T,DOOR,OFFSET,PALETTE,ENTRY,ARRIVE,EXIT,SHOP,inside,near,colours,obstacles};
   if(typeof module!=='undefined') module.exports=api;
   else root.ROLLER=api;
 })(typeof window!=='undefined'?window:this);

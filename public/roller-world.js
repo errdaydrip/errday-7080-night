@@ -69,10 +69,6 @@ AFRAME.registerComponent('roller-sparkle',{
     E('a-ring',{position:'-1 .018 59',rotation:'-90 0 0',scale:`${8.5*scale} ${7.8*scale} 1`,
       'radius-inner':.985,'radius-outer':1,material:'shader:flat;color:#38dce9;side:double','segments-theta':80},hall);
   });
-  for(let z=51;z<68;z+=3.4)for(const x of [-11.5,11.5]){
-    box(hall,x,.48,z,.7,.16,2,'#341027');
-    box(hall,x,.8,z,.12,.65,2,'#341027');
-  }
   // A staffed snack corner and three dining tables, with the same seats and serving rules as the pocha.
   box(hall,8.5,.5,49.4,5,1,1,'#46263c');
   box(hall,8.5,1.04,49.4,5.2,.08,1.2,'#bf9a69');
@@ -105,15 +101,20 @@ AFRAME.registerComponent('roller-sparkle',{
   // Raised DJ deck, with a smooth skate ramp on both sides and a walkway behind the console.
   box(hall,0,.6,67.4,9,1.2,4.8,'#241a32');
   box(hall,0,1.21,65.02,9,.04,.04,'#39e1d1',true);
-  box(hall,0,.6,69.3,13,1.2,1,'#241a32');
-  for(const side of [-1,1]){
-    const length=7.8,h=R.DJ.h,geometry=new THREE.BufferGeometry();
-    const x=side*5.5,z=64.9;
-    const vertices=new Float32Array([-1,0,-length/2,1,0,-length/2,-1,h,length/2,1,0,-length/2,1,h,length/2,-1,h,length/2]);
+  // The operator stands higher than the fixed-height console, so the torso clears the LP equipment.
+  box(hall,0,1.6,68.55,9,.8,2.5,'#241a32');
+  const slopeGeometry=new THREE.BufferGeometry();
+  slopeGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array([-4.5,1.2,66.3,4.5,1.2,66.3,-4.5,2,67.3,4.5,1.2,66.3,4.5,2,67.3,-4.5,2,67.3]),3));
+  slopeGeometry.computeVertexNormals();hall.object3D.add(new THREE.Mesh(slopeGeometry,new THREE.MeshStandardMaterial({color:'#241a32',side:THREE.DoubleSide,roughness:.7})));
+  for(const r of R.ramps){
+    const length=R.DJ.rampLength,h=R.DJ.operatorH,half=(R.DJ.rampZ1-R.DJ.rampZ0)/2;
+    const geometry=new THREE.BufferGeometry(),dx=r.topX-r.lowX;
+    const vertices=new Float32Array([0,0,-half,dx,h,-half,0,0,half,dx,h,-half,dx,h,half,0,0,half]);
     geometry.setAttribute('position',new THREE.BufferAttribute(vertices,3));geometry.computeVertexNormals();
     const ramp=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:'#40324e',side:THREE.DoubleSide,roughness:.7}));
-    ramp.position.set(x,.008,z);hall.object3D.add(ramp);
-    for(const edge of [-1,1])E('a-box',{position:`${x+edge*.96} ${h/2+.025} ${z}`,width:.035,height:.035,depth:Math.hypot(length,h),rotation:`${-Math.atan2(h,length)*180/Math.PI} 0 0`,material:'color:#39e1d1;emissive:#39e1d1;emissiveIntensity:1'},hall);
+    ramp.name=`rollerRamp${r.side<0?'Left':'Right'}`;
+    ramp.position.set(r.lowX-R.OFFSET.x,.008,r.z-R.OFFSET.z);hall.object3D.add(ramp);
+    for(const edge of [-1,1])E('a-box',{position:`${(r.lowX+r.topX)/2-R.OFFSET.x} ${h/2+.025} ${r.z+edge*(half-.04)-R.OFFSET.z}`,width:Math.hypot(length,h),height:.035,depth:.035,rotation:`0 0 ${Math.atan2(h,dx)*180/Math.PI}`,material:'color:#39e1d1;emissive:#39e1d1;emissiveIntensity:1'},hall);
   }
   const h0=window.heightAt;window.heightAt=(x,z)=>R.floorAt(x,z)??h0(x,z);
   const console=E('a-entity',{id:'rollerDJ',position:'0 1.2 66.5'},hall);

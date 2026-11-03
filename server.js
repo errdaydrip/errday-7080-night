@@ -269,6 +269,7 @@ io.on('connection',s=>{
   }
   if(ROLLER.inside(rp.pos[0],rp.pos[2])&&!rp.rollerSkates)rp.pos=[ROLLER.ARRIVE.x,0,ROLLER.ARRIVE.z];
   if(!clubOpen&&!isAdmin(s.data.adminToken)&&rp.pos[2]<12){rp.pos=[-3.3,0,14.5];rp.seat=null;}
+  if(typeof rp.seat==='string'&&rp.seat.startsWith('R')&&!ROLLER.seats.some(seat=>seat.id===rp.seat)){rp.seat=null;rp.pos=[Math.max(ROLLER.T.x0+1,Math.min(ROLLER.T.x1-1,rp.pos[0])),0,rp.pos[2]];}
   base.seat=rp.seat;
   Object.assign(base,{pos:rp.pos,rollerSkates:rp.rollerSkates});
   if(prevId)io.emit('rekey',{old:prevId,id:s.id});io.emit('player',{id:s.id,...pub()[s.id]});
