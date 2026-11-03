@@ -10,15 +10,19 @@
  // A wide glass entrance across from the red car, next to the roller rink.
  for(const [l,r] of [[T.x0,A.DOOR.x-A.DOOR.half],[A.DOOR.x+A.DOOR.half,T.x1]]){
   box((l+r)/2,1.5,T.z0,r-l,3,.18,'#201820');box((l+r)/2,1.45,T.z0-.11,r-l-.16,2.5,.025,'#301c26');
-  for(let x=l+.35;x<r;x+=1.1)box(x,1.4,T.z0-.14,.025,2.6,.03,'#bd965d',true);
+  for(let x=l+.35;x<r;x+=1.1)box(x,1.4,T.z0-.14,.025,2.6,.03,'#9084ff',true);
  }
- box(cx,4.6,T.z0,T.x1-T.x0,3.2,.25,'#120f15');box(cx,5.95,T.z0-.2,T.x1-T.x0,.055,.08,'#aa834f',true);
- box(cx,3.17,T.z0-.3,T.x1-T.x0,.06,.06,'#d3ae70',true);
- text('ERRDAY ARCADE',cx,4.8,T.z0-.23,8.3,'#c2a16c',180);
- text('PLAY · WIN · REPEAT',cx,3.82,T.z0-.24,5.2,'#997a55',180);
+ box(cx,4.6,T.z0,T.x1-T.x0,3.2,.25,'#120f15');box(cx,5.95,T.z0-.2,T.x1-T.x0,.055,.08,'#957cff',true);
+ box(cx,3.17,T.z0-.3,T.x1-T.x0,.06,.06,'#83dfff',true);
+ text('게임랜드',cx,4.8,T.z0-.23,5.7,'#dcc6ff',180);
+ text('GAME LAND',cx,3.82,T.z0-.24,3.25,'#7be9ff',180);
  for(const side of [-1,1]){
-  const glass=E('a-box',{position:`${A.DOOR.x+side*2} 1.45 ${T.z0+.9}`,rotation:`0 ${side*85} 0`,width:1.9,height:2.85,depth:.035,material:'color:#acf9ff;opacity:.18;transparent:true;roughness:.1;depthWrite:false'},root);
-  box(A.DOOR.x+side*2,1.5,T.z0,.06,3,.1,'#c7a366',true);
+  const hinge=E('a-entity',{position:`${A.DOOR.x+side*A.DOOR.half} 0 ${T.z0-.08}`,rotation:`0 ${-side*84} 0`},root);
+  const leaf=(x,y,w,h,d,color)=>E('a-box',{position:`${x} ${y} 0`,width:w,height:h,depth:d,color},hinge);
+  E('a-box',{position:`${-side} 1.45 0`,width:1.96,height:2.85,depth:.035,material:'color:#91dce6;opacity:.16;transparent:true;metalness:.1;roughness:.08;depthWrite:false;side:double'},hinge);
+  for(const y of [.03,2.9])leaf(-side,y,2,.04,.07,'#b2c9d6');
+  for(const x of [0,-side*2])leaf(x,1.45,.045,2.9,.07,'#b2c9d6');
+  leaf(-side*1.78,1.35,.045,.48,.17,'#eefbff');
  }
  text('WELCOME / 입장',A.DOOR.x,3.35,T.z0-.4,3.7,'#c7a366',180);
  text('EXIT',A.DOOR.x,2.9,T.z0+.25,2,'#c7a366');
@@ -26,17 +30,16 @@
  text('PLAY · SCORE · RANK',cx,5.15,47.8,5.6,'#b99560',180);
  // Burgundy patterned carpet, brass wall mouldings and warm ceiling fixtures.
  const carpet=canvasTex(256,256,(c,w,h)=>{
-  c.fillStyle='#26151e';c.fillRect(0,0,w,h);
-  c.strokeStyle='#5d3c37';c.lineWidth=1;
-  for(let y=-64;y<320;y+=64)for(let x=-64;x<320;x+=64){
-   c.beginPath();c.moveTo(x+32,y);c.lineTo(x+64,y+32);c.lineTo(x+32,y+64);c.lineTo(x,y+32);c.closePath();c.stroke();
-   c.fillStyle='#9e7950';c.fillRect(x+30,y+30,3,3);
+  c.fillStyle='#554542';c.fillRect(0,0,w,h);
+  for(let row=0;row<2;row++)for(let col=0;col<2;col++){
+   c.fillStyle=(row+col)%2?'#67544c':'#877565';
+   c.fillRect(col*128+1,row*128+1,125,125);
   }
  },6,16);
  const carpetPlane=E('a-plane',{position:`${cx} .006 ${cz}`,rotation:'-90 0 0',width:T.x1-T.x0-.35,height:depth-.35,material:'roughness:1'},root);
  texMesh(carpetPlane,carpet,{emissiveMap:carpet,emissive:new THREE.Color('#ffffff'),emissiveIntensity:.25});
  for(let z=31;z<T.z1;z+=4){
-  box(cx,5.96,z,T.x1-T.x0-1,.035,.065,'#b18b56',true);
+  box(cx,5.96,z,T.x1-T.x0-1,.035,.065,'#8c81ff',true);
   for(const x of [T.x0+.18,T.x1-.18]){
    box(x,3.1,z,.035,3.1,.045,'#9d7a4d');
    box(x,4.64,z+1.6,.035,.045,3.2,'#9d7a4d');
@@ -45,28 +48,32 @@
  for(const x of [T.x0+.14,T.x1-.14]){
   box(x,1,cz,.045,.045,depth-1,'#b99560');box(x,4.68,cz,.045,.06,depth-1,'#b99560');
  }
- for(const z of [35.5,42,49]){
-  box(cx,5.5,z,.07,.9,.07,'#ac8755');
-  E('a-torus',{position:`${cx} 5.08 ${z}`,rotation:'90 0 0',radius:.55,'radius-tubular':.025,'segments-tubular':20,'segments-radial':6,material:'color:#d7b47c;shader:flat'},root);
-  for(const dx of [-.4,0,.4])E('a-sphere',{position:`${cx+dx} 5.04 ${z}`,radius:.085,'segments-width':8,'segments-height':6,material:'shader:flat;color:#ffe0a5'},root);
+ for(const x of [T.x0+.28,T.x1-.28]){
+  box(x,5.48,cz,.35,.12,depth-.35,'#a295ff',true);
+  box(x,5.22,cz,.17,.06,depth-.35,'#ffda91',true);
  }
+ for(let z=32;z<T.z1;z+=2.8){
+  box(cx,6.04,z,T.x1-T.x0-.4,.085,.085,'#34344c');
+  box(cx,5.98,z,1.05,.09,.5,'#ffe4ae',true);
+ }
+ for(let x=T.x0+.8;x<T.x1;x+=1.3)box(x,6.06,cz,.065,.06,depth-.3,'#34344c');
  const rankTextures=new Map();
  function rankTexture(game){
   if(rankTextures.has(game))return rankTextures.get(game);
-  const canvas=document.createElement('canvas');canvas.width=576;canvas.height=720;
+  const canvas=document.createElement('canvas');canvas.width=576;canvas.height=448;
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
   texture.generateMipmaps=false;texture.minFilter=THREE.LinearFilter;
   const board={canvas,texture,last:null};rankTextures.set(game,board);return board;
  }
  function drawRanking(game,rows){
-  const board=rankTexture(game),list=Array.isArray(rows)?rows.slice(0,6):[],key=JSON.stringify(list);
+  const board=rankTexture(game),list=Array.isArray(rows)?rows.slice(0,3):[],key=JSON.stringify(list);
   if(board.last===key)return;board.last=key;
   const c=board.canvas.getContext('2d');
-  c.fillStyle='#100d12';c.fillRect(0,0,576,720);
-  c.strokeStyle='#b7975b';c.lineWidth=4;c.strokeRect(10,10,556,700);
-  c.textAlign='center';c.fillStyle='#ead3a0';c.font='bold 42px sans-serif';c.fillText('TOP 6',288,65);
+  c.fillStyle='#100d12';c.fillRect(0,0,576,448);
+  c.strokeStyle='#b7975b';c.lineWidth=4;c.strokeRect(10,10,556,428);
+  c.textAlign='center';c.fillStyle='#ead3a0';c.font='bold 42px sans-serif';c.fillText('TOP 3',288,65);
   c.font='bold 30px sans-serif';c.fillText(A.GAMES[game].name,288,112);
-  for(let i=0;i<6;i++){
+  for(let i=0;i<3;i++){
    const row=list[i],y=145+i*86;
    c.fillStyle=i%2?'#1e1820':'#17131b';c.fillRect(22,y,532,77);
    c.fillStyle=['#f3d584','#cfd7df','#cb9974'][i]||'#c0b7aa';
@@ -77,15 +84,15 @@
    c.textAlign='right';c.font='bold 29px sans-serif';c.fillStyle='#efe4cc';
    c.fillText(row?row.score.toLocaleString('ko-KR'):'—',532,y+47);
   }
-  c.fillStyle='#ad9572';c.textAlign='center';c.font='21px sans-serif';c.fillText('PERSONAL BEST / SHARED RANK',288,694);
+  c.fillStyle='#ad9572';c.textAlign='center';c.font='21px sans-serif';c.fillText('PERSONAL BEST / SHARED RANK',288,424);
   board.texture.needsUpdate=true;
  }
  window.setArcadeRankings=rankings=>{
-  for(const game of Object.keys(A.GAMES))drawRanking(game,rankings?.[game]);
+  for(const game of Object.keys(A.GAMES).filter(g=>g!=='pingpong'&&g!=='hockey'))drawRanking(game,rankings?.[game]);
  };
  function rankingBoard(machine){
   const table=machine.game==='pingpong'||machine.game==='hockey';
-  const width=table?2:1.4,height=width*1.25;
+  const width=table?2:1.4,height=width*448/576;
   const facing=machine.yaw>0?1:-1;
   const x=table?machine.x:machine.x+facing*.72;
   const y=table?3.9:3.65,z=table?machine.z+1.2:machine.z;
@@ -110,7 +117,7 @@
  const screenGeo=new THREE.PlaneGeometry(.98,.98);
  for(const m of A.machines){
   const g=A.GAMES[m.game];
-  rankingBoard(m);
+  if(m.game!=='pingpong'&&m.game!=='hockey')rankingBoard(m);
   if(m.game==='pingpong'||m.game==='hockey'){
    box(m.x,.74,m.z,3,.18,3.6,'#1a131a');box(m.x,.86,m.z,2.85,.06,3.5,m.game==='pingpong'?'#174a3b':'#5b253c',false);
    for(const dx of [-1.3,1.3])for(const dz of [-1.5,1.5])box(m.x+dx,.36,m.z+dz,.12,.72,.12,'#28324a');
@@ -120,7 +127,7 @@
    text(g.name,m.x,2.25,m.z,3.7,g.colour,180);text(m.game==='hockey'?'PRACTICE / 1 vs 1':'VS COMPUTER',m.x,1.75,m.z,2.7,g.colour,180);continue;
   }
   // Cabinet dimensions are symmetric; screen and controls face the central aisle.
-  box(m.x,.66,m.z,1.25,1.32,1.5,'#171419');box(m.x,1.7,m.z,1.15,.85,1.4,'#2a1b25');box(m.x,2.35,m.z,1.3,.35,1.5,'#241922');
+  box(m.x,.66,m.z,1.25,1.32,1.5,'#968e9e');box(m.x,1.7,m.z,1.15,.85,1.4,'#454365');box(m.x,2.35,m.z,1.3,.35,1.5,g.colour);
   const facing=m.yaw>0?1:-1;
   box(m.x+facing*.61,1.04,m.z,.4,.12,1.35,'#29352e');box(m.x+facing*.83,1.16,m.z-.3,.07,.2,.07,g.colour,true);
   for(let k=0;k<3;k++)box(m.x+facing*.82,1.12,m.z+.05+k*.21,.1,.045,.1,k%2?'#ff7cbb':'#67f7e9',true);

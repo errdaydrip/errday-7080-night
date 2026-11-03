@@ -23,7 +23,7 @@
   const token=sessionToken;
   socket.timeout(5000).emit('arcadeFinish',{token,score:state.score},(error,result)=>{
    if(error||!result?.ok){sys(result?.error||'순위 저장 연결을 확인해 주세요');return;}
-   if(window.ARCADE_PLAYING&&sessionToken===token&&state?.over&&result.rank){
+   if(window.ARCADE_PLAYING&&sessionToken===token&&state?.over&&result.rank>0&&result.rank<=3&&!['pingpong','hockey'].includes(state.kind)){
     $('arcadeCoverText').textContent='점수 '+state.score+' · 현재 '+result.rank+'위';
    }
   });

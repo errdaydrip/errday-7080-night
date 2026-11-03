@@ -15,7 +15,7 @@
   pingpong:{name:'탁구',subtitle:'VS COMPUTER · 7점 승부',colour:'#7bafff',controls:'← → 라켓 이동 · Space / 서브 · AI와 7점 승부'},
   hockey:{name:'에어하키',subtitle:'연습 / 실시간 1대1 · 7점 승부',colour:'#ff75c9',controls:'마우스·터치 드래그 / 방향키로 패들 이동 · 빠르게 밀면 강타 · Space 서브 / 누른 채 방향키로 빠르게'}
  };
- const machines=[];for(const [side,x,yaw] of [[-1,-10.9,Math.PI/2],[1,-4.3,-Math.PI/2]])Object.keys(GAMES).slice(0,8).forEach((game,i)=>machines.push({id:`AC-${side<0?'L':'R'}${i}`,game,x,z:33+i*1.65,yaw,spot:{x:x-side*1.65,z:33+i*1.65},box:{x0:x-.65,x1:x+.65,z0:32.25+i*1.65,z1:33.75+i*1.65}}));
+ const machines=[];for(const [side,x,yaw] of [[-1,T.x0+.75,Math.PI/2],[1,T.x1-.75,-Math.PI/2]])Object.keys(GAMES).slice(0,8).forEach((game,i)=>machines.push({id:`AC-${side<0?'L':'R'}${i}`,game,x,z:33+i*1.65,yaw,spot:{x:x-side*1.65,z:33+i*1.65},box:{x0:x-.65,x1:x+.65,z0:32.25+i*1.65,z1:33.75+i*1.65}}));
  machines.push({id:'AC-PING',game:'pingpong',x:-10,z:51.4,yaw:0,spot:{x:-10,z:48.7},box:{x0:-11.5,x1:-8.5,z0:49.6,z1:53.2}},
  {id:'AC-HOCKEY',game:'hockey',x:-5.2,z:51.4,yaw:0,spot:{x:-5.2,z:48.7},box:{x0:-6.7,x1:-3.7,z0:49.6,z1:53.2}});
  const inside=(x,z)=>x>T.x0&&x<T.x1&&z>T.z0&&z<T.z1;
