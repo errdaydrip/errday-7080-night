@@ -24,7 +24,6 @@
   for(const x of [0,-side*2])leaf(x,1.45,.045,2.9,.07,'#b2c9d6');
   leaf(-side*1.78,1.35,.045,.48,.17,'#eefbff');
  }
- text('WELCOME / 입장',A.DOOR.x,3.35,T.z0-.4,3.7,'#c7a366',180);
  text('EXIT',A.DOOR.x,2.9,T.z0+.25,2,'#c7a366');
  text('THE ARCADE LOUNGE',cx,5.55,T.z1-.15,7.6,'#b99560',180);
  text('PLAY · SCORE · RANK',cx,5.15,47.8,5.6,'#b99560',180);
@@ -57,6 +56,7 @@
   box(cx,5.98,z,1.05,.09,.5,'#ffe4ae',true);
  }
  for(let x=T.x0+.8;x<T.x1;x+=1.3)box(x,6.06,cz,.065,.06,depth-.3,'#34344c');
+ for(const z of [34,42,51])E('a-entity',{position:`${cx} 4.8 ${z}`,light:'type:point;color:#ffffff;intensity:2;distance:13;decay:1'},root);
  const rankTextures=new Map();
  function rankTexture(game){
   if(rankTextures.has(game))return rankTextures.get(game);
@@ -69,13 +69,13 @@
   const board=rankTexture(game),list=Array.isArray(rows)?rows.slice(0,3):[],key=JSON.stringify(list);
   if(board.last===key)return;board.last=key;
   const c=board.canvas.getContext('2d');
-  c.fillStyle='#100d12';c.fillRect(0,0,576,448);
-  c.strokeStyle='#b7975b';c.lineWidth=4;c.strokeRect(10,10,556,428);
-  c.textAlign='center';c.fillStyle='#ead3a0';c.font='bold 42px sans-serif';c.fillText('TOP 3',288,65);
+  c.fillStyle='#171b38';c.fillRect(0,0,576,448);
+  c.strokeStyle='#8f9cff';c.lineWidth=4;c.strokeRect(10,10,556,428);
+  c.textAlign='center';c.fillStyle='#a5eaff';c.font='bold 42px sans-serif';c.fillText('TOP 3',288,65);
   c.font='bold 30px sans-serif';c.fillText(A.GAMES[game].name,288,112);
   for(let i=0;i<3;i++){
    const row=list[i],y=145+i*86;
-   c.fillStyle=i%2?'#1e1820':'#17131b';c.fillRect(22,y,532,77);
+   c.fillStyle=i%2?'#293052':'#212741';c.fillRect(22,y,532,77);
    c.fillStyle=['#f3d584','#cfd7df','#cb9974'][i]||'#c0b7aa';
    c.textAlign='left';c.font='bold 34px sans-serif';c.fillText(String(i+1),38,y+48);
    let nick=row?.nick||'기록 대기';c.font='28px sans-serif';
@@ -95,13 +95,13 @@
   const width=table?2:1.4,height=width*448/576;
   const facing=machine.yaw>0?1:-1;
   const x=table?machine.x:machine.x+facing*.72;
-  const y=table?3.9:3.65,z=table?machine.z+1.2:machine.z;
+  const y=table?3.9:3.12,z=table?machine.z+1.2:machine.z;
   if(table){
-   box(x,y,z,width+.1,height+.1,.06,'#100d12');
-   for(const side of [-1,1]){box(x+side*width/2,y,z-.04,.035,height,.025,'#bb995f');box(x,y+side*height/2,z-.04,width,.035,.025,'#bb995f');}
+   box(x,y,z,width+.1,height+.1,.06,'#171b38');
+   for(const side of [-1,1]){box(x+side*width/2,y,z-.04,.035,height,.025,'#a19aff');box(x,y+side*height/2,z-.04,width,.035,.025,'#a19aff');}
   }else{
-   box(x-facing*.025,y,z,.06,height+.1,width+.1,'#100d12');
-   for(const side of [-1,1]){box(x+facing*.025,y,z+side*width/2,.025,height,.035,'#bb995f');box(x+facing*.025,y+side*height/2,z,.025,.035,width,'#bb995f');}
+   box(x-facing*.025,y,z,.06,height+.1,width+.1,'#171b38');
+   for(const side of [-1,1]){box(x+facing*.025,y,z+side*width/2,.025,height,.035,'#a19aff');box(x+facing*.025,y+side*height/2,z,.025,.035,width,'#a19aff');}
   }
   const entity=E('a-entity',{id:'rank-'+machine.id,position:`${x+(table?0:facing*.055)} ${y} ${z-(table?.055:0)}`,rotation:`0 ${table?180:machine.yaw*180/Math.PI} 0`},root);
   entity.setObject3D('mesh',new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:rankTexture(machine.game).texture,toneMapped:false})));

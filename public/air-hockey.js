@@ -11,7 +11,7 @@
  function update(s,dt,targets=[]){if(s.over||!Number.isFinite(dt)||dt<=0)return;dt=Math.min(.1,dt);const steps=Math.ceil(dt*240),h=dt/steps,paths=s.paddles.map((p,i)=>{const end={...p};target(end,i,dt,targets[i]);return {x:p.x,y:p.y,dx:end.x-p.x,dy:end.y-p.y};});
   for(let j=0;j<steps&&!s.over;j++){
    s.t+=h;for(let i=0;i<2;i++){const p=paths[i],k=(j+1)/steps;target(s.paddles[i],i,h,{x:p.x+p.dx*k,y:p.y+p.dy*k});}
-   if(s.serve){s.serveTime+=h;if(s.serveTime>=6)serve(s,s.serveSide);continue;}
+   if(s.serve){s.serveTime+=h;if(s.serveTime>=1)serve(s,s.serveSide);continue;}
    const b=s.ball;b.x+=b.vx*h;b.y+=b.vy*h/K.aspect;
    for(const p of s.paddles){const dx=b.x-p.x,dy=(b.y-p.y)*K.aspect,d=Math.hypot(dx,dy),r=K.paddle+K.puck;if(d>=r)continue;
     const nx=d>1e-8?dx/d:0,ny=d>1e-8?dy/d:(p===s.paddles[0]?-1:1);b.x=p.x+nx*(r+.0001);b.y=p.y+ny*(r+.0001)/K.aspect;
@@ -22,6 +22,16 @@
    const inGoal=b.x>K.goal0+K.puck&&b.x<K.goal1-K.puck;
    if(b.y<K.top+K.puck/K.aspect){if(inGoal){if(b.y<K.top-K.puck/K.aspect){goal(s,0);continue;}}else{b.y=K.top+K.puck/K.aspect;b.vy=Math.abs(b.vy)*.96;s.event++;}}
    if(b.y>K.bottom-K.puck/K.aspect){if(inGoal){if(b.y>K.bottom+K.puck/K.aspect){goal(s,1);continue;}}else{b.y=K.bottom-K.puck/K.aspect;b.vy=-Math.abs(b.vy)*.96;s.event++;}}
+   const radius=.13;
+   for(const [cx,cy,sx,sy] of [[K.left+radius,K.top+radius/K.aspect,-1,-1],[K.right-radius,K.top+radius/K.aspect,1,-1],[K.left+radius,K.bottom-radius/K.aspect,-1,1],[K.right-radius,K.bottom-radius/K.aspect,1,1]]){
+    if((b.x-cx)*sx<=0||(b.y-cy)*sy<=0)continue;
+    const dx=b.x-cx,dy=(b.y-cy)*K.aspect,d=Math.hypot(dx,dy),limit=radius-K.puck;
+    if(d<limit)continue;
+    const nx=dx/d,ny=dy/d,out=b.vx*nx+b.vy*ny;
+    b.x=cx+nx*(limit-.001);b.y=cy+ny*(limit-.001)/K.aspect;
+    if(out>0){b.vx-=1.9*out*nx;b.vy-=1.9*out*ny;}
+    if(Math.hypot(b.vx,b.vy)<.3){b.vx=-nx*.35;b.vy=-ny*.35;}
+   }
    const drag=Math.exp(-.075*h);b.vx*=drag;b.vy*=drag;
   }
  }

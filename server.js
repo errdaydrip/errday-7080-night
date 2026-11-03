@@ -227,12 +227,8 @@ function poolShot(id,a,p,sx,sy){sx=Math.max(-1,Math.min(1,+sx||0));sy=Math.max(-
  if(!over&&!keep&&!scratch)msg=`다음: ${pool.players[pool.turn].nick}`;
  pool.msg=msg;pool.over=over;pool.shots++;pool.t=Date.now();pool.busy=Date.now()+r.steps/240*1000+300;pool.deadline=over?0:pool.busy+POOL_TURN;
  return{ok:true,shot:{by:id,nick:pl.nick,a,p,before,sx,sy},msg,over};}
-const hockeyMatches=require('./hockey-matches')({io,players,arcade:ARCADE,onResult:(ids,state)=>{
- let changed=false;ids.forEach((id,i)=>{const p=players[id];if(p)changed=arcadeScores.record('hockey',p.cid,p.nick,i===0?state.score:state.opponent).changed||changed;});
- if(changed){save();io.emit('arcadeRankings',arcadeScores.publicScores());}
-}});
 io.on('connection',s=>{
- hockeyMatches.attach(s);
+
  [0,1,2].forEach(b=>s.emit('dartState',{b,g:DG.pub(dartGames[b]),recs:dartRecs[b],top:dartTop()}));
  const bOf=v=>Math.max(0,Math.min(2,v|0)),A=f=>typeof f==='function'?f:()=>{};
  s.on('dartNew',(d,ack)=>{ack=A(ack);const pl=players[s.id];if(!pl||!d)return ack({ok:false});const b=bOf(d.b),g=dartGames[b],R=d.rounds===8?8:3;
@@ -401,7 +397,7 @@ io.on('connection',s=>{
   const nearMachine = player && machine && ARCADE.inside(player.pos[0], player.pos[2]) &&
    Math.hypot(player.pos[0] - machine.spot.x, player.pos[2] - machine.spot.z) < 2.1;
   if (!nearMachine || player.seat) return ack({ok:false, error:'게임기 앞에서 시작해 주세요'});
-  hockeyMatches.leave(s.id);
+
   const token = require('crypto').randomBytes(16).toString('hex');
   s.data.arcadeSession = {token, game:machine.game, startedAt:Date.now(), clientId:player.cid};
   ack({ok:true, token});

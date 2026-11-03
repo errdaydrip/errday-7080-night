@@ -12,8 +12,8 @@
   reflex:{name:'라이트 터치',subtitle:'LIGHT TAP',colour:'#76ffd5',controls:'빛나는 패널을 클릭·터치 · 키보드 1~9'},
   rhythm:{name:'비트 스테이션',subtitle:'4 KEY RHYTHM',colour:'#ed8bff',controls:'D F J K 또는 방향키 · 노트가 판정선에 닿을 때 누르세요'},
   ddr:{name:'댄스 스테이지',subtitle:'DDR 스타일',colour:'#73f4ed',controls:'← ↓ ↑ → 또는 터치 발판 · 박자에 맞춰 누르세요'},
-  pingpong:{name:'탁구',subtitle:'VS COMPUTER · 7점 승부',colour:'#7bafff',controls:'← → 라켓 이동 · Space / 서브 · AI와 7점 승부'},
-  hockey:{name:'에어하키',subtitle:'연습 / 실시간 1대1 · 7점 승부',colour:'#ff75c9',controls:'마우스·터치 드래그 / 방향키로 패들 이동 · 빠르게 밀면 강타 · Space 서브 / 누른 채 방향키로 빠르게'}
+  pingpong:{name:'탁구',subtitle:'VS COMPUTER · 7점 승부',colour:'#7bafff',controls:'마우스·터치로 라켓을 움직여 바운드한 공을 치세요'},
+  hockey:{name:'에어하키',subtitle:'VS COMPUTER · 7점 승부',colour:'#ff75c9',controls:'마우스·터치로 패들을 드래그하세요'}
  };
  const machines=[];for(const [side,x,yaw] of [[-1,T.x0+.75,Math.PI/2],[1,T.x1-.75,-Math.PI/2]])Object.keys(GAMES).slice(0,8).forEach((game,i)=>machines.push({id:`AC-${side<0?'L':'R'}${i}`,game,x,z:33+i*1.65,yaw,spot:{x:x-side*1.65,z:33+i*1.65},box:{x0:x-.65,x1:x+.65,z0:32.25+i*1.65,z1:33.75+i*1.65}}));
  machines.push({id:'AC-PING',game:'pingpong',x:-10,z:51.4,yaw:0,spot:{x:-10,z:48.7},box:{x0:-11.5,x1:-8.5,z0:49.6,z1:53.2}},
