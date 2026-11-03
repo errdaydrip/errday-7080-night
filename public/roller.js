@@ -8,10 +8,11 @@
   const EXIT = {x:10, z:30.5};
   const MENU=['ramen','tteokbokki','cola','cider'];
   const CHANGE = {x:1,z:31.4};
-  const DJ = {h:.6,operatorH:1,operatorZ0:48,operatorZ1:49,x0:5.5,x1:14.5,z0:46.7,z1:51.5,rampZ0:49.3,rampZ1:51.5,rampLength:5};
+  const DJ = {h:.6,operatorH:1,consoleH:1.57,operatorZ0:48,operatorZ1:49,x0:5.5,x1:14.5,z0:46.7,z1:51.5,rampZ0:49.3,rampZ1:51.5,rampLength:5};
   const ramps=[-1,1].map(side=>({side,lowX:side<0?.5:19.5,topX:side<0?DJ.x0:DJ.x1,z:50.4}));
   const onDeck=(x,z)=>x>=DJ.x0&&x<=DJ.x1&&z>=DJ.z0&&z<=DJ.z1;
   const floorAt=(x,z)=>{
+    if(x>=7.2&&x<=12.8&&z>=47.7&&z<=48.7)return DJ.consoleH;
     if(onDeck(x,z))return DJ.h+(DJ.operatorH-DJ.h)*Math.max(0,Math.min(1,(z-DJ.operatorZ0)/(DJ.operatorZ1-DJ.operatorZ0)));
     if(z>=DJ.rampZ0&&z<=DJ.rampZ1)for(const r of ramps){
       const k=(x-r.lowX)/(r.topX-r.lowX);if(k>=0&&k<=1)return DJ.operatorH*Math.max(0,k);
@@ -55,8 +56,8 @@
   const obstacles = [
     {x0:-12.2,x1:-11.8,z0:48,z1:70}, {x0:11.8,x1:12.2,z0:48,z1:70},
     {x0:-12,x1:-2.2,z0:47.8,z1:48.2}, {x0:2.2,x1:12,z0:47.8,z1:48.2}, {x0:-12,x1:12,z0:69.8,z1:70.2},
-    {x0:6,x1:11,z0:48.9,z1:49.9}, {x0:-2.8,x1:2.8,z0:66,z1:67}
-  ].map(o=>({x0:o.x0+OFFSET.x,x1:o.x1+OFFSET.x,z0:o.z0+OFFSET.z,z1:o.z1+OFFSET.z}));
+    {x0:6,x1:11,z0:48.9,z1:49.9}, {x0:-2.8,x1:2.8,z0:66,z1:67,jumpTop:DJ.consoleH}
+  ].map(o=>({...o,x0:o.x0+OFFSET.x,x1:o.x1+OFFSET.x,z0:o.z0+OFFSET.z,z1:o.z1+OFFSET.z}));
   obstacles.push(...tables.map(t=>({x0:t.x-.78,x1:t.x+.78,z0:t.z-.78,z1:t.z+.78})));
   const api = {MENU,CHANGE,DJ,ramps,onDeck,floorAt,STAFF,tables,seats,T,DOOR,OFFSET,PALETTE,ENTRY,ARRIVE,EXIT,SHOP,inside,near,colours,obstacles};
   if(typeof module!=='undefined') module.exports=api;

@@ -1,5 +1,5 @@
 // node tests/pocha.test.js (server on :8080)
-const {io}=require('socket.io-client');const assert=require('assert');const W=ms=>new Promise(r=>setTimeout(r,ms));
+const SPORTS=require('../public/sports');const {io}=require('socket.io-client');const assert=require('assert');const W=ms=>new Promise(r=>setTimeout(r,ms));
 const U='http://localhost:'+(process.env.PORT||8080);
 (async()=>{const a=io(U,{forceNew:true}),b=io(U,{forceNew:true});await W(400);
  await new Promise(r=>a.emit('join',{nick:'Server1',clientId:'P1'},r));await new Promise(r=>b.emit('join',{nick:'Guest1',clientId:'P2'},r));
@@ -16,9 +16,9 @@ const U='http://localhost:'+(process.env.PORT||8080);
  for(let i=0;i<5;i++){await W(2100);b.emit('eat','squid');}await W(300);assert.strictEqual(eats.length,6);assert.deepStrictEqual(tb.Y2,[null,null,null,null],'squid gone');
  // 통닭/모듬회
  a.emit('move',{pos:[0.8,0,14.6],rot:0});await W(600);a.emit('pickup','chicken');await W(300);const nc=carry.length;
- a.emit('move',{pos:[-11.6,0,20.5],rot:0});await W(600);a.emit('pickup','chicken');await W(600);assert.strictEqual(carry.length,nc+1,'chicken pickup');assert.strictEqual(carry[carry.length-1].kind,'chicken');
+ a.emit('move',{pos:[-11.6,0,SPORTS.SHOPS.chicken.z],rot:0});await W(600);a.emit('pickup','chicken');await W(600);assert.strictEqual(carry.length,nc+1,'chicken pickup');assert.strictEqual(carry[carry.length-1].kind,'chicken');
  a.emit('move',{pos:[-3,0,17.5],rot:0});await W(600);a.emit('place');await W(300);
- a.emit('move',{pos:[-11.6,0,15],rot:0});await W(600);a.emit('pickup','hoe');await W(600);a.emit('move',{pos:[-3,0,17.5],rot:0});await W(600);a.emit('place');await W(300);
+ a.emit('move',{pos:[-11.6,0,SPORTS.SHOPS.hoe.z],rot:0});await W(600);a.emit('pickup','hoe');await W(600);a.emit('move',{pos:[-3,0,17.5],rot:0});await W(600);a.emit('place');await W(300);
  assert.deepStrictEqual(tb.Y2,['chicken','hoe',null,null]);
  for(let i=0;i<6;i++){await W(2100);b.emit('eat','chicken');}await W(300);assert.deepStrictEqual(tb.Y2,[null,'hoe',null,null],'chicken gone in place');
  for(let i=0;i<6;i++){await W(2100);b.emit('eat','hoe');}await W(300);assert.deepStrictEqual(tb.Y2,[null,null,null,null]);

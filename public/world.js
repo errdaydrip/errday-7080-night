@@ -697,7 +697,7 @@ window.WAITERS=[];
 // ---------- 80년대 거리 보강: 낮은 상가 + 주차된 자동차 ----------
 (function street80(){
  // 영업중 가게(샷다 올림, 내부 보임)
- const openShop=(x,z,w,h,d,ry,col,sign,sc,kind)=>{const g=E('a-entity',{position:`${x} 0 ${z}`,rotation:`0 ${ry} 0`});const F=d/2;
+ const openShop=(x,z,w,h,d,ry,col,sign,sc,kind)=>{const g=E('a-entity',{position:`${x} 0 ${z}`,rotation:`0 ${ry} 0`});const F=d/2;g.setAttribute('scale','.7 .85 .7');
   const ft=TEX.facade(w,h,col);
   [[-w/2+.15,.3],[w/2-.15,.3]].forEach(([px,pw])=>{const b=E('a-box',{position:`${px} ${h/2} 0`,width:pw,height:h,depth:d,material:'roughness:1'},g);texMesh(b,ft,{emissiveMap:ft,emissive:new THREE.Color('#ffffff'),emissiveIntensity:.45});});
   E('a-box',{position:`0 ${(h+2.6)/2} ${F-.15}`,width:w,height:h-2.6,depth:.3,material:`color:${col};roughness:1`},g);
@@ -744,11 +744,11 @@ window.WAITERS=[];
   }
   return g;};
 
- [[15,'횟집','#33aaff'],[20.5,'통닭','#ff5533']].forEach(([z,l,sc])=>{openShop(-15.1,z,5,4.6,3,90,'#5e5048',l,sc,l==='통닭'?'chicken':'hoe');OBSTACLES.push({x0:-17.2,x1:-13.65,z0:z-2.55,z1:z+2.55});E('a-box',{position:`-12.7 .5 ${z}`,width:.6,height:1,depth:2.4,material:`color:${l==='통닭'?'#c8a070':'#e0e4e8'};roughness:.7`});OBSTACLES.push({x0:-13.0,x1:-12.4,z0:z-1.2,z1:z+1.2});});
+ [[SPORTS.SHOPS.hoe.z,'횟집','#33aaff'],[SPORTS.SHOPS.chicken.z,'통닭','#ff5533']].forEach(([z,l,sc])=>{openShop(-15.1,z,5,4.6,3,90,'#5e5048',l,sc,l==='통닭'?'chicken':'hoe');OBSTACLES.push({x0:-16.2,x1:-14.0,z0:z-1.8,z1:z+1.8});E('a-box',{position:`-13.55 .5 ${z}`,width:.45,height:1,depth:1.5,material:`color:${l==='통닭'?'#c8a070':'#e0e4e8'};roughness:.7`});OBSTACLES.push({x0:-13.8,x1:-13.3,z0:z-.75,z1:z+.75});});
  // 횟집 수족관
- E('a-box',{position:'-13.25 .9 13.2',width:.7,height:1.2,depth:1.4,material:'color:#5ac8ff;opacity:.45;transparent:true;metalness:.2;roughness:.05;emissive:#1060a0;emissiveIntensity:.4'});OBSTACLES.push({x0:-13.6,x1:-12.9,z0:12.5,z1:13.9});
- window.AQFISH=[];for(let k=0;k<5;k++){const f=E('a-entity',{position:`-13.25 ${.6+k*.13} 13.2`});E('a-sphere',{radius:.07,scale:'1.8 .7 .5',color:['#e86a40','#c0c8d0','#ff9a50','#8090a0','#d84a30'][k]},f);E('a-cone',{position:'-.14 0 0',rotation:'0 0 90','radius-bottom':.05,height:.08,scale:'1 1 .3',color:'#777'},f);window.AQFISH.push(f);}
- AFRAME.registerComponent('aq-swim',{tick(t){(window.AQFISH||[]).forEach((f,k)=>{const a=t/1000*(.6+k*.15)+k;f.object3D.position.z=13.2+Math.sin(a)*.5;f.object3D.rotation.y=Math.cos(a)>0?-Math.PI/2:Math.PI/2;});}});document.querySelector('a-scene').setAttribute('aq-swim','');
+ E('a-box',{position:`-13.6 .9 ${SPORTS.SHOPS.hoe.z-.9}`,width:.7,height:1.2,depth:1.4,material:'color:#5ac8ff;opacity:.45;transparent:true;metalness:.2;roughness:.05;emissive:#1060a0;emissiveIntensity:.4'});OBSTACLES.push({x0:-13.95,x1:-13.25,z0:SPORTS.SHOPS.hoe.z-1.6,z1:SPORTS.SHOPS.hoe.z-.2});
+ window.AQFISH=[];for(let k=0;k<5;k++){const f=E('a-entity',{position:`-13.6 ${.6+k*.13} ${SPORTS.SHOPS.hoe.z-.9}`});E('a-sphere',{radius:.07,scale:'1.8 .7 .5',color:['#e86a40','#c0c8d0','#ff9a50','#8090a0','#d84a30'][k]},f);E('a-cone',{position:'-.14 0 0',rotation:'0 0 90','radius-bottom':.05,height:.08,scale:'1 1 .3',color:'#777'},f);window.AQFISH.push(f);}
+ AFRAME.registerComponent('aq-swim',{tick(t){(window.AQFISH||[]).forEach((f,k)=>{const a=t/1000*(.6+k*.15)+k;f.object3D.position.z=SPORTS.SHOPS.hoe.z-.9+Math.sin(a)*.5;f.object3D.rotation.y=Math.cos(a)>0?-Math.PI/2:Math.PI/2;});}});document.querySelector('a-scene').setAttribute('aq-swim','');
  const car=(x,z,ry,col,truck)=>{const g=E('a-entity',{position:`${x} 0 ${z}`,rotation:`0 ${ry} 0`}),L=truck?4.2:4.1,W=1.6;
   E('a-box',{position:'0 .55 0',width:W,height:.55,depth:L,material:`color:${col};metalness:.4;roughness:.45`},g);
   if(truck===true){E('a-box',{position:`0 1.15 ${L/2-.75}`,width:W,height:.75,depth:1.3,material:`color:${col};metalness:.4;roughness:.45`},g);
@@ -817,7 +817,7 @@ async function shopGuy(z,name,outfit,apron,band,kind){const holder=E('a-entity',
   if(kind==='hoe'){const k=Math.abs(Math.sin(t*4.5));knife.position.set(0,.04+k*.06,.1);knife.rotation.x=-k*.3;}
   else{const f=(t%3)/3;basket.position.y=.25-(f<.7?.12:.12-Math.sin((f-.7)/.3*Math.PI)*.15);}};
  OBSTACLES.push({x:-13.35,z,r:.35});}
-shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy(15,'횟집 아저씨','#2a4a7a','#2a6ab0','#d02020','hoe');
+shopGuy(SPORTS.SHOPS.chicken.z,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy(SPORTS.SHOPS.hoe.z,'횟집 아저씨','#2a4a7a','#2a6ab0','#d02020','hoe');
 
 // ---------- 야장 극장 (비디오방+만화방 합침) : 큰 스크린에 지금 플레이리스트 영상 ----------
 (function theater(){const TH=window.THEATER,T=TH.T,S=T.screen,D=T.door,W=T.wall,cx=(T.x0+T.x1)/2,cz=(T.z0+T.z1)/2,L=T.x1-T.x0,Wz=T.z1-T.z0;
