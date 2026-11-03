@@ -25,16 +25,17 @@
  <div class="row"><b>헤어</b><span id="hairs"></span></div>
  <div class="row"><b>안경</b><span id="accs"></span></div>
  <div class="row"><b>피부</b><span id="skins"></span></div>
- <div id="skateOptions" class="hidden">
- <h2>🛼 나만의 롤러스케이트</h2><p>부츠·바퀴·끈 색상을 고르고 입장하세요.</p>
- <div class="row"><b>부츠</b><input id="skateBoot" type="color" value="#f5f5f5" aria-label="롤러 부츠 색상"></div>
- <div class="row"><b>바퀴</b><input id="skateWheel" type="color" value="#ff69b4" aria-label="롤러 바퀴 색상"></div>
- <div class="row"><b>끈</b><input id="skateLace" type="color" value="#2f7bff" aria-label="롤러 끈 색상"></div>
- <button id="skateCancel" type="button">돌아가기</button>
- </div>
  <div id="adultNote" style="display:flex;gap:10px;align-items:center;margin:10px auto;max-width:340px;padding:8px 12px;border:1px solid #ff4d6d;border-radius:10px;background:rgba(255,40,80,.12);color:#ffd6de;font-size:13px;line-height:1.45;text-align:left"><span style="flex:none;width:34px;height:34px;border-radius:50%;background:#e01e3c;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff">19</span><span>이 공간은 성인 테마의 가상 나이트클럽입니다.<br>19세 미만은 이용을 자제해 주시기 바랍니다.</span></div>
  <button id="enter" class="big" disabled>입장하기 (소리 켜짐)</button>
  <p class="hint">바닥 클릭/탭 = 그 자리로 걸어가기 · 의자 클릭/탭 = 가서 앉기 · WASD 이동 · 드래그 = 시점 회전 · 휠/두 손가락 = 줌</p>
+</div>
+<div id="rollerSelect" class="panel center hidden" role="dialog" aria-modal="true" aria-labelledby="rollerSelectTitle">
+ <h2 id="rollerSelectTitle">나만의 롤러스케이트</h2>
+ <canvas id="rollerPreview" width="560" height="300" aria-label="선택한 롤러스케이트 미리보기"></canvas>
+ <div class="roller-colour-row"><b>부츠</b><div id="rollerBootColours" class="roller-palette"></div></div>
+ <div class="roller-colour-row"><b>바퀴</b><div id="rollerWheelColours" class="roller-palette"></div></div>
+ <div class="roller-colour-row"><b>끈</b><div id="rollerLaceColours" class="roller-palette"></div></div>
+ <div class="roller-select-actions"><button id="rollerCancel" type="button">돌아가기</button><button id="rollerConfirm" type="button" class="big">스케이트 신고 입장</button></div>
 </div>
 <div id="hud" class="hidden">
 <div id="actBar" class="hidden"></div><div id="orderMenu" class="hidden"><div class="ohead">🛎 야장 주문 <button id="orderClose" type="button">✕</button></div><div class="otabs"><button class="otab" data-tab="anju" type="button">🍢 안주</button><button class="otab" data-tab="drink" type="button">🍶 주류</button></div><div class="olist"></div></div>

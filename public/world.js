@@ -454,9 +454,9 @@ window.makeHuman=async function(holder,opts){const c=makeChibi(opts);holder.obje
   dispose(){holder.object3D.remove(c.root);c.root.traverse(n=>{if(n.isMesh){n.geometry.dispose();}});}};h.play('Idle_Loop');animateChibi(c,'idle',0,opts);return h;};
 function makeRollerSkate(opts){
  const colours=ROLLER.colours(opts),g=new THREE.Group();
- const boot=new THREE.MeshStandardMaterial({color:colours.skateBoot,roughness:.45});
- const wheel=new THREE.MeshStandardMaterial({color:colours.skateWheel,roughness:.5});
- const lace=new THREE.MeshStandardMaterial({color:colours.skateLace,roughness:.7});
+ const boot=new THREE.MeshStandardMaterial({color:colours.skateBoot,emissive:colours.skateBoot,emissiveIntensity:.3,roughness:.45});
+ const wheel=new THREE.MeshStandardMaterial({color:colours.skateWheel,emissive:colours.skateWheel,emissiveIntensity:.5,roughness:.5});
+ const lace=new THREE.MeshStandardMaterial({color:colours.skateLace,emissive:colours.skateLace,emissiveIntensity:.3,roughness:.7});
  const base=new THREE.MeshStandardMaterial({color:'#b9c6d1',metalness:.7,roughness:.3});
  g.add(mesh(new THREE.BoxGeometry(.13,.13,.24),boot,[0,-.015,.015]));
  g.add(mesh(new THREE.BoxGeometry(.11,.13,.1),boot,[0,.07,-.045]));
@@ -689,13 +689,6 @@ window.WAITERS=[];
 
 // ---------- 80년대 거리 보강: 낮은 상가 + 주차된 자동차 ----------
 (function street80(){
- const shop=(x,z,w,h,d,ry,col,sign,sc)=>{const g=E('a-entity',{position:`${x} 0 ${z}`,rotation:`0 ${ry} 0`});
-  const b=E('a-box',{position:`0 ${h/2} 0`,width:w,height:h,depth:d,material:'roughness:1'},g);const ft=TEX.facade(w,h,col);texMesh(b,ft,{emissiveMap:ft,emissive:new THREE.Color('#ffffff'),emissiveIntensity:.45});
-  E('a-box',{position:`0 ${h+.15} 0`,width:w+.2,height:.3,depth:d+.2,color:'#3a302a'},g);
-  E('a-box',{position:`0 1.2 ${d/2+.02}`,width:w*.8,height:2.2,depth:.04,material:'color:#2a2a30;metalness:.6'},g);
-  for(let k=0;k<8;k++)E('a-box',{position:`0 ${.2+k*.27} ${d/2+.05}`,width:w*.8,height:.02,depth:.02,color:'#555'},g);
-  E('a-box',{position:`0 2.75 ${d/2+.12}`,width:w*.85,height:.6,depth:.12,material:`color:#111;emissive:${sc};emissiveIntensity:.25`},g);
-  E('a-entity',{position:`0 2.75 ${d/2+.19}`,ktext:hand(sign,{c:'#fff',g:sc,s:70,w:Math.min(w*.8,2.8)})},g);};
  // 영업중 가게(샷다 올림, 내부 보임)
  const openShop=(x,z,w,h,d,ry,col,sign,sc,kind)=>{const g=E('a-entity',{position:`${x} 0 ${z}`,rotation:`0 ${ry} 0`});const F=d/2;
   const ft=TEX.facade(w,h,col);
@@ -743,7 +736,7 @@ window.WAITERS=[];
    E('a-sphere',{position:`-.6 .88 ${-F+.45}`,radius:.08,scale:'1.4 .5 1',color:'#d04020'},g);
   }
   return g;};
- [[-7.5,31.2,'다방',  '#ff6688','#6b5a4a'],[-1.5,31.2,'전파사','#66ccff','#5a5a62'],[4.5,31.2,'연탄가게','#ffcc55','#6a4a3a']].forEach(([x,z,l,sc,c])=>shop(x,z,5,4.2+((x*7)%3+3)%2*1.4,3,0,c,l,sc));
+
  [[15,'횟집','#33aaff'],[20.5,'통닭','#ff5533']].forEach(([z,l,sc])=>{openShop(-15.1,z,5,4.6,3,90,'#5e5048',l,sc,l==='통닭'?'chicken':'hoe');OBSTACLES.push({x0:-17.2,x1:-13.65,z0:z-2.55,z1:z+2.55});E('a-box',{position:`-12.7 .5 ${z}`,width:.6,height:1,depth:2.4,material:`color:${l==='통닭'?'#c8a070':'#e0e4e8'};roughness:.7`});OBSTACLES.push({x0:-13.0,x1:-12.4,z0:z-1.2,z1:z+1.2});});
  // 횟집 수족관
  E('a-box',{position:'-13.25 .9 13.2',width:.7,height:1.2,depth:1.4,material:'color:#5ac8ff;opacity:.45;transparent:true;metalness:.2;roughness:.05;emissive:#1060a0;emissiveIntensity:.4'});OBSTACLES.push({x0:-13.6,x1:-12.9,z0:12.5,z1:13.9});
@@ -903,10 +896,20 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
 // ---------- 💝 후원 전광판 (나이트 뒷벽, 네온 스크롤) ----------
 (function donationTicker(){const W=2048,H=128,cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
  const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace||tex.colorSpace;
- const SZ=(window.STAGE&&STAGE.z1)||-11.82;const board=E('a-entity',{position:`0 6.35 ${Math.min(-6,SZ+.15)}`});window.setBoards=b=>{board.setAttribute('visible',!!(b&&b.ticker!==false));window.setRankVis&&window.setRankVis(!!(b&&b.rank!==false));};
+ const boards=[];
+ window.makeTickerBoard=(attrs,parent)=>{
+  const board=E('a-entity',attrs,parent);
  E('a-box',{position:'0 0 -.04',width:11.4,height:1.15,depth:.06,material:'color:#0a0210;roughness:.6'},board);
  [[0,.6,11.5,.06],[0,-.6,11.5,.06],[-5.72,0,.06,1.26],[5.72,0,.06,1.26]].forEach(([px,py,w,h])=>E('a-box',{position:`${px} ${py} 0`,width:w,height:h,depth:.05,material:'color:#ff3cac;emissive:#ff3cac;emissiveIntensity:1.4'},board));
  const pl=E('a-plane',{position:'0 0 .005',width:11,height:11*H/W*1.4},board);pl.addEventListener('loaded',()=>{const m=pl.getObject3D('mesh');m.material=new THREE.MeshBasicMaterial({map:tex,toneMapped:false});});
+  boards.push(board);return board;
+ };
+ const SZ=(window.STAGE&&STAGE.z1)||-11.82;
+ window.makeTickerBoard({id:'clubTicker',position:`0 6.35 ${Math.min(-6,SZ+.15)}`});
+ window.setBoards=b=>{
+  boards.forEach(board=>board.setAttribute('visible',!!(b&&b.ticker!==false)));
+  window.setRankVis&&window.setRankVis(!!(b&&b.rank!==false));
+ };
  /* 일반 LED 전광판: 관리자가 넣은 글자가 LED 점(도트) 모양으로 흐르며 번쩍번쩍. 글자 없으면 기본 문구 */
  const FONT='"Malgun Gothic","Noto Sans KR",sans-serif',DEF='★ ERRDAY 7080 NIGHT ★ 오늘 밤도 신나게! ★';let text=DEF,tw=1,off=0,last=0;const GAP=320;
  const src=document.createElement('canvas');src.width=W;src.height=H;const sx=src.getContext('2d');
@@ -924,10 +927,15 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  document.querySelector('a-scene').setAttribute('don-ticker','');})();
 (function rankingBoard(){const W=1024,H=1024,cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
  const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace||tex.colorSpace;const FONT='"Malgun Gothic","Noto Sans KR",sans-serif';
- const board=E('a-entity',{position:'0 5.9 11.88',rotation:'0 180 0'}); /* 출구 문 쪽 벽 가운데 위 (EXIT 간판보다 위) */
+ const boards=[];
+ window.makeRankBoard=(attrs,parent)=>{
+  const board=E('a-entity',attrs,parent);
  E('a-box',{position:'0 0 -.04',width:3.3,height:3.3,depth:.06,material:'color:#0a0210;roughness:.6'},board);
  [[0,1.68,3.4,.06],[0,-1.68,3.4,.06],[-1.68,0,.06,3.42],[1.68,0,.06,3.42]].forEach(([px,py,w,h])=>E('a-box',{position:`${px} ${py} 0`,width:w,height:h,depth:.05,material:'color:#ffd23c;emissive:#ffd23c;emissiveIntensity:1.4'},board));
  const pl=E('a-plane',{position:'0 0 .005',width:3.2,height:3.2},board);pl.addEventListener('loaded',()=>{pl.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:tex,toneMapped:false});});
+  boards.push(board);return board;
+ };
+ window.makeRankBoard({id:'clubRanking',position:'0 5.9 11.88',rotation:'0 180 0'});
  const fmt=n=>(+n||0).toLocaleString('ko-KR');let data=null;
  const neon=(t,X,y,px,c,al)=>{x.font=`bold ${px}px ${FONT}`;x.textAlign=al||'left';x.textBaseline='middle';for(const b of [18,0]){x.shadowColor=c;x.shadowBlur=b;x.fillStyle=b?c:'#fff8e6';x.fillText(t,X,y);}x.shadowBlur=0;};
  const draw=()=>{x.fillStyle='#0a0210';x.fillRect(0,0,W,H);neon('🏆 '+((data&&data.title)||'후원랭킹'),W/2,100,96,'#ffd23c','center');
@@ -935,7 +943,7 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
   if(!L.length)neon('아직 랭킹이 없어요',W/2,H/2,54,'#3cd8ff','center');
   L.slice(0,5).forEach((r,i)=>{const y=290+i*160,c=['#ffd23c','#d8e4f0','#e09050'][r.rank-1]||'#3cd8ff';neon(r.rank+'등',60,y,76,c);let nm=r.name;x.font=`bold 62px ${FONT}`;while(nm.length>1&&x.measureText(nm).width>520)nm=nm.slice(0,-1);neon(nm,215,y-28,62,'#ff3cac');neon(fmt(r.cash)+'원',W-60,y+36,56,'#3cd8ff','right');});
   tex.needsUpdate=true;};
- window.setRanking=r=>{data=r;draw();};window.setRankVis=v=>board.setAttribute('visible',v);draw();})();
+ window.setRanking=r=>{data=r;draw();};window.setRankVis=v=>boards.forEach(board=>board.setAttribute('visible',v));draw();})();
 /* 나이트 문 닫힘 표시: 두 출입문에 셔터 + CLOSED 네온 (관리자 토글) */
 (function clubDoorClosed(){const g=[];for(const D of [window.DOOR,THEATER.CLUB_DOOR]){
   for(const z of [12.08]){const e=E('a-entity',{position:`${D.x} 0 ${z}`,visible:false});E('a-box',{position:`0 ${D.h/2} 0`,width:D.w+.1,height:D.h,depth:.06,material:'color:#4a4a52;metalness:.5;roughness:.5'},e);

@@ -5,6 +5,8 @@ const R=require('../public/roller');
 const U='http://localhost:'+(process.env.PORT||8080);
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const emit=(s,event,data)=>new Promise((resolve,reject)=>s.timeout(3000).emit(event,data,(err,r)=>err?reject(err):resolve(r)));
+assert.strictEqual(R.PALETTE.length,10);assert.strictEqual(new Set(R.PALETTE.map(p=>p[0])).size,10);
+assert(R.PALETTE.some(([c])=>c===R.colours({skateBoot:'#f5f5f5'}).skateBoot),'legacy colour normalized');
 (async()=>{
  const a=io(U,{forceNew:true}),b=io(U,{forceNew:true});
  const observed={players:{},snacks:[],doors:[],motion:[]};
@@ -31,10 +33,10 @@ const emit=(s,event,data)=>new Promise((resolve,reject)=>s.timeout(3000).emit(ev
   let correction=null;a.once('rollerPosition',d=>correction=d);
   a.emit('move',{pos:[0,0,59],rot:0});await wait(150);
   assert.deepStrictEqual(correction.pos,entry.pos,'cannot move until skates selected');
-  const equipped=await emit(a,'rollerEquip',{on:true,skateBoot:'#2f7bff',skateWheel:'#ffd400',skateLace:'invalid'});
-  assert(equipped.ok);assert.strictEqual(equipped.skateLace,'#2f7bff');
+  const equipped=await emit(a,'rollerEquip',{on:true,skateBoot:'#2685ff',skateWheel:'#faff00',skateLace:'invalid'});
+  assert(equipped.ok);assert.strictEqual(equipped.skateLace,'#faff00');
   await wait(100);
-  const seen=observed.players[a.id];assert(seen.rollerSkates);assert.strictEqual(seen.skateBoot,'#2f7bff');assert.strictEqual(seen.skateWheel,'#ffd400');
+  const seen=observed.players[a.id];assert(seen.rollerSkates);assert.strictEqual(seen.skateBoot,'#2685ff');assert.strictEqual(seen.skateWheel,'#faff00');
   a.emit('rollerMotion','run');a.emit('rollerMotion','jump');await wait(100);
   assert.deepStrictEqual(observed.motion.slice(-2).map(x=>x.motion),['run','jump']);
   assert.strictEqual((await emit(a,'rollerSnack','cider')).ok,false,'must reach shop');
@@ -45,7 +47,7 @@ const emit=(s,event,data)=>new Promise((resolve,reject)=>s.timeout(3000).emit(ev
   await wait(2250);assert.strictEqual((await emit(a,'rollerSnack','cider')).ok,true);await wait(100);
   assert.deepStrictEqual(observed.snacks.map(d=>d.kind),['ramen','cider']);
   // Changing outfits keeps the chosen skate colours and equipped state.
-  await emit(a,'profile',{nick:'롤러'+unique,style:'disco',skateBoot:'#2f7bff',skateWheel:'#ffd400'});await wait(100);
+  await emit(a,'profile',{nick:'롤러'+unique,style:'disco',skateBoot:'#2685ff',skateWheel:'#faff00'});await wait(100);
   assert.strictEqual(observed.players[a.id].rollerSkates,true);
   await emit(a,'setRollerDoor',{token,open:false});
   a.emit('move',{pos:[R.ARRIVE.x,0,R.ARRIVE.z],rot:0});
@@ -53,6 +55,38 @@ const emit=(s,event,data)=>new Promise((resolve,reject)=>s.timeout(3000).emit(ev
   const resume=await emit(a,'join',{nick:'롤러'+unique,clientId:'roller-'+unique});
   assert.strictEqual(resume.resume.rollerSkates,false);
   await emit(a,'setRollerDoor',{token,open:true});
-  console.log('roller OK');
+  // Walking through the ground-floor doorway uses the same access checks.
+  a.emit('move',{pos:[R.ENTRY.x,0,R.ENTRY.z],rot:0});
+  const crossed=new Promise(resolve=>a.once('rollerPosition',resolve));
+  a.emit('move',{pos:[R.DOOR.x,0,R.DOOR.z+.1],rot:0});
+  assert.strictEqual((await crossed).rollerSkates,false);
+  assert.strictEqual((await emit(a,'rollerTravel','exit')).ok,true);
+  await emit(a,'setRollerDoor',{token,open:false});
+  assert.strictEqual((await emit(a,'adminAccess','invalid')).ok,false);
+  assert.strictEqual((await emit(a,'rollerTravel','enter')).ok,false);
+  assert.strictEqual((await emit(a,'adminAccess',token)).ok,true);
+  assert.strictEqual((await emit(a,'rollerTravel','enter')).ok,true,'admin enters closed roller rink');
+  assert.strictEqual((await emit(a,'rollerTravel','exit')).ok,true);
+  await emit(a,'setRollerDoor',{token,open:true});
+  // Closing the nightclub ejects regular visitors and keeps verified admins inside.
+  await emit(a,'setClubDoor',{token,open:true});
+  a.emit('move',{pos:[0,0,4],rot:0});b.emit('move',{pos:[0,0,4],rot:0});
+  const guestEjected=new Promise(resolve=>b.once('accessPosition',resolve));
+  await emit(a,'setClubDoor',{token,open:false});
+  assert((await guestEjected).pos[2]>12);
+  a.emit('move',{pos:[0,0,3],rot:0});
+  const adminResume=await emit(a,'join',{nick:'롤러'+unique,clientId:'roller-'+unique});
+  assert(adminResume.resume.pos[2]<12,'admin remains inside closed nightclub');
+  const guestBlocked=new Promise(resolve=>b.once('accessPosition',resolve));
+  b.emit('move',{pos:[0,0,4],rot:0});assert((await guestBlocked).pos[2]>12);
+  await emit(a,'adminAccess',null);
+  const formerAdminBlocked=new Promise(resolve=>a.once('accessPosition',resolve));
+  a.emit('move',{pos:[0,0,2],rot:0});assert((await formerAdminBlocked).pos[2]>12);
+  await emit(a,'setClubDoor',{token,open:true});
+  const legacy=io(U,{forceNew:true});await new Promise(resolve=>legacy.on('connect',resolve));
+  const restored=await emit(legacy,'join',{nick:'이전롤러'+unique,clientId:'legacy-roller-'+unique,last:{pos:[0,0,59],rollerSkates:true}});
+  assert.deepStrictEqual(restored.resume.pos,[R.OFFSET.x,0,59+R.OFFSET.z],'saved old rink positions migrate');
+  assert.strictEqual(restored.resume.rollerSkates,true);legacy.close();
+  console.log('roller, legacy saves and closed-door admin access OK');
  }finally{a.close();b.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

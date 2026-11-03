@@ -142,6 +142,11 @@ setInterval(()=>{const n=Date.now();let ch=false;for(const k in tables)if(tables
 setInterval(()=>{const n=Date.now();let ch=false;for(const k in glasses)if(n-glasses[k].t>60000){delete glasses[k];ch=true;}if(ch)io.emit('glasses',glassPub());},2000).unref();
 // 위치는 이동마다 바로 보내지 않고 0.1초마다 바뀐 사람만 묶어서 한 번에 방송 (N² 메시지 → 틱당 1개)
 const dirty=new Set();const r2=v=>Math.round(v*100)/100;
+function ejectClubPlayer(id){
+ const pl=players[id];if(!pl)return;
+ pl.pos=[-3.3,0,14.5];pl.seat=null;pl.dance=0;dirty.add(id);
+ io.to(id).emit('accessPosition',{pos:pl.pos,rollerSkates:false});io.emit('seat',{id,seat:null});
+}
 setInterval(()=>{if(!dirty.size)return;const a=[];for(const id of dirty){const p=players[id];if(p&&!p.gone)a.push(id,r2(p.pos[0]),r2(p.pos[1]),r2(p.pos[2]),r2(p.rot),p.dance|0);}dirty.clear();if(a.length)io.volatile.emit('m',a);},100).unref();
 const bans=[];const BAN_MS=+process.env.BAN_MS||600000;const ipOf=so=>String(so.handshake.headers['x-forwarded-for']||so.handshake.address||'').split(',')[0].trim();
 const banned=(cid,ip,nick)=>{const n=Date.now();for(let i=bans.length-1;i>=0;i--)if(bans[i].until<n)bans.splice(i,1);return bans.find(b=>b.cid===cid||b.nick===nick||(process.env.BAN_IP==='1'&&ip&&b.ip===ip));};
@@ -244,14 +249,44 @@ io.on('connection',s=>{
    :{pos:[0,0,4],rot:0,seat:null,carry:null,drinks:[]};
   const re=!!cur;players[s.id]={...(cur||{}),seen:Date.now(),joinedAt:Date.now(),cid,nick,...look(p),...base};
   const rp=players[s.id];rp.rollerSkates=ROLLER.inside(rp.pos[0],rp.pos[2])&&!!base.rollerSkates;
-  if(ROLLER.inside(rp.pos[0],rp.pos[2])&&!rp.rollerSkates)rp.pos=[0,0,ROLLER.ARRIVE.z];
+  if(!cur&&L&&L.worldVersion!==2&&rp.pos[0]>-12&&rp.pos[0]<12&&rp.pos[2]>48&&rp.pos[2]<70){
+   rp.pos=[rp.pos[0]+ROLLER.OFFSET.x,rp.pos[1],rp.pos[2]+ROLLER.OFFSET.z];rp.rollerSkates=!!base.rollerSkates;
+  }
+  if(ROLLER.inside(rp.pos[0],rp.pos[2])&&!rp.rollerSkates)rp.pos=[ROLLER.ARRIVE.x,0,ROLLER.ARRIVE.z];
+  if(!clubOpen&&!isAdmin(s.data.adminToken)&&rp.pos[2]<12){rp.pos=[-3.3,0,14.5];rp.seat=null;}
+  base.seat=rp.seat;
   Object.assign(base,{pos:rp.pos,rollerSkates:rp.rollerSkates});
   if(prevId)io.emit('rekey',{old:prevId,id:s.id});io.emit('player',{id:s.id,...pub()[s.id]});
   if(typeof ack==='function')ack(re||L?{ok:true,resume:base}:{ok:true});/* 유예시간이 지나도 앱이 기억한 위치/자리로 복원 */if(!re)io.emit('chat',{sys:true,text:nick+' 님 입장!'});bcOnline(true);});
  s.on('profile',(p,ack)=>{const pl=players[s.id];if(!pl)return;const nn=String(p.nick||pl.nick).trim().slice(0,16)||pl.nick;if(isBad(nn)){if(typeof ack==='function')ack({ok:false,error:'bad'});return;}if(nickTaken(nn,pl.cid,s.id)){if(typeof ack==='function')ack({ok:false,error:'nick'});s.emit('nickTaken',nn);return;}if(typeof ack==='function')ack({ok:true});Object.assign(pl,{nick:nn,...look(p)});io.emit('player',{id:s.id,...pl});});
- s.on('move',m=>{const pl=players[s.id];if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;const wasRoller=ROLLER.inside(pl.pos[0],pl.pos[2]),willRoller=ROLLER.inside(m.pos[0],m.pos[2]);
-  if(wasRoller!==willRoller||(willRoller&&!pl.rollerSkates)){s.emit('rollerPosition',{pos:pl.pos,rollerSkates:!!pl.rollerSkates});return;}
-  pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);});
+ s.on('adminAccess',(token,ack)=>{
+  s.data.adminToken=isAdmin(token)?token:null;
+  const pl=players[s.id];if(!s.data.adminToken&&!clubOpen&&pl&&pl.pos[2]<12)ejectClubPlayer(s.id);
+  if(typeof ack==='function')ack({ok:!!s.data.adminToken});
+ });
+ s.on('move',m=>{
+  const pl=players[s.id];
+  if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;
+  const admin=isAdmin(s.data.adminToken),wasRoller=ROLLER.inside(pl.pos[0],pl.pos[2]),willRoller=ROLLER.inside(m.pos[0],m.pos[2]);
+  if(!clubOpen&&!admin&&m.pos[2]<12){
+   if(pl.pos[2]<12)ejectClubPlayer(s.id);
+   else{pl.seat=null;io.emit('seat',{id:s.id,seat:null});s.emit('accessPosition',{pos:pl.pos,rollerSkates:!!pl.rollerSkates});}
+   return;
+  }
+  if(wasRoller!==willRoller){
+   const throughDoor=Math.abs(m.pos[0]-ROLLER.DOOR.x)<ROLLER.DOOR.half-.2&&Math.abs(m.pos[2]-ROLLER.DOOR.z)<1.2&&ROLLER.near(pl.pos,ROLLER.ENTRY,3.5);
+   if(!throughDoor||(willRoller&&!rollerOpen&&!admin)){
+    s.emit('rollerPosition',{pos:pl.pos,rollerSkates:!!pl.rollerSkates});return;
+   }
+   pl.rollerSkates=false;pl.rollerMotion='idle';pl.dance=0;
+   pl.pos=willRoller?[m.pos[0],0,ROLLER.ARRIVE.z]:m.pos;
+   s.emit('rollerPosition',{pos:pl.pos,rollerSkates:false});io.emit('player',{id:s.id,...pub()[s.id]});dirty.add(s.id);return;
+  }
+  if(willRoller&&!pl.rollerSkates){
+   s.emit('rollerPosition',{pos:pl.pos,rollerSkates:false});return;
+  }
+  pl.pos=m.pos;pl.rot=+m.rot||0;pl.dance=(+m.dance|0)%4;dirty.add(s.id);
+ });
  s.on('seat',seat=>{const pl=players[s.id];if(!pl)return;pl.seat=seat;io.emit('seat',{id:s.id,seat});});
  s.emit('glasses',glassPub());
  s.emit('tableUses',usesPub());s.emit('table',tablePub());waiterJobs.forEach(j=>j&&s.emit('waiterJob',j));s.emit('tickerIdle',tickerIdle);s.emit('boards',boardsPub());s.emit('clubDoor',{open:clubOpen});s.emit('rollerDoor',{open:rollerOpen});if(rankData)s.emit('ranking',rankData);if(albaJob)s.emit('albaJob',albaJob);
@@ -298,11 +333,13 @@ io.on('connection',s=>{
  s.on('rollerTravel',(d,ack)=>{
   ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];
   if(!pl||pl.seat)return ack({ok:false,err:'자리에서 일어나 주세요'});
-  if(d==='enter'){
-   if(!rollerOpen)return ack({ok:false,err:'롤라장 문이 닫혀 있어요'});
+  const direction=typeof d==='string'?d:d&&d.direction;
+  const admin=isAdmin(s.data.adminToken)||isAdmin(d&&d.token);
+  if(direction==='enter'){
+   if(!rollerOpen&&!admin)return ack({ok:false,err:'롤라장 문이 닫혀 있어요'});
    if(!ROLLER.near(pl.pos,ROLLER.ENTRY,2.5))return ack({ok:false,err:'택시 옆 롤라장 입구로 와 주세요'});
    pl.pos=[ROLLER.ARRIVE.x,0,ROLLER.ARRIVE.z];pl.rollerSkates=false;
-  }else if(d==='exit'){
+  }else if(direction==='exit'){
    if(!ROLLER.inside(pl.pos[0],pl.pos[2])||!(ROLLER.near(pl.pos,ROLLER.ARRIVE,2.8)||ROLLER.near(pl.pos,ROLLER.EXIT,2.8)))return ack({ok:false,err:'롤라장 출구로 와 주세요'});
    pl.pos=[ROLLER.ENTRY.x,0,ROLLER.ENTRY.z-.8];pl.rollerSkates=false;
   }else return ack({ok:false});
@@ -311,7 +348,7 @@ io.on('connection',s=>{
  });
  s.on('rollerEquip',(d,ack)=>{
   ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];
-  if(!pl||pl.seat||!ROLLER.near(pl.pos,ROLLER.ARRIVE,2.3))return ack({ok:false,err:'롤라장 입구에서 이용해 주세요'});
+  if(!pl||pl.seat||!ROLLER.inside(pl.pos[0],pl.pos[2])||!ROLLER.near(pl.pos,ROLLER.ARRIVE,2.3))return ack({ok:false,err:'롤라장 입구에서 이용해 주세요'});
   pl.rollerSkates=!!(d&&d.on);Object.assign(pl,ROLLER.colours(d||{}));pl.rollerMotion='idle';
   io.emit('player',{id:s.id,...pub()[s.id]});ack({ok:true,rollerSkates:pl.rollerSkates,...ROLLER.colours(pl)});
  });
@@ -326,7 +363,17 @@ io.on('connection',s=>{
   const n=Date.now();if(n-(pl.lastRollerSnack||0)<2200)return ack({ok:false,err:'천천히 드세요'});
   pl.lastRollerSnack=n;io.emit('rollerSnack',{id:s.id,kind});ack({ok:true});
  });
- s.on('setClubDoor',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token)||typeof d.open!=='boolean')return ack({ok:false,err:'관리자만'});clubOpen=d.open;save();io.emit('clubDoor',{open:clubOpen,by:true});ack({ok:true,open:clubOpen});});
+ s.on('setClubDoor',(d,ack)=>{
+  ack=typeof ack==='function'?ack:()=>{};
+  if(!d||!isAdmin(d.token)||typeof d.open!=='boolean')return ack({ok:false,err:'관리자만'});
+  clubOpen=d.open;save();
+  if(!clubOpen)for(const [id,pl] of Object.entries(players)){
+   const client=io.sockets.sockets.get(id);
+   if(pl.pos[2]>=12||isAdmin(client&&client.data.adminToken))continue;
+   ejectClubPlayer(id);
+  }
+  io.emit('clubDoor',{open:clubOpen,by:true});ack({ok:true,open:clubOpen});
+ });
  s.on('setBoards',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});const was={...boards};
   if(typeof d.ticker==='boolean')boards.ticker=d.ticker;if(typeof d.rank==='boolean')boards.rank=d.rank;save();if(was.rank!==boards.rank)startRank();io.emit('boards',boardsPub());ack({ok:true,boards});});
  s.on('setPresets',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token)||!Array.isArray(d.list)||d.list.length!==3)return ack({ok:false,err:'관리자만'});

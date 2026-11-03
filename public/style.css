@@ -220,5 +220,15 @@ body:has(#poolUI) #keyHint,body:has(#poolUI) #runBtn,body:has(#poolUI) #jumpBtn,
  #actBar{right:calc(10px + env(safe-area-inset-right))!important;bottom:calc(78px + env(safe-area-inset-bottom))!important;flex-direction:column!important;flex-wrap:nowrap!important;align-items:flex-end!important;max-height:calc(100vh - 150px);overflow-y:auto}
 }
 
-/* Keep the roller selection confirmation reachable while customizing on phones. */
-#entry.roller-select #enter { position:sticky; bottom:0; z-index:2; box-shadow:0 -8px 18px #18091e; }
+
+#rollerSelect {z-index:80;width:min(440px,calc(100vw - 28px));box-sizing:border-box;padding:22px;max-height:94dvh;overflow:auto;background:linear-gradient(150deg,#180c26,#080d20);border:1px solid #32e9e2;box-shadow:0 0 30px #00d5ff35;}
+#rollerSelect h2 {margin:0 0 12px;text-align:center;font-size:21px;color:#fff;}
+#rollerPreview {display:block;width:100%;height:160px;}
+.roller-colour-row {margin:14px 0;}
+.roller-colour-row b {display:block;margin-bottom:8px;color:#dfe5f8;font-size:13px;}
+.roller-palette {display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;}
+.roller-palette button {width:100%;min-width:0;aspect-ratio:1;padding:0;border-radius:50%;border:2px solid #697387;cursor:pointer;}
+.roller-palette button[aria-pressed="true"] {outline:2px solid #fff;outline-offset:2px;box-shadow:0 0 10px #33e9e9;}
+.roller-select-actions {display:flex;gap:10px;margin-top:20px;}
+.roller-select-actions button {flex:1;margin:0;padding:12px 6px;font-size:14px;}
+@media(max-height:650px){#rollerPreview{height:95px}.roller-colour-row{margin:9px 0}#rollerSelect{padding:14px}}

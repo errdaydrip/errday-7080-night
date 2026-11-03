@@ -12,7 +12,7 @@
  const W=T.wall,D=T.door;
  const obstacles=[
   {x0:T.x0-.1,x1:T.x0+W,z0:T.z0-.6,z1:D.z0}, {x0:T.x0-.1,x1:T.x0+W,z0:D.z1,z1:T.z1+.6}, // 앞벽 (문 양옆)
-  {x0:T.x0,x1:40,z0:T.z0-6,z1:T.z0+W},{x0:T.x0,x1:40,z0:T.z1-W,z1:T.z1+20},           // 옆벽 + 바깥
+  {x0:T.x0,x1:40,z0:T.z0-6,z1:T.z0+W},{x0:T.x0,x1:40,z0:T.z1-W,z1:T.z1+2.2},           // 옆벽 + 바깥
   {x0:T.x1-W-.1,x1:40,z0:T.z0,z1:T.z1}];                                                     // 뒷벽(스크린)
  // 카메라 가림 상자 [x0,y0,z0,x1,y1,z1]
  const camOcc=[[T.x0-.1,0,T.z0,T.x0+W,T.h,D.z0],[T.x0-.1,0,D.z1,T.x0+W,T.h,T.z1],[T.x0-.1,2.7,D.z0,T.x0+W,T.h,D.z1],
