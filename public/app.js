@@ -269,6 +269,7 @@ function actions(){const A=[];if(mySeat&&mySeat.startsWith('TAXI')){A.push(['�
   A.push([`🎯 조준해서 던지기 (${DB+1}번)`,()=>dartAim(DB),'dart'+DB]);
   A.push(['하이스코어 (3R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:3},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi3'],['하이스코어 (8R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:8},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi8']);}}
  {const TS=SEATS.filter(q=>q.table==='TAXI');if(TS.length&&TS.some(q=>near({x:q.x,z:q.z-.9},1.9))){const f=TS.find(q=>!seatTaken(q));if(f)A.push(['🚕 택시 타기',()=>{const g=TS.find(q=>!seatTaken(q));g&&sit(g);},'taxi']);else A.push(['🚕 만석',null,'lbl']);}}
+ if(window.POOLT&&!mySeat&&near(window.POOLT,2.6))A.push(['🎱 당구하기',()=>poolOpen(),'pool']);
  if(near(window.FRIDGE,1.6))for(const k of ['soju','beer'])A.push([ITEM_NAME[k]+' 꺼내기',()=>socket.emit('pickup',k),'p-'+k]);
  if(near(window.COOK,2.2))for(const k of ['dakbal','kkom','fish','squid'])A.push([ITEM_NAME[k],()=>socket.emit('pickup',k),'p-'+k]);
  if(near({x:-11.6,z:20.5},2.2))A.push(['🍗 통닭 가져가기',()=>socket.emit('pickup','chicken'),'p-chicken']);if(near({x:-11.6,z:15},2.2))A.push(['🐟 모듬회 가져가기',()=>socket.emit('pickup','hoe'),'p-hoe']);
@@ -513,3 +514,47 @@ function goHome(){if(!confirm('집으로 돌아갈까요? (게임에서 나가�
   const d=document.createElement('div');d.id='byeScreen';d.innerHTML='<div class="bx"><div class="bt">🚕 안녕히 가세요!</div><div class="bs">오늘 밤도 즐거우셨나요? 또 놀러 오세요 ✨</div><button type="button">다시 들어가기</button></div>';document.body.appendChild(d);d.querySelector('button').onclick=()=>location.reload();};
  socket.timeout(1500).emit('bye',()=>end());setTimeout(end,1600);}
 window.goHome=goHome;
+
+/* ---------- 🎱 당구: 탑뷰 화면에서 직접 조준(큐볼 주위로 돌리기) + 파워바 드래그 → 놓으면 샷 ---------- */
+let POOLS={balls:POOL.rack(),players:[],turn:0,groups:{},msg:''},poolAnim=null;
+const poolMe=()=>POOLS.players.findIndex(p=>p.id===myId),poolMyTurn=()=>{const i=poolMe();return i>=0&&POOLS.turn===i&&!POOLS.over&&!poolAnim;};
+socket.on('poolState',st=>{POOLS=st;if(!poolAnim)window.poolRender&&window.poolRender(st.balls);poolDraw();});
+socket.on('poolShot',d=>{const r=POOL.simulate(d.before,d.a,d.p,{frames:true});const fr=r.frames;let i=0;const mine=poolMe()>=0||d.by===myId;
+ poolAnim={balls:d.before,fr:null};const t0=performance.now();const step=()=>{i=Math.floor((performance.now()-t0)/1000*60); /* 시간 기준 재생 (느린 폰도 같은 속도) */if(i>=fr.length){poolAnim=null;POOLS=d.state;window.poolRender&&window.poolRender(d.state.balls);poolDraw();if(mine&&d.state.msg)sys(d.state.msg);
+   if(mine&&d.state.over)setTimeout(()=>poolClose(true),2500);return;}poolAnim.fr=fr[i];window.poolRenderFrame&&window.poolRenderFrame(d.before,fr[i]);poolDraw();requestAnimationFrame(step);};step();});
+let poolAim=0,poolPow=0,poolHold=false;
+function poolOpen(){if(document.getElementById('poolUI'))return;const o=document.createElement('div');o.id='poolUI';
+ o.innerHTML='<div class="ph"><span id="poolStat"></span></div><canvas id="poolCv" width="1200" height="660"></canvas><div class="pbw"><div id="poolBar"><div id="poolFill"></div><span>⬅ 파워: 끌어서 세기 조절 → 손 떼면 샷</span></div></div><div class="pbtn"><button type="button" id="poolJoin">🙋 같이 치기</button><button type="button" id="poolNew">🔄 새 게임</button><button type="button" id="poolClose">닫기</button></div>';
+ document.body.appendChild(o);const cv=o.querySelector('#poolCv');
+ const join=()=>socket.emit('poolJoin',{},r=>{if(r&&!r.ok&&r.err)sys('🎱 '+r.err);if(r&&r.state){POOLS=r.state;poolDraw();}});if(!POOLS.players.length)join();o.querySelector('#poolJoin').onclick=join;
+ const toTable=e=>{const b=cv.getBoundingClientRect(),sx=(e.clientX-b.left)/b.width*1200,sy=(e.clientY-b.top)/b.height*660;return[(sx-600)/POOLK,(sy-330)/POOLK];};
+ const aim=e=>{if(!poolMyTurn())return;const c=POOLS.balls.find(q=>q.n===0);const [x,y]=toTable(e);poolAim=Math.atan2(y-c.y,x-c.x);poolDraw();};
+ cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);cv._d=true;aim(e);});cv.addEventListener('pointermove',e=>{if(cv._d||e.pointerType==='mouse')aim(e);});cv.addEventListener('pointerup',()=>{cv._d=false;});
+ const bar=o.querySelector('#poolBar'),setP=e=>{const b=bar.getBoundingClientRect();poolPow=Math.max(0,Math.min(1,(e.clientX-b.left)/b.width));poolDraw();};
+ bar.addEventListener('pointerdown',e=>{e.preventDefault();if(!poolMyTurn()){sys(poolMe()<0?'🎱 구경 중이에요':'🎱 아직 차례가 아니에요');return;}bar.setPointerCapture(e.pointerId);poolHold=true;setP(e);});
+ bar.addEventListener('pointermove',e=>{if(poolHold)setP(e);});
+ const rel=()=>{if(!poolHold)return;poolHold=false;const p=poolPow;poolPow=0;poolDraw();if(p<.03)return;socket.emit('poolShoot',{a:poolAim,p},r=>{if(r&&!r.ok&&r.err)sys('🎱 '+r.err);});};
+ bar.addEventListener('pointerup',rel);bar.addEventListener('pointercancel',()=>{poolHold=false;poolPow=0;poolDraw();});
+ o.querySelector('#poolClose').onclick=()=>poolClose();o.querySelector('#poolNew').onclick=()=>socket.emit('poolNew',{},r=>{if(r&&!r.ok)sys('🎱 치는 사람만 새 게임을 할 수 있어요');});poolDraw();}
+function poolClose(auto){const o=document.getElementById('poolUI');if(!o)return;o.remove();socket.emit('poolLeave');}
+window.poolOpen=poolOpen;window.poolClose=poolClose;
+const POOLK=1200/(POOL.L+.3);
+function poolDraw(){const cv=document.getElementById('poolCv');if(!cv)return;const c=cv.getContext('2d'),K=POOLK,X=x=>600+x*K,Y=y=>330+y*K;
+ c.fillStyle='#4a240c';c.fillRect(0,0,1200,660);c.fillStyle='#0f6b3a';c.fillRect(X(-POOL.L/2),Y(-POOL.Wd/2),POOL.L*K,POOL.Wd*K);
+ c.fillStyle='#000';POOL.POCKETS.forEach(([x,y])=>{c.beginPath();c.arc(X(x),Y(y),POOL.PR*K,0,7);c.fill();});
+ c.strokeStyle='rgba(255,255,255,.15)';c.beginPath();c.moveTo(X(-POOL.L/4),Y(-POOL.Wd/2));c.lineTo(X(-POOL.L/4),Y(POOL.Wd/2));c.stroke();
+ const COL=n=>['#f4f1e6','#f2c418','#1f4fd1','#d12a1f','#5a2a9a','#ff7a1a','#1f8a3a','#8a1a1a','#111'][n<=8?n:n-8];
+ const B=poolAnim&&poolAnim.fr?poolAnim.balls.map((o,i)=>({n:o.n,in:!poolAnim.fr[i],x:poolAnim.fr[i]?poolAnim.fr[i][0]:0,y:poolAnim.fr[i]?poolAnim.fr[i][1]:0})):POOLS.balls;
+ const cue=B.find(o=>o.n===0);
+ if(poolMyTurn()&&cue&&!cue.in){/* 조준선: 처음 맞는 공/쿠션까지 */const dx=Math.cos(poolAim),dy=Math.sin(poolAim);let tmin=3;
+  for(const o of B){if(o.n===0||o.in)continue;const ox=o.x-cue.x,oy=o.y-cue.y,t=ox*dx+oy*dy;if(t<=0)continue;const d2=ox*ox+oy*oy-t*t,rr=4*POOL.R*POOL.R;if(d2>rr)continue;const th=t-Math.sqrt(rr-d2);if(th<tmin)tmin=th;}
+  const tx=dx>0?(POOL.L/2-POOL.R-cue.x)/dx:dx<0?(-POOL.L/2+POOL.R-cue.x)/dx:9,ty=dy>0?(POOL.Wd/2-POOL.R-cue.y)/dy:dy<0?(-POOL.Wd/2+POOL.R-cue.y)/dy:9;tmin=Math.min(tmin,tx,ty);
+  c.setLineDash([10,8]);c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=3;c.beginPath();c.moveTo(X(cue.x),Y(cue.y));c.lineTo(X(cue.x+dx*tmin),Y(cue.y+dy*tmin));c.stroke();c.setLineDash([]);
+  c.strokeStyle='rgba(255,255,255,.6)';c.beginPath();c.arc(X(cue.x+dx*tmin),Y(cue.y+dy*tmin),POOL.R*K,0,7);c.stroke();
+  /* 큐대 (파워만큼 뒤로) */const back=POOL.R*1.5+.04+poolPow*.35;c.strokeStyle='#e0c090';c.lineWidth=10;c.lineCap='round';c.beginPath();c.moveTo(X(cue.x-dx*back),Y(cue.y-dy*back));c.lineTo(X(cue.x-dx*(back+1.1)),Y(cue.y-dy*(back+1.1)));c.stroke();
+  c.strokeStyle='#2a6aff';c.lineWidth=10;c.beginPath();c.moveTo(X(cue.x-dx*back),Y(cue.y-dy*back));c.lineTo(X(cue.x-dx*(back+.03)),Y(cue.y-dy*(back+.03)));c.stroke();}
+ for(const o of B){if(o.in)continue;const x=X(o.x),y=Y(o.y),r=POOL.R*K;c.fillStyle=o.n>8?'#fff':COL(o.n);c.beginPath();c.arc(x,y,r,0,7);c.fill();if(o.n>8){c.fillStyle=COL(o.n);c.fillRect(x-r,y-r*.5,r*2,r);}
+  if(o.n){c.fillStyle='#fff';c.beginPath();c.arc(x,y,r*.45,0,7);c.fill();c.fillStyle='#000';c.font=`bold ${Math.round(r*.6)}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(o.n,x,y+1);}}
+ const st=document.getElementById('poolStat');if(st){const me=poolMe(),P=POOLS.players,cur=P[POOLS.turn];const gname=g=>g==='solid'?'솔리드(1~7)':g==='stripe'?'스트라이프(9~15)':'';
+  st.textContent=(me<0?'👀 구경 중 · ':'')+(P.length===2?`${P[0].nick} vs ${P[1].nick} · `:P.length===1?'혼자 연습 · ':'')+(cur?`차례: ${cur.nick}`:'')+(me>=0&&POOLS.groups[myId]?` · 내 공: ${gname(POOLS.groups[myId])}`:'')+(POOLS.msg?` · ${POOLS.msg}`:'');}
+ {const j=document.getElementById('poolJoin'),n=document.getElementById('poolNew'),me=poolMe();if(j)j.style.display=me<0&&POOLS.players.length<2?'':'none';if(n)n.style.display=me>=0?'':'none';}const f=document.getElementById('poolFill');if(f){f.style.width=(poolPow*100)+'%';f.style.background=poolPow>.75?'#ff3b3b':poolPow>.4?'#ffd23a':'#3ee05a';}}

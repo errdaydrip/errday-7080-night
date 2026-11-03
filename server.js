@@ -148,6 +148,24 @@ const banned=(cid,ip,nick)=>{const n=Date.now();for(let i=bans.length-1;i>=0;i--
 const DG=require('./dartgame');const dartGames=[0,1,2].map(()=>DG.newGame(3)),dartWins={},dartRecs=[[],[],[]]; /* 판마다 끝난 게임 기록만 */
 const dartTopR=R=>dartRecs.flat().filter(r=>r.rounds===R).sort((p,q)=>q.score-p.score||p.t-q.t).slice(0,6).map(r=>({nick:r.nick,total:r.score,rounds:r.rounds}));const dartTop=()=>({r3:dartTopR(3),r8:dartTopR(8)}); /* 하이스코어판: 오른쪽 3R, 왼쪽 8R — 끝난 게임 기록 하나하나(합산 아님) 상위 6 */
 const dartEmit=(b,extra)=>io.emit('dartState',{b,g:DG.pub(dartGames[b]),recs:dartRecs[b],top:dartTop(),...(extra||{})});
+/* 🎱 당구: 서버가 물리 계산(결정적) → 모두에게 샷(각도·세기·결과) 보내 같은 장면 재생 */
+const POOL=require('./public/pool.js');const pool={balls:POOL.rack(),players:[],turn:0,groups:{},busy:0,msg:'',over:null,t:Date.now()};
+const poolPub=()=>({balls:pool.balls,players:pool.players.map(p=>({id:p.id,nick:p.nick})),turn:pool.turn,groups:pool.groups,msg:pool.msg,over:pool.over});
+function poolReset(keep){pool.balls=POOL.rack();pool.turn=0;pool.groups={};pool.msg='';pool.over=null;if(!keep)pool.players=[];}
+function poolLeave(id){const i=pool.players.findIndex(p=>p.id===id);if(i<0)return false;pool.players.splice(i,1);if(!pool.players.length)poolReset();else{pool.turn=0;pool.groups={};pool.msg='';}return true;}
+function poolShot(id,a,p){const pl=pool.players[pool.turn];if(!pl||pl.id!==id)return{ok:false,err:'내 차례가 아니에요'};if(pool.over)return{ok:false,err:'게임 끝'};if(Date.now()<pool.busy)return{ok:false,err:'공이 아직 움직여요'};
+ a=+a;p=+p;if(!Number.isFinite(a)||!Number.isFinite(p))return{ok:false};p=Math.max(.05,Math.min(1,p));const before=POOL.clone(pool.balls);const r=POOL.simulate(before,a,p);
+ const mine=pool.groups[id],solo=pool.players.length===1,left=g=>r.balls.filter(o=>!o.in&&POOL.kind(o.n)===g).length;const pk=r.pocketed;const scratch=pk.includes(0);const eight=pk.includes(8);
+ let keep=false,msg='',over=null;
+ if(eight){const need=solo?r.balls.filter(o=>!o.in&&o.n!==0&&o.n!==8).length:(mine?left(mine):7);
+  if(need===0&&!scratch){over={win:pl.nick};msg=`🏆 ${pl.nick} 승리! (8번 마무리)`;}else{const other=pool.players.find(q=>q.id!==id);over={win:solo?null:other&&other.nick,lose:pl.nick};msg=solo?'😵 8번이 먼저 들어갔어요 — 게임 오버':`😵 8번 반칙 — ${other.nick} 승리!`;}}
+ else{const objs=pk.filter(n=>n!==0);
+  if(!solo&&!mine&&objs.length&&!scratch){const g=POOL.kind(objs[0]);pool.groups[id]=g;const o=pool.players.find(q=>q.id!==id);if(o)pool.groups[o.id]=g==='solid'?'stripe':'solid';}
+  const g2=pool.groups[id];keep=!scratch&&objs.length>0&&(solo||!g2||objs.some(n=>POOL.kind(n)===g2));
+  if(scratch){msg='⚠️ 스크래치! 큐볼 다시 놓음';}else if(objs.length)msg=`🎱 ${objs.join(', ')}번 들어감`;else msg='들어간 공 없음';}
+ pool.balls=r.balls;if(scratch&&!over)POOL.spotCue(pool.balls);if(!keep&&!over&&!solo)pool.turn=(pool.turn+1)%pool.players.length;
+ pool.msg=msg;pool.over=over;pool.t=Date.now();pool.busy=Date.now()+r.steps/240*1000+300;
+ return{ok:true,shot:{by:id,nick:pl.nick,a,p,before},msg,over};}
 io.on('connection',s=>{
  [0,1,2].forEach(b=>s.emit('dartState',{b,g:DG.pub(dartGames[b]),recs:dartRecs[b],top:dartTop()}));
  const bOf=v=>Math.max(0,Math.min(2,v|0)),A=f=>typeof f==='function'?f:()=>{};
@@ -201,6 +219,14 @@ io.on('connection',s=>{
  s.on('setTickerIdle',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});tickerIdle=cleanText(String(d.text||'').replace(/\s+/g,' ').trim().slice(0,120));save();io.emit('tickerIdle',tickerIdle);io.emit('boards',boardsPub());ack({ok:true,text:tickerIdle});});
  s.on('setRank',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});const u=String(d.url||'').trim().slice(0,300);if(!DON.rankPayload(u))return ack({ok:false,err:'투네이션 ranking 위젯 주소가 아니에요'});
   rankUrl=u;rankData=null;save();io.emit('ranking',null);startRank();ack({ok:true,url:rankUrl});});
+ s.emit('poolState',poolPub());
+ s.on('poolJoin',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};const pl=players[s.id];if(!pl)return ack({ok:false});if(pool.players.some(p=>p.id===s.id))return ack({ok:true,state:poolPub()});
+  if(pool.players.length>=2)return ack({ok:false,err:'2명이 치는 중 — 구경만 가능해요',state:poolPub()});if(pool.players.length===1&&(pool.over||pool.balls.filter(o=>o.in).length))poolReset(true);
+  pool.players.push({id:s.id,nick:pl.nick});pool.msg=pool.players.length===2?`${pool.players[0].nick} vs ${pl.nick} — 새 게임!`:'혼자 연습 중';if(pool.players.length===2){pool.balls=POOL.rack();pool.turn=0;pool.groups={};pool.over=null;}io.emit('poolState',poolPub());ack({ok:true,state:poolPub()});});
+ s.on('poolLeave',()=>{if(poolLeave(s.id))io.emit('poolState',poolPub());});
+ s.on('poolNew',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!pool.players.some(p=>p.id===s.id))return ack({ok:false});poolReset(true);pool.msg='새 게임!';io.emit('poolState',poolPub());ack({ok:true});});
+ s.on('poolShoot',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d)return ack({ok:false});const r=poolShot(s.id,d.a,d.p);if(!r.ok)return ack(r);io.emit('poolShot',{...r.shot,state:poolPub()});ack({ok:true});
+  if(r.over)setTimeout(()=>{poolReset(true);pool.msg='새 게임!';io.emit('poolState',poolPub());},8000);});
  s.on('clearChat',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});chatHist.length=0;io.emit('chatCleared');ack({ok:true});});
  s.on('setClubDoor',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token)||typeof d.open!=='boolean')return ack({ok:false,err:'관리자만'});clubOpen=d.open;save();io.emit('clubDoor',{open:clubOpen,by:true});ack({ok:true,open:clubOpen});});
  s.on('setBoards',(d,ack)=>{ack=typeof ack==='function'?ack:()=>{};if(!d||!isAdmin(d.token))return ack({ok:false,err:'관리자만'});const was={...boards};
@@ -248,8 +274,8 @@ io.on('connection',s=>{
   else if(cmd.type==='delete'&&music.playlist[cmd.index]){const [t]=music.playlist.splice(cmd.index,1);if(t.type==='mp3')fs.unlink(path.join(UP,t.id),()=>{});
    if(cmd.index<music.index)music.index--;else if(cmd.index===music.index){if(!music.playlist.length){music.index=-1;music.playing=false;}else{music.index%=music.playlist.length;music.startedAt=now;music.pausedAt=0;}}}
   broadcastMusic();});
- s.on('bye',ack=>{const pl=players[s.id];if(pl){clearTimeout(pl.timer);delete players[s.id];dirty&&dirty.delete&&dirty.delete(s.id);io.emit('leave',s.id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});bcOnline();}s.data.kicked=true;if(typeof ack==='function')ack({ok:true});});
- s.on('disconnect',()=>{const pl=players[s.id];if(!pl||s.data.kicked)return;pl.gone=Date.now();clearTimeout(pl.timer);
+ s.on('bye',ack=>{if(poolLeave(s.id))io.emit('poolState',poolPub());const pl=players[s.id];if(pl){clearTimeout(pl.timer);delete players[s.id];dirty&&dirty.delete&&dirty.delete(s.id);io.emit('leave',s.id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});bcOnline();}s.data.kicked=true;if(typeof ack==='function')ack({ok:true});});
+ s.on('disconnect',()=>{if(poolLeave(s.id))io.emit('poolState',poolPub());const pl=players[s.id];if(!pl||s.data.kicked)return;pl.gone=Date.now();clearTimeout(pl.timer);
   pl.timer=setTimeout(()=>{if(players[s.id]!==pl||!pl.gone)return;delete players[s.id];io.emit('leave',s.id);io.emit('chat',{sys:true,text:pl.nick+' 님 퇴장'});bcOnline();},GRACE_MS);bcOnline();});
 });
 server.listen(PORT,'0.0.0.0',()=>{tick();ensureDefault();
