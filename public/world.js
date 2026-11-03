@@ -914,14 +914,15 @@ shopGuy(20.5,'통닭 아저씨','#ececec','#f2f2ea','#ffffff','chicken');shopGuy
  // 던지는 선 (바닥)
  E('a-box',{position:`${window.DARTS[bi].x-.2} .015 ${ZS[bi]}`,width:.05,height:.01,depth:1.2,material:'color:#ffd23c;emissive:#ffd23c;emissiveIntensity:.8'});
  });
- // 점수판
- const sc=document.createElement('canvas');sc.width=1024;sc.height=1024;const s=sc.getContext('2d');s.scale(2,2);const stex=new THREE.CanvasTexture(sc);stex.colorSpace=THREE.SRGBColorSpace||stex.colorSpace;
- const sp=E('a-plane',{position:'1.35 .1 0',width:1.2,height:1.2},g);sp.addEventListener('loaded',()=>{sp.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:stex,toneMapped:false});});
- let last='';window.dartBoard=top=>{s.fillStyle='#14051c';s.fillRect(0,0,512,512);s.strokeStyle='#ff3cac';s.lineWidth=10;s.strokeRect(5,5,502,502);s.textBaseline='middle';
-  s.fillStyle='#ffd23c';s.font='bold 50px "Malgun Gothic","Noto Sans KR",sans-serif';s.textAlign='center';s.fillText('🎯 하이스코어',256,60);
-  s.font='bold 36px "Malgun Gothic","Noto Sans KR",sans-serif';(top||[]).slice(0,6).forEach((t,i)=>{s.fillStyle=i?'#fff':'#7cff5c';s.textAlign='left';s.fillText(`${i+1}. ${String(t.nick).slice(0,8)}`,30,128+i*54);if(t.rounds){s.textAlign='center';s.fillStyle='#3cd8ff';s.fillText(`${t.rounds}R`,330,128+i*54);s.fillStyle=i?'#fff':'#7cff5c';}s.textAlign='right';s.fillText(`${t.total}점`,482,128+i*54);});
-  if(!(top||[]).length){s.fillStyle='#aaa';s.textAlign='center';s.fillText('아직 기록 없음',256,240);}
-  if(last){s.fillStyle='#3cd8ff';s.textAlign='center';s.font='bold 32px "Malgun Gothic","Noto Sans KR",sans-serif';s.fillText(last,256,470);}stex.needsUpdate=true;};window.dartBoard([]);
+ // 하이스코어판: 오른쪽 = 3R, 왼쪽(맨 끝) = 8R. 3대 전체 끝난 게임 기록 하나하나 상위 6
+ const mkRank=(host,pos,title)=>{const sc=document.createElement('canvas');sc.width=1024;sc.height=1024;const s=sc.getContext('2d');s.scale(2,2);const stex=new THREE.CanvasTexture(sc);stex.colorSpace=THREE.SRGBColorSpace||stex.colorSpace;
+  const sp=E('a-plane',{position:pos,width:1.2,height:1.2},host);sp.addEventListener('loaded',()=>{sp.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:stex,toneMapped:false});});
+  return top=>{s.fillStyle='#14051c';s.fillRect(0,0,512,512);s.strokeStyle='#ff3cac';s.lineWidth=10;s.strokeRect(5,5,502,502);s.textBaseline='middle';
+   s.fillStyle='#ffd23c';s.font='bold 46px "Malgun Gothic","Noto Sans KR",sans-serif';s.textAlign='center';s.fillText(title,256,60);
+   s.font='bold 36px "Malgun Gothic","Noto Sans KR",sans-serif';(top||[]).slice(0,6).forEach((t,i)=>{const y=135+i*58;s.fillStyle=i?'#fff':'#7cff5c';s.textAlign='left';s.fillText(`${i+1}. ${String(t.nick).slice(0,9)}`,30,y);s.textAlign='right';s.fillText(`${t.total}점`,482,y);});
+   if(!(top||[]).length){s.fillStyle='#aaa';s.textAlign='center';s.fillText('아직 기록 없음',256,250);}stex.needsUpdate=true;};};
+ const R3=mkRank(G[0],'1.35 .1 0','🎯 하이스코어 3R'),R8=mkRank(G[2],'-1.35 .1 0','🎯 하이스코어 8R');let last='';
+ window.dartBoard=top=>{if(Array.isArray(top)||!top)top={r3:top||[],r8:[]};R3(top.r3);R8(top.r8);};window.dartBoard(null);
  /* 판마다 게임 상태판 (판 아래) */
  const ST=G.map(g=>{const c2=document.createElement('canvas');c2.width=1024;c2.height=600;c2.getContext('2d').scale(2,2);const tx=new THREE.CanvasTexture(c2);tx.colorSpace=THREE.SRGBColorSpace||tx.colorSpace;E('a-box',{position:'0 .97 -.03',width:1.32,height:.82,depth:.05,material:'color:#3cd8ff;emissive:#3cd8ff;emissiveIntensity:.6'},g);const pl=E('a-plane',{position:'0 .97 .002',width:1.24,height:.74},g); /* 다트판 바로 위 이 판 전용 점수판 */pl.addEventListener('loaded',()=>{pl.getObject3D('mesh').material=new THREE.MeshBasicMaterial({map:tx,toneMapped:false});});return{c:c2.getContext('2d'),tx};});
  window.dartState=d=>{const S=ST[d.b];if(!S)return;const c=S.c,g=d.g;c.fillStyle='#14051c';c.fillRect(0,0,512,300);c.strokeStyle='#3cd8ff';c.lineWidth=8;c.strokeRect(4,4,504,292);const F='"Malgun Gothic","Noto Sans KR",sans-serif';

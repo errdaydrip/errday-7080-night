@@ -146,7 +146,7 @@ const bans=[];const BAN_MS=+process.env.BAN_MS||600000;const ipOf=so=>String(so.
 const banned=(cid,ip,nick)=>{const n=Date.now();for(let i=bans.length-1;i>=0;i--)if(bans[i].until<n)bans.splice(i,1);return bans.find(b=>b.cid===cid||b.nick===nick||(process.env.BAN_IP==='1'&&ip&&b.ip===ip));};
 /* 🎯 다트: 판마다 하이스코어(3R/8R), 조준 좌표 + 손떨림, 서버가 판정 */
 const DG=require('./dartgame');const dartGames=[0,1,2].map(()=>DG.newGame(3)),dartWins={},dartRecs=[[],[],[]]; /* 판마다 끝난 게임 기록만 */
-const dartTop=()=>dartRecs.flat().sort((p,q)=>q.score-p.score||p.t-q.t).slice(0,6).map(r=>({nick:r.nick,total:r.score,rounds:r.rounds})); /* 오른쪽 하이스코어판: 3대 전체 끝난 게임 기록 하나하나 (합산 아님) 상위 6 */
+const dartTopR=R=>dartRecs.flat().filter(r=>r.rounds===R).sort((p,q)=>q.score-p.score||p.t-q.t).slice(0,6).map(r=>({nick:r.nick,total:r.score,rounds:r.rounds}));const dartTop=()=>({r3:dartTopR(3),r8:dartTopR(8)}); /* 하이스코어판: 오른쪽 3R, 왼쪽 8R — 끝난 게임 기록 하나하나(합산 아님) 상위 6 */
 const dartEmit=(b,extra)=>io.emit('dartState',{b,g:DG.pub(dartGames[b]),recs:dartRecs[b],top:dartTop(),...(extra||{})});
 io.on('connection',s=>{
  [0,1,2].forEach(b=>s.emit('dartState',{b,g:DG.pub(dartGames[b]),recs:dartRecs[b],top:dartTop()}));
