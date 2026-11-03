@@ -138,3 +138,9 @@ body.pfs{height:100dvh;overflow:hidden;overscroll-behavior:none}
 #runBtn{position:fixed;right:12px;bottom:164px;width:64px;height:64px;border-radius:50%;background:rgba(60,216,255,.3);border:2px solid rgba(255,216,74,.7);color:#fff;font-size:20px;line-height:1;text-align:center;padding-top:10px;box-sizing:border-box;display:none;touch-action:none;pointer-events:auto;z-index:20;user-select:none;-webkit-user-select:none}#runBtn small{font-size:11px}#runBtn.on{background:rgba(60,216,255,.7)}
 @media (max-width:700px),(pointer:coarse){#runBtn{display:block;right:calc(12px + env(safe-area-inset-right))}#hud.showChat~#runBtn,body.seated #runBtn,body.thseat #runBtn,body.typing #runBtn,body:has(#entry:not(.hidden)) #runBtn,body:has(#dartAim) #runBtn{display:none!important}}
 @media (max-width:700px) and (orientation:landscape),(pointer:coarse) and (orientation:landscape){#runBtn{width:56px;height:56px;padding-top:7px;font-size:18px}}
+
+/* PC 조작 안내 (오른쪽 가운데) */
+#keyHint{position:fixed;right:12px;top:50%;transform:translateY(-50%);z-index:15;display:flex;flex-direction:column;gap:6px;pointer-events:none;background:rgba(14,4,22,.55);border:1px solid rgba(255,216,74,.35);border-radius:10px;padding:8px 10px;color:#fff;font-size:13px;font-weight:700;text-shadow:0 1px 2px #000}
+#keyHint kbd{display:inline-block;min-width:46px;text-align:center;padding:2px 6px;margin-right:6px;border-radius:5px;background:linear-gradient(#3a2a4a,#24162f);border:1px solid #8a7a9a;border-bottom-width:3px;color:#ffd84a;font:700 12px/1.3 system-ui,sans-serif}
+@media (max-width:700px),(pointer:coarse){#keyHint{display:none!important}}
+body.seated #keyHint,body.thseat #keyHint,body.typing #keyHint,body:has(#entry:not(.hidden)) #keyHint,body:has(#dartAim) #keyHint,body:has(#byeScreen) #keyHint{display:none!important}
