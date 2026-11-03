@@ -9,7 +9,7 @@
   dt=Math.min(.04,dt);s.t+=dt;s.swing=Math.max(0,s.swing-dt);s.aiSwing=Math.max(0,s.aiSwing-dt);
   const oldX=s.x,oldY=s.y;
   s.x=clamp(input.pointerX??s.x+((input.right?1:0)-(input.left?1:0))*dt,.1,.9);
-  s.y=clamp(input.pointerY===undefined?s.y:.76+(input.pointerY-.5)*.36,.76,.94);
+  s.y=clamp(input.pointerY===undefined?s.y+((input.down?1:0)-(input.up?1:0))*dt*.5:.76+(input.pointerY-.5)*.36,.76,.94);
   // Short motion memory keeps a swipe effective between pointer events.
   const blend=1-Math.exp(-dt/.07);
   s.strokeX+=(clamp((s.x-oldX)/Math.max(dt,.001),-3,3)-s.strokeX)*blend;
