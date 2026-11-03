@@ -84,7 +84,7 @@ async function buildAvatar(root,p,mine){if(root._h){HUMANS.delete(root._h);root.
  const tag=document.createElement('a-entity');tag.classList.add('tag');tag.setAttribute('position','0 1.78 0');tag.setAttribute('billboard','');
  tag.setAttribute('ktext',`value:${(p.nick||'').replace(/;/g,' ')};color:#fff;glow:#ff3cac;size:40;width:.9;top:true`);tag.dataset.nick=p.nick||'';tag.setAttribute('tag-follow','');root.appendChild(tag);
  const bub=document.createElement('a-entity');bub.classList.add('bubble');bub.setAttribute('position','0 2.12 0');bub.setAttribute('billboard','');bub.setAttribute('visible',false);root.appendChild(bub);
- const h=await makeHuman(root,humanOpts(p));if(!h||root._tok!==token){if(h)h.dispose();return;}root._h=h;HUMANS.add(h);}
+ const h=await makeHuman(root,humanOpts(p));if(!h||root._tok!==token){if(h)h.dispose();return;}root._h=h;HUMANS.add(h);h.after=(t,c)=>dartPose(root,mine?myId:p.id,c);}
 function upsertOther(p){if(p.id===myId)return;let o=others[p.id];
  if(!o){const el=document.createElement('a-entity');$('others').appendChild(el);o=others[p.id]={el,target:new THREE.Vector3(...(p.pos||[0,0,4])),rot:p.rot||0};el.object3D.position.copy(o.target);}
  const key=[p.nick,p.gender,p.style,p.outfit,p.top,p.bottom,p.acc,p.hair,p.face,p.beard,p.skin].join('|');if(o.key!==key){o.key=key;buildAvatar(o.el,p);}if(p.drinks&&o.el._h&&!(o.el._h.drinks||[]).length)o.el._h.drinks=p.drinks.slice();o.data=p;o.dance=p.dance||0;applySeatPose(o,p.seat);}
@@ -269,7 +269,7 @@ function actions(){const A=[];if(mySeat&&mySeat.startsWith('TAXI')){A.push(['�
   A.push([`🎯 조준해서 던지기 (${DB+1}번)`,()=>dartAim(DB),'dart'+DB]);
   A.push(['하이스코어 (3R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:3},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi3'],['하이스코어 (8R)',()=>socket.emit('dartNew',{b:DB,mode:'high',rounds:8},r=>r&&!r.ok&&r.err&&sys(`🎯 ${(r.err)}`)),'dhi8']);}}
  {const TS=SEATS.filter(q=>q.table==='TAXI');if(TS.length&&TS.some(q=>near({x:q.x,z:q.z-.9},1.9))){const f=TS.find(q=>!seatTaken(q));if(f)A.push(['🚕 택시 타기',()=>{const g=TS.find(q=>!seatTaken(q));g&&sit(g);},'taxi']);else A.push(['🚕 만석',null,'lbl']);}}
- if(window.POOLT&&!mySeat&&near(window.POOLT,2.6))A.push(['🎱 당구하기',()=>poolOpen(),'pool']);
+ if(window.POOLT&&!mySeat&&window.POOLT.some(q=>near(q,2.6)))A.push(['🎱 당구하기',()=>poolOpen(),'pool']);
  if(near(window.FRIDGE,1.6))for(const k of ['soju','beer'])A.push([ITEM_NAME[k]+' 꺼내기',()=>socket.emit('pickup',k),'p-'+k]);
  if(near(window.COOK,2.2))for(const k of ['dakbal','kkom','fish','squid'])A.push([ITEM_NAME[k],()=>socket.emit('pickup',k),'p-'+k]);
  if(near({x:-11.6,z:20.5},2.2))A.push(['🍗 통닭 가져가기',()=>socket.emit('pickup','chicken'),'p-chicken']);if(near({x:-11.6,z:15},2.2))A.push(['🐟 모듬회 가져가기',()=>socket.emit('pickup','hoe'),'p-hoe']);
@@ -412,7 +412,14 @@ function setClubDoor(open,announce){const was=window.CLUB_OPEN;window.CLUB_OPEN=
 function ejectFromClub(){if(mySeat){const s=mySeat;mySeat=null;socket.emit('seat',null);camGoal=null;}route=[];goal=null;goalSeat=null;marker.setAttribute('visible',false);
  const D=window.DOOR;rig.object3D.position.set(D.x+(Math.random()-.5)*3,0,14+Math.random()*1.5);myYaw=0;updateWhere();}
 window.ejectFromClub=ejectFromClub;
-window.DART_G=[];socket.on('dartState',d=>{window.DART_G[d.b]=d.g;const h=d.hit&&d.hit.id===myId?d.hit:null; /* 다른 사람 다트는 점수판 숫자만 갱신, 꽂히는 다트·알림은 내 것만 */window.dartState&&window.dartState({...d,hit:h});if(h&&h.win)setTimeout(()=>window.dartAimClose(),1300);if(h&&(h.bust||h.win))sys(`🎯 ${h.label}${h.bust?' (버스트!)':''}${h.win?' 🏆 승리!':''}`);});
+window.DART_THROW={};
+/* 🎯 다트 자세: 게임 참가 중이면 보드를 보고 팔 들기, 던질 때 팔 휘두르기 (모두에게 보임) */
+function dartPose(root,id,c){if(!id)return;const G=window.DART_G||[],D=window.DARTS||[];let b=-1;for(let i=0;i<G.length;i++){const g=G[i];if(g&&g.players&&g.players.some(p=>p.id===id)){b=i;break;}}
+ if(b<0||!D[b]){c.root.rotation.y=0;return;}const wp=root.object3D.getWorldPosition(new THREE.Vector3()),wy=new THREE.Euler().setFromQuaternion(root.object3D.getWorldQuaternion(new THREE.Quaternion()),'YXZ').y,bx=11.94,bz=D[b].z;if(Math.hypot(wp.x-D[b].x,wp.z-bz)>2.2){c.root.rotation.y=0;return;}
+ const yaw=Math.atan2(bx-wp.x,bz-wp.z);c.root.rotation.y=yaw-wy+(window.DART_YAWOFF||0);
+ const a=c.arms[0],e=(performance.now()-(window.DART_THROW[id]||0))/1000;let x=-1.75;if(e<.5){x=e<.25?-1.75-(e/.25)*.9:-2.65+((e-.25)/.25)*1.9;}
+ a.rotation.set(x,0,-.15);c.arms[1].rotation.set(-.2,0,.25);}
+window.DART_G=[];socket.on('dartState',d=>{if(d.hit&&d.hit.id)window.DART_THROW[d.hit.id]=performance.now();window.DART_G[d.b]=d.g;const h=d.hit&&d.hit.id===myId?d.hit:null; /* 다른 사람 다트는 점수판 숫자만 갱신, 꽂히는 다트·알림은 내 것만 */window.dartState&&window.dartState({...d,hit:h});if(h&&h.win)setTimeout(()=>window.dartAimClose(),1300);if(h&&(h.bust||h.win))sys(`🎯 ${h.label}${h.bust?' (버스트!)':''}${h.win?' 🏆 승리!':''}`);});
 /* 조준: 판 위를 드래그(또는 마우스 이동)해서 위치를 정하고 손을 떼면 던짐. 조준점은 살짝 흔들림 */
 function dartAim(b){if(document.getElementById('dartAim'))return;const o=document.createElement('div');o.id='dartAim';o.innerHTML='<div class="dah">🎯 판 위를 누르고 끌어 조준 → 손 떼면 던지기</div><canvas width="640" height="640"></canvas><button type="button">닫기</button>';document.body.appendChild(o);
  const cv=o.querySelector('canvas'),c=cv.getContext('2d'),img=window.DART_IMG;let ax=0,ay=0,down=false,raf=0;const S=320,R=S/2*0.86; /* 판(더블 바깥선)=R */
@@ -520,28 +527,59 @@ function goHome(){if(!confirm('집으로 돌아갈까요? (게임에서 나가�
 window.goHome=goHome;
 
 /* ---------- 🎱 당구: 탑뷰 화면에서 직접 조준(큐볼 주위로 돌리기) + 파워바 드래그 → 놓으면 샷 ---------- */
-let POOLS={balls:POOL.rack(),players:[],turn:0,groups:{},msg:''},poolAnim=null;
-const poolMe=()=>POOLS.players.findIndex(p=>p.id===myId),poolMyTurn=()=>{const i=poolMe();return i>=0&&POOLS.turn===i&&!POOLS.over&&!poolAnim;};
-socket.on('poolState',st=>{POOLS=st;if(!poolAnim)window.poolRender&&window.poolRender(st.balls);poolDraw();});
-socket.on('poolShot',d=>{const r=POOL.simulate(d.before,d.a,d.p,{frames:true});const fr=r.frames;let i=0;const mine=poolMe()>=0||d.by===myId;
- poolAnim={balls:d.before,fr:null};const t0=performance.now();const step=()=>{i=Math.floor((performance.now()-t0)/1000*60); /* 시간 기준 재생 (느린 폰도 같은 속도) */if(i>=fr.length){poolAnim=null;POOLS=d.state;window.poolRender&&window.poolRender(d.state.balls);poolDraw();if(mine&&d.state.msg)sys(d.state.msg);
-   if(mine&&d.state.over)setTimeout(()=>poolClose(true),2500);return;}poolAnim.fr=fr[i];window.poolRenderFrame&&window.poolRenderFrame(d.before,fr[i]);poolDraw();requestAnimationFrame(step);};step();});
+let SHARED=[0].map(t=>({t,balls:POOL.rack(),players:[],turn:0,scores:{},msg:''})),POOLT_I=0,PRAC=true,PRACS=null,POOLS=SHARED[0],poolAnim=null;
+const poolMe=()=>PRAC?0:POOLS.players.findIndex(p=>p.id===myId),poolMyTurn=()=>{const i=poolMe();return i>=0&&POOLS.turn===i&&!POOLS.over&&!poolAnim;};
+const poolNewPrac=()=>({t:-1,balls:POOL.rack(),players:[{id:myId,nick:me.nick||'나'}],turn:0,scores:{},msg:'연습 중',practice:true});
+const poolIn=()=>SHARED.findIndex(S=>S.players.some(p=>p.id===myId));
+function poolPlay(before,a,p,final,mine,t){const fr=POOL.simulate(before,a,p,{frames:true}).frames;const anim={balls:before,fr:null};const vis=()=>document.getElementById('poolUI')&&((t<0&&PRAC)||(!PRAC&&t===POOLT_I));if(vis())poolAnim=anim;const t0=performance.now();
+ const step=()=>{const i=Math.floor((performance.now()-t0)/1000*60);if(i>=fr.length){if(poolAnim===anim)poolAnim=null;if(t>=0){SHARED[t]=final;window.poolRender&&window.poolRender(final.balls,t);if(!PRAC&&t===POOLT_I)POOLS=final;}else PRACS=final,POOLS=PRAC?final:POOLS;poolDraw();
+   if(final.over&&t>=0){const best=final.over.win;window.poolWinner&&window.poolWinner('🏆 우승: '+best);if(mine)poolBanner(final);}else if(mine&&final.msg)sys('🎱 '+final.msg);return;}
+  anim.fr=fr[i];if(t>=0)window.poolRenderFrame&&window.poolRenderFrame(before,fr[i],t);if(poolAnim===anim)poolDraw();requestAnimationFrame(step);};step();}
+socket.on('poolState',st=>{const t=st.t||0;st._dl=st.left?performance.now()+st.left:0;SHARED[t]=st;if(!poolAnim)window.poolRender&&window.poolRender(st.balls,t);if(!PRAC&&t===POOLT_I&&!poolAnim)POOLS=st;
+ if(!PRAC&&t===POOLT_I&&!st.players.some(p=>p.id===myId)&&document.getElementById('poolUI')){PRAC=true;PRACS=PRACS||poolNewPrac();POOLS=PRACS;}poolDraw();});
+socket.on('poolShot',d=>{const t=d.state.t||0;d.state._dl=d.state.left?performance.now()+d.state.left:0;poolPlay(d.before,d.a,d.p,d.state,d.state.players.some(p=>p.id===myId),t);});
+socket.on('poolStart',d=>{POOLT_I=(d&&d.t)||0;PRAC=false;POOLS=SHARED[POOLT_I];if(!document.getElementById('poolUI'))poolOpen(POOLT_I,true);poolDraw();});
+socket.on('poolEnded',d=>{sys('🎱 '+(d&&d.msg||'같이 치기가 끝났어요'));});
+socket.on('poolChallengeResult',d=>{if(d&&d.msg)sys('🎱 '+d.msg);});
+socket.on('poolInvite',d=>{const old=document.getElementById('poolInv');if(old)old.remove();const o=document.createElement('div');o.id='poolInv';let left=d.sec||20;
+ o.innerHTML=`<div class="pih">🎱 같이 치기 신청</div><div><b>${esc(d.nick)}</b>님이 당구대에서 같이 치자고 해요</div><div class="pit"></div><div class="pib"><button type="button" class="ok">수락</button><button type="button" class="no">거절</button></div>`;document.body.appendChild(o);
+ const tk=()=>{o.querySelector('.pit').textContent=`${left}초 안에 답해 주세요`;};tk();const iv=setInterval(()=>{left--;tk();if(left<=0)done(false,true);},1000);
+ function done(acc,silent){clearInterval(iv);o.remove();if(silent)return;socket.emit('poolAnswer',{from:d.from,accept:acc},r=>{if(r&&!r.ok&&r.err)sys('🎱 '+r.err);});}
+ o.querySelector('.ok').onclick=()=>done(true);o.querySelector('.no').onclick=()=>done(false);});
+socket.on('poolInviteGone',()=>{const o=document.getElementById('poolInv');if(o)o.remove();});
+function poolInviteUI(){if(document.getElementById('poolPick'))return;const S=SHARED[POOLT_I];const mine=S.players.some(p=>p.id===myId);const room=4-Math.max(S.players.length,1);
+ if(S.players.length&&!mine)return sys('🎱 게임 중이에요 — 대기열에 들어가세요');if(mine&&S.shots>0)return sys('🎱 게임이 이미 시작됐어요');if(room<=0)return sys('🎱 만석 (4명)');
+ const busy=new Set(SHARED.flatMap(x=>x.players.map(p=>p.id).concat((x.queue||[]).map(q=>q.id))));const L=Object.entries(others).filter(([id,o])=>o.data&&o.data.nick&&!o.gone&&!busy.has(id));
+ const o=document.createElement('div');o.id='poolPick';o.innerHTML=`<div class="pih">🎱 같이 치기 신청 <button type="button" class="x">✕</button></div><div class="pis">함께 칠 사람을 골라요 (최대 ${room}명 더)</div><div class="pil">${L.length?L.map(([id,q])=>`<label><input type="checkbox" value="${id}"> ${esc(q.data.nick)}</label>`).join(''):'<i>지금 신청할 수 있는 사람이 없어요</i>'}</div><div class="pib"><button type="button" class="ok">신청 보내기</button></div>`;
+ document.getElementById('poolUI').appendChild(o);o.querySelector('.x').onclick=()=>o.remove();
+ o.querySelectorAll('input').forEach(c=>c.onchange=()=>{const n=o.querySelectorAll('input:checked').length;if(n>room){c.checked=false;sys(`🎱 최대 ${room}명까지`);}});
+ o.querySelector('.ok').onclick=()=>{const ids=[...o.querySelectorAll('input:checked')].map(c=>c.value);if(!ids.length)return sys('🎱 한 명 이상 골라 주세요');
+  ids.forEach(to=>socket.emit('poolChallenge',{t:POOLT_I,to},r=>{if(r&&!r.ok&&r.err)sys('🎱 '+r.err);}));sys(`🎱 같이 치기 신청 보냄 (${ids.length}명) · 20초 기다려요`);o.remove();};}
+function poolBanner(f){const o=document.createElement('div');o.id='poolWin';o.innerHTML=`<div class="pw1">🏆 우승: ${esc(f.over.win)}</div>`+f.players.map(p=>`<div>${esc(p.nick)} — ${f.scores[p.id]||0}개</div>`).sort().join('')+`<div class="pw2">${esc(f.msg||'')}</div>`;document.body.appendChild(o);setTimeout(()=>o.remove(),5500);}
 let poolAim=0,poolPow=0,poolHold=false;
-function poolOpen(){if(document.getElementById('poolUI'))return;const o=document.createElement('div');o.id='poolUI';
- o.innerHTML='<div class="ph"><span id="poolStat"></span></div><canvas id="poolCv" width="1200" height="660"></canvas><div class="pbw"><div id="poolBar"><div id="poolFill"></div><span>⬅ 파워: 끌어서 세기 조절 → 손 떼면 샷</span></div></div><div class="pbtn"><button type="button" id="poolJoin">🙋 같이 치기</button><button type="button" id="poolNew">🔄 새 게임</button><button type="button" id="poolClose">닫기</button></div>';
+function poolShootLocal(a,p){const before=POOL.clone(PRACS.balls);const r=POOL.simulate(POOL.clone(before),a,p);const pk=r.pocketed;const f={...PRACS,balls:r.balls,msg:'연습 중'};
+ if(pk.includes(0)){POOL.spotCue(f.balls);f.msg='흰 공 빠짐 → 다시 놓음';}else if(pk.length)f.msg=`${pk.length}개 들어감!`;
+ if(pk.includes(8)||f.balls.filter(o=>!o.in&&o.n).length===0){f.msg+=' · 새로 배치';setTimeout(()=>{if(PRACS===f){PRACS=poolNewPrac();if(PRAC)POOLS=PRACS;poolDraw();}},2000);}
+ poolPlay(before,a,p,f,false,-1);}
+function poolOpen(t,shared){if(document.getElementById('poolUI'))return;if(t===undefined){const ps=window.POOLT||[];let bi=0,bd=1e9;
+  const rig=document.getElementById('rig');const pp=rig?rig.object3D.position:{x:0,z:0};ps.forEach((q,i)=>{const d=Math.hypot(q.x-pp.x,q.z-pp.z);if(d<bd){bd=d;bi=i;}});t=bi;}
+ POOLT_I=t;const inT=poolIn();if(inT>=0){POOLT_I=inT;PRAC=false;POOLS=SHARED[inT];}else{PRAC=true;PRACS=PRACS||poolNewPrac();POOLS=PRACS;}
+ const o=document.createElement('div');o.id='poolUI';
+ o.innerHTML='<div class="ph"><span id="poolStat"></span></div><canvas id="poolCv" width="1200" height="660"></canvas><div class="pbw"><div id="poolBar"><div id="poolFill"></div><span>⬅ 파워: 끌어서 세기 조절 → 손 떼면 샷</span></div></div><div class="pbtn"><button type="button" id="poolJoin">🎱 같이 치기</button><button type="button" id="poolRule">❓ 규칙</button><button type="button" id="poolNew">🔄 새로 배치</button><button type="button" id="poolClose">닫기</button></div><div id="poolRules"></div>';
  document.body.appendChild(o);const cv=o.querySelector('#poolCv');
- const join=()=>socket.emit('poolJoin',{},r=>{if(r&&!r.ok&&r.err)sys('🎱 '+r.err);if(r&&r.state){POOLS=r.state;poolDraw();}});if(!POOLS.players.length)join();o.querySelector('#poolJoin').onclick=join;
+ o.querySelector('#poolJoin').onclick=()=>{const S=SHARED[0],mine=S.players.some(p=>p.id===myId),qi=(S.queue||[]).findIndex(q=>q.id===myId);
+  if(qi>=0)return socket.emit('poolQueue',{join:false},()=>sys('🎱 대기 취소'));if(S.players.length&&!mine)return socket.emit('poolQueue',{join:true},r=>{if(r&&r.ok)sys(`🎱 대기 ${r.pos}번째 — 이번 게임 끝나면 시작`);else if(r&&r.err)sys('🎱 '+r.err);});poolInviteUI();};o.querySelector('#poolRule').onclick=()=>{o.querySelector('#poolRules').classList.toggle('on');poolDraw();};
  const toTable=e=>{const b=cv.getBoundingClientRect(),sx=(e.clientX-b.left)/b.width*1200,sy=(e.clientY-b.top)/b.height*660;return[(sx-600)/POOLK,(sy-330)/POOLK];};
  const aim=e=>{if(!poolMyTurn())return;const c=POOLS.balls.find(q=>q.n===0);const [x,y]=toTable(e);poolAim=Math.atan2(y-c.y,x-c.x);poolDraw();};
  cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);cv._d=true;aim(e);});cv.addEventListener('pointermove',e=>{if(cv._d||e.pointerType==='mouse')aim(e);});cv.addEventListener('pointerup',()=>{cv._d=false;});
  const bar=o.querySelector('#poolBar'),setP=e=>{const b=bar.getBoundingClientRect();poolPow=Math.max(0,Math.min(1,(e.clientX-b.left)/b.width));poolDraw();};
- bar.addEventListener('pointerdown',e=>{e.preventDefault();if(!poolMyTurn()){sys(poolMe()<0?'🎱 구경 중이에요':'🎱 아직 차례가 아니에요');return;}bar.setPointerCapture(e.pointerId);poolHold=true;setP(e);});
+ bar.addEventListener('pointerdown',e=>{e.preventDefault();if(!poolMyTurn()){sys('🎱 아직 차례가 아니에요');return;}bar.setPointerCapture(e.pointerId);poolHold=true;setP(e);});
  bar.addEventListener('pointermove',e=>{if(poolHold)setP(e);});
- const rel=()=>{if(!poolHold)return;poolHold=false;const p=poolPow;poolPow=0;poolDraw();if(p<.03)return;socket.emit('poolShoot',{a:poolAim,p},r=>{if(r&&!r.ok&&r.err)sys('🎱 '+r.err);});};
+ const rel=()=>{if(!poolHold)return;poolHold=false;const p=poolPow;poolPow=0;poolDraw();if(p<.03)return;if(PRAC)poolShootLocal(poolAim,p);else socket.emit('poolShoot',{t:POOLT_I,a:poolAim,p},r=>{if(r&&!r.ok&&r.err)sys('🎱 '+r.err);});};
  bar.addEventListener('pointerup',rel);bar.addEventListener('pointercancel',()=>{poolHold=false;poolPow=0;poolDraw();});
- o.querySelector('#poolClose').onclick=()=>poolClose();o.querySelector('#poolNew').onclick=()=>socket.emit('poolNew',{},r=>{if(r&&!r.ok)sys('🎱 치는 사람만 새 게임을 할 수 있어요');});poolDraw();}
-function poolClose(auto){const o=document.getElementById('poolUI');if(!o)return;o.remove();socket.emit('poolLeave');}
-window.poolOpen=poolOpen;window.poolClose=poolClose;
+ o.querySelector('#poolClose').onclick=()=>poolClose();o.querySelector('#poolNew').onclick=()=>{if(!PRAC)return socket.emit('poolNew',{t:0},()=>{});PRACS=poolNewPrac();POOLS=PRACS;poolDraw();};poolDraw();}
+function poolClose(auto){const o=document.getElementById('poolUI');if(!o)return;o.remove();socket.emit('poolLeave');PRAC=true;poolAnim=null;}
+window.poolOpen=poolOpen;window.poolClose=poolClose;setInterval(()=>{if(!PRAC&&document.getElementById('poolUI')&&!poolAnim)poolDraw();},500);
 const POOLK=1200/(POOL.L+.3);
 function poolDraw(){const cv=document.getElementById('poolCv');if(!cv)return;const c=cv.getContext('2d'),K=POOLK,X=x=>600+x*K,Y=y=>330+y*K;
  c.fillStyle='#4a240c';c.fillRect(0,0,1200,660);c.fillStyle='#0f6b3a';c.fillRect(X(-POOL.L/2),Y(-POOL.Wd/2),POOL.L*K,POOL.Wd*K);
@@ -559,6 +597,16 @@ function poolDraw(){const cv=document.getElementById('poolCv');if(!cv)return;con
   c.strokeStyle='#2a6aff';c.lineWidth=10;c.beginPath();c.moveTo(X(cue.x-dx*back),Y(cue.y-dy*back));c.lineTo(X(cue.x-dx*(back+.03)),Y(cue.y-dy*(back+.03)));c.stroke();}
  for(const o of B){if(o.in)continue;const x=X(o.x),y=Y(o.y),r=POOL.R*K;c.fillStyle=o.n>8?'#fff':COL(o.n);c.beginPath();c.arc(x,y,r,0,7);c.fill();if(o.n>8){c.fillStyle=COL(o.n);c.fillRect(x-r,y-r*.5,r*2,r);}
   if(o.n){c.fillStyle='#fff';c.beginPath();c.arc(x,y,r*.45,0,7);c.fill();c.fillStyle='#000';c.font=`bold ${Math.round(r*.6)}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(o.n,x,y+1);}}
- const st=document.getElementById('poolStat');if(st){const me=poolMe(),P=POOLS.players,cur=P[POOLS.turn];const gname=g=>g==='solid'?'솔리드(1~7)':g==='stripe'?'스트라이프(9~15)':'';
-  st.textContent=(me<0?'👀 구경 중 · ':'')+(P.length===2?`${P[0].nick} vs ${P[1].nick} · `:P.length===1?'혼자 연습 · ':'')+(cur?`차례: ${cur.nick}`:'')+(me>=0&&POOLS.groups[myId]?` · 내 공: ${gname(POOLS.groups[myId])}`:'')+(POOLS.msg?` · ${POOLS.msg}`:'');}
- {const j=document.getElementById('poolJoin'),n=document.getElementById('poolNew'),me=poolMe();if(j)j.style.display=me<0&&POOLS.players.length<2?'':'none';if(n)n.style.display=me>=0?'':'none';}const f=document.getElementById('poolFill');if(f){f.style.width=(poolPow*100)+'%';f.style.background=poolPow>.75?'#ff3b3b':poolPow>.4?'#ffd23a':'#3ee05a';}}
+ const st=document.getElementById('poolStat');if(st){const P=POOLS.players,cur=P[POOLS.turn];
+  st.textContent=PRAC?`혼자 연습 (나만 보여요)${POOLS.msg?' · '+POOLS.msg:''}`:``+P.map(p=>`${p.nick} ${POOLS.scores[p.id]||0}개`).join(' / ')+(cur?` · 차례: ${cur.nick}${cur.id===myId?' (나!)':''}`:'')+(!PRAC&&POOLS._dl&&!POOLS.over&&!poolAnim?` · ⏱ ${Math.ceil(Math.max(0,POOLS._dl-performance.now())/1000)}초`:'')+(POOLS.msg?` · ${POOLS.msg}`:'');}
+ {const j=document.getElementById('poolJoin'),n=document.getElementById('poolNew'),S=SHARED[POOLT_I];if(j){const mine=S.players.some(p=>p.id===myId),qi=(S.queue||[]).findIndex(q=>q.id===myId),other=S.players.length&&!mine;j.disabled=!!(mine&&(S.shots>0||S.players.length>=4));j.textContent=qi>=0?`⏳ 대기 중 ${qi+1}번째 (취소)`:other?`🎱 같이 치기 (대기${(S.queue||[]).length?' '+S.queue.length+'명':''})`:mine?(S.players.length>=4?'🎱 만석':S.shots>0?'🎱 게임 중':'🎱 같이 치기'):'🎱 같이 치기';}if(n){const mine=S.players.some(p=>p.id===myId),vt=(S.votes||[]).includes(myId);n.style.display=PRAC||mine?'':'none';n.textContent=PRAC?'🔄 새로 배치':`🔄 새 게임 동의 ${(S.votes||[]).length}/${S.players.length}${vt?' (취소)':''}`;}
+  const R=document.getElementById('poolRules');if(R)R.innerHTML=(PRAC?'':'<b>규칙</b><br>· 차례대로 친다<br>· 공을 넣으면 한 번 더<br>· 못 넣으면 다음 사람<br>· 흰 공이 빠지면 다시 놓고 차례 넘김<br>· 8번 공은 마지막에, 들어가면 게임 끝<br>· 공을 가장 많이 넣은 사람 승리<br>· 한 차례 10초 — 넘기면 다음 사람<br>· 새 게임은 모두 동의해야 시작<br>')+'<b>조작</b><br>· 테이블을 끌어/눌러 방향 조준 → 아래 파워바를 끌어 세기 → 손 떼면 샷';}
+ const f=document.getElementById('poolFill');if(f){f.style.width=(poolPow*100)+'%';f.style.background=poolPow>.75?'#ff3b3b':poolPow>.4?'#ffd23a':'#3ee05a';}}
+
+/* 👥 접속자 목록: 인원수 누르면 열고/닫기 */
+{const oc=$('onlineCnt');if(oc){oc.style.cursor='pointer';oc.title='접속자 보기';const stop=e=>e.stopPropagation();['pointerdown','touchstart','mousedown'].forEach(ev=>oc.addEventListener(ev,stop,{passive:true}));
+ let tmr=null;const render=()=>{const p=document.getElementById('userList');if(!p)return;const L=[(me.nick||'손님')+' (나)',...Object.values(others).map(o=>o.data&&o.data.nick).filter(Boolean)];
+  p.querySelector('.ulb').innerHTML=L.map(n=>`<div>• ${esc(n)}</div>`).join('');p.querySelector('.ulh span').textContent=`👥 접속자 ${L.length}명`;};
+ const close=()=>{const p=document.getElementById('userList');if(p)p.remove();clearInterval(tmr);};
+ oc.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();if(document.getElementById('userList'))return close();const p=document.createElement('div');p.id='userList';p.innerHTML='<div class="ulh"><span></span><button type="button">✕</button></div><div class="ulb"></div>';
+  ['pointerdown','touchstart','mousedown','click'].forEach(ev=>p.addEventListener(ev,stop,{passive:true}));p.querySelector('button').onclick=close;$('chat').appendChild(p);render();tmr=setInterval(render,1000);});}}

@@ -8,13 +8,22 @@ t=[{n:0,x:0,y:0,in:false}];r=P.simulate(t,0,.5);a.ok(!r.balls[0].in&&Math.abs(r.
 (async()=>{const PORT=+(process.env.PORT||8080)+37,U='http://localhost:'+PORT;const srv=spawn('node',['server.js'],{cwd:path.join(__dirname,'..'),env:{...process.env,PORT,STATE_FILE:path.join(os.tmpdir(),'pool-state.json'),WAITER_OFF:'1',TICKER_OFF:'1'},stdio:'ignore'});await W(1500);
  try{const c=io(U,{forceNew:true}),o=io(U,{forceNew:true}),sp=io(U,{forceNew:true});const S=[];sp.on('poolShot',d=>S.push(d));
  await new Promise(r=>c.emit('join',{nick:'큐1',clientId:'p1'},r));await new Promise(r=>o.emit('join',{nick:'큐2',clientId:'p2'},r));
- let j=await new Promise(r=>c.emit('poolJoin',{},r));a.ok(j.ok);a.strictEqual(j.state.players.length,1);
- a.ok((await new Promise(r=>c.emit('poolShoot',{a:0,p:1},r))).ok,'solo shot');await W(300);a.strictEqual(S.length,1,'spectator gets shot');
+ const E=(s,ev,d)=>new Promise(r=>s.emit(ev,d,r));const once=(s,ev)=>new Promise(r=>s.once(ev,r));
+ await new Promise(r=>sp.emit('join',{nick:'구경',clientId:'p0'},r));
+ const ids={};c.on('connect',()=>{});ids.o=o.id;ids.c=c.id;
+ // 초대 → 거절 알림
+ let inv=once(o,'poolInvite');a.ok((await E(c,'poolChallenge',{t:0,to:o.id})).ok);let iv=await inv;a.strictEqual(iv.t,0);let res=once(c,'poolChallengeResult');await E(o,'poolAnswer',{from:c.id,accept:false});a.strictEqual((await res).ok,false,'declined');
+ // 초대 → 수락 → 2인 게임 (TABLE 2)
+ inv=once(o,'poolInvite');await E(c,'poolChallenge',{t:0,to:o.id});await inv;let st1=once(c,'poolStart');a.ok((await E(o,'poolAnswer',{from:c.id,accept:true})).ok);a.strictEqual((await st1).t,0);
+ a.strictEqual((await E(o,'poolShoot',{t:0,a:0,p:1})).ok,false,'not your turn');
+ a.ok((await E(c,'poolShoot',{t:0,a:0,p:1})).ok);await W(300);a.ok(S.length>=1&&S[0].state.t===0,'spectator sees shot on table 2');
+ // 3번째 사람 합류 (같은 테이블, 판 유지)
+ const sp3=io(U,{forceNew:true});await new Promise(r=>sp3.emit('join',{nick:'셋째',clientId:'p3'},r));a.strictEqual((await E(o,'poolChallenge',{t:0,to:sp3.id})).ok,false,'no invite mid-game');
+ let gs=null;sp.on('poolState',x=>{if(x.t===0)gs=x;});a.strictEqual((await E(sp3,'poolQueue',{join:true})).pos,1);await W(200);a.strictEqual(gs.players.length,2,'no mid-game join');a.strictEqual(gs.queue.length,1,'queued');
+ // 다른 테이블에 사람 있는 상태로 테이블1 침범 불가
+ a.strictEqual((await E(sp,'poolChallenge',{t:0,to:c.id})).ok,false,'busy table');a.strictEqual((await E(sp,'poolQueue',{join:true})).pos,2);let vv=await E(c,'poolNew',{t:0});a.deepStrictEqual([vv.n,vv.m],[1,2],'vote 1/2');
+ // 나가면 남은 2명 계속
+ sp3.emit('poolLeave');await W(300);a.strictEqual(gs.players.length,2);a.strictEqual(gs.queue.length,1);
+ const ns=once(sp,'poolStart');c.disconnect();await W(400);await ns;a.deepStrictEqual(gs.players.map(p=>p.nick),['구경','큐2'],'next game from queue');a.strictEqual(gs.shots,0);
  const rep=P.simulate(S[0].before,S[0].a,S[0].p);a.deepStrictEqual(rep.balls.filter(x=>x.n!==0),S[0].state.balls.filter(x=>x.n!==0),'replay matches server');
- j=await new Promise(r=>o.emit('poolJoin',{},r));a.ok(j.ok);a.strictEqual(j.state.players.length,2);a.strictEqual(j.state.balls.filter(x=>x.in).length,0,'new rack for 2p');
- a.strictEqual((await new Promise(r=>o.emit('poolShoot',{a:0,p:1},r))).ok,false,'not your turn');await W(4000);
- a.ok((await new Promise(r=>c.emit('poolShoot',{a:Math.PI/2,p:.08},r))).ok);await W(2500);const last=S[S.length-1].state;
- a.strictEqual(last.turn,1,'turn passes when nothing pocketed');
- const sp3=io(U,{forceNew:true});await new Promise(r=>sp3.emit('join',{nick:'구경',clientId:'p3'},r));a.strictEqual((await new Promise(r=>sp3.emit('poolJoin',{},r))).ok,false,'full');
- c.disconnect();await W(400);let st=null;o.on('poolState',x=>st=x);await W(10);sp.emit('poolLeave');await W(300);
  c.close();o.close();sp.close();sp3.close();console.log('pool OK');srv.kill();process.exit(0);}catch(e){console.error(e);srv.kill();process.exit(1);}})();
