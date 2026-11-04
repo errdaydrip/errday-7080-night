@@ -4,3 +4,6 @@ uploads/*
 ref/
 *.zip
 data/
+
+# Generated visual checks (game assets live in public/)
+/*.png
