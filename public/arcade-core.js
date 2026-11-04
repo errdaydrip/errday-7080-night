@@ -38,7 +38,7 @@
  function wave(s){s.wave++;s.aliens=Array.from({length:24},(_,i)=>({x:.12+i%8*.105,y:.13+Math.floor(i/8)*.085,alive:true}));s.enemyTime=0;s.shift=0;}
  function lost(s){s.lives--;s.hit=.65;if(s.lives<=0)s.over=true;}
  function point(s,player){if(player){s.score++;s.event++;}else{s.opponent++;s.hit=.5;}s.serve=true;s.ball={x:.5,y:.5,vx:0,vy:0};if(s.score>=7||s.opponent>=7){s.over=true;s.won=s.score>=7;}}
- function update(s,dt,input={}){if(s.over)return;if(s.kind==='pingpong'){TT.update(s,dt,input);return;}if(s.kind==='hockey'){const p=s.paddles[0],speed=input.fire?2.4:1.2,target={x:input.pointerX??p.x+((input.right?1:0)-(input.left?1:0))*dt*speed,y:input.pointerY??p.y+((input.down?1:0)-(input.up?1:0))*dt*speed/H.K.aspect};if(s.serve&&s.serveSide===1&&s.serveTime>.7)H.serve(s,1);H.update(s,dt,[target,H.ai(s,dt)]);return;}s.t+=dt;s.cool=Math.max(0,s.cool-dt);s.hit=Math.max(0,s.hit-dt);const dir=(input.right?1:0)-(input.left?1:0);
+ function update(s,dt,input={}){if(s.over)return;if(s.kind==='pingpong'){TT.update(s,dt,input);return;}if(s.kind==='hockey'){const p=s.paddles[0],speed=input.fire?2.4:1.2,target={x:input.pointerX??p.x+(input.axisX??((input.right?1:0)-(input.left?1:0)))*dt*speed,y:input.pointerY??p.y+(input.axisY??((input.down?1:0)-(input.up?1:0)))*dt*speed/H.K.aspect};if(s.serve&&s.serveSide===1&&s.serveTime>.7)H.serve(s,1);H.update(s,dt,[target,H.ai(s,dt)]);return;}s.t+=dt;s.cool=Math.max(0,s.cool-dt);s.hit=Math.max(0,s.hit-dt);const dir=(input.right?1:0)-(input.left?1:0);
   if(s.kind==='blocks'){s.fall+=dt;if(s.fall>=Math.max(.1,.72-s.lines*.015)){action(s,'down');s.fall=0;}return;}
   if(s.kind==='shooter'){
    s.x=clamp(input.pointerX??s.x+dir*dt*.75,.05,.95);if(input.fire&&s.cool<=0){s.bullets.push({x:s.x,y:.85});s.cool=.18;}

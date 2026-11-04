@@ -21,3 +21,11 @@ for (let frame = 0; frame < 1800; frame++) {
   assert(Number.isFinite(state.ball.z) && Number.isFinite(state.ball.x));
 }
 console.log('table tennis stroke strength, direction and stable simulation OK');
+const novice = tennis.create();
+const advanced = tennis.create();
+advanced.level = 6;
+novice.ball.x = advanced.ball.x = .9;
+tennis.update(novice, 1/60);
+tennis.update(advanced, 1/60);
+assert(advanced.ai > novice.ai, 'higher CPU level moves faster');
+assert(advanced.aiReaction < novice.aiReaction, 'higher CPU level reacts sooner');

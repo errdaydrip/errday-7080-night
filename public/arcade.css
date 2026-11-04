@@ -40,3 +40,8 @@
  #arcadeOverlay.table-game .arcade-controls button[data-input=down]{grid-column:2;grid-row:2}
  #arcadeOverlay.table-game .arcade-controls button[data-input=right]{grid-column:3;grid-row:2}
 }
+
+.arcade-joystick{position:relative;width:120px;height:120px;border-radius:50%!important;border:2px solid #7f91b4!important;background:radial-gradient(circle,#344662,#152238)!important;touch-action:none;user-select:none}
+.joystick-arrows{position:absolute;inset:4px;text-align:center;font-size:20px;line-height:35px;color:#becce3;pointer-events:none}
+.joystick-knob{position:absolute;width:46px;height:46px;left:35px;top:35px;border-radius:50%;background:radial-gradient(circle at 35% 25%,#c0defa,#557fad);box-shadow:0 3px 12px #0008;pointer-events:none}
+@media(orientation:landscape){#arcadeOverlay.table-game .arcade-controls{display:block;width:120px;height:120px}#arcadeOverlay.table-game .arcade-controls .arcade-joystick{width:120px;height:120px}}
