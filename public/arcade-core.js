@@ -15,7 +15,7 @@
  ];
  const PUMP_STEPS=[0,2,4,2,1,3,2,4,3,2,1,0,2,4,0,2];
  const isRhythm=kind=>kind==='rhythm'||kind==='ddr'||kind==='pump';
- const hasStages=kind=>isRhythm(kind)||kind==='breaker'||kind==='racer';
+ const hasStages=kind=>isRhythm(kind)||kind==='breaker'||kind==='racer'||kind==='mole';
  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),SHAPES=[[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[0,1,1],[1,1,0]],[[1,1,0],[0,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]]];
  function create(kind,seed=Date.now(),level=1,track){
   if(kind==='pingpong')return TT.create();
@@ -36,7 +36,10 @@
    }
   }
   else if(kind==='racer'){s.x=.5;s.cars=[];s.spawn=.7;s.distance=0;s.duration=25;s.roadSpeed=.36+(level-1)*.095;}
-  else if(kind==='reflex'){s.target=Math.floor(random()*9);s.time=30;s.targetAge=0;s.combo=0;}
+  else if(kind==='mole'){
+   s.time=20;s.nextPop=.25;s.holes=Array(9).fill(null);
+   s.combo=0;s.caught=0;s.goal=[10,15,20,25,30][level-1];
+  }
   else if(isRhythm(kind)){
    s.health=100;s.combo=0;s.maxCombo=0;s.judgement='READY';s.lanes=kind==='pump'?5:4;
    const song=track??Math.floor(random()*TRACKS.length);
@@ -63,14 +66,20 @@
  function collide(s,p,x,y){return p.some((r,j)=>r.some((v,i)=>v&&(x+i<0||x+i>=10||y+j>=20||(y+j>=0&&s.grid[y+j][x+i]))));}
  function lock(s){s.shape.forEach((r,j)=>r.forEach((v,i)=>{if(v&&s.py+j>=0)s.grid[s.py+j][s.px+i]=s.colour;}));let lines=0;for(let y=19;y>=0;y--)if(s.grid[y].every(Boolean)){s.grid.splice(y,1);s.grid.unshift(Array(10).fill(0));lines++;y++;}s.lines+=lines;s.score+=[0,100,300,500,800][lines]||0;if(lines)s.event++;spawn(s);}
  function action(s,key){if(s.over||s.kind==='pingpong')return;if(s.kind==='hockey'){if(key==='fire')H.serve(s,0);return;}
-  if(isRhythm(s.kind)&&/^lane[0-4]$/.test(key)&&+key.slice(4)<s.lanes){const lane=+key.slice(4),note=s.notes.find(n=>!n.judged&&n.lane===lane&&Math.abs(n.at-s.t)<s.window);if(note){const perfect=Math.abs(note.at-s.t)<s.window*.44;note.judged=true;note.hit=true;s.flashLane=lane;s.flashUntil=s.t+.16;s.combo++;s.maxCombo=Math.max(s.maxCombo,s.combo);s.score+=perfect?300:150;s.health=Math.min(100,s.health+2);s.judgement=perfect?'PERFECT':'GOOD';s.event++;}else{s.combo=0;s.health=Math.max(0,s.health-3);s.judgement='EARLY / LATE';}return;}
+  if(isRhythm(s.kind)&&/^lane[0-4]$/.test(key)&&+key.slice(4)<s.lanes){const lane=+key.slice(4),note=s.notes.find(n=>!n.judged&&n.lane===lane&&Math.abs(n.at-s.t)<s.window);if(note){const perfect=Math.abs(note.at-s.t)<s.window*.44;note.judged=true;note.hit=true;s.flashLane=lane;s.flashUntil=s.t+.16;s.combo++;s.maxCombo=Math.max(s.maxCombo,s.combo);s.score+=perfect?300:150;s.health=Math.min(100,s.health+2);s.judgement=perfect?'PERFECT':'GOOD';s.event++;}else{s.combo=0;s.health=Math.max(0,s.health-3);s.judgement='EARLY / LATE';s.event++;}return;}
   if(s.kind==='blocks'){
    if(key==='left'||key==='right'){const x=s.px+(key==='left'?-1:1);if(!collide(s,s.shape,x,s.py))s.px=x;}
    if(key==='rotate'){const p=s.shape[0].map((_,i)=>s.shape.map(r=>r[i]).reverse());for(const dx of [0,-1,1,-2,2])if(!collide(s,p,s.px+dx,s.py)){s.shape=p;s.px+=dx;break;}}
    if(key==='down'){if(!collide(s,s.shape,s.px,s.py+1)){s.py++;s.score++;}else lock(s);s.fall=0;}
    if(key==='fire'){while(!collide(s,s.shape,s.px,s.py+1)){s.py++;s.score+=2;}lock(s);}
   }else if(s.kind==='racer'&&(key==='left'||key==='right'))s.targetX=clamp((s.targetX??s.x)+(key==='left'?-.25:.25),.22,.78);
-  else if(s.kind==='reflex'&&/^tap[0-8]$/.test(key)){const k=+key.slice(3);if(k===s.target){s.score+=10+Math.min(20,s.combo++);s.target=(s.target+1+Math.floor(s.random()*8))%9;s.targetAge=0;s.event++;}else{s.combo=0;s.score=Math.max(0,s.score-5);}}
+  else if(s.kind==='mole'&&/^tap[0-8]$/.test(key)){
+   const mole=s.holes[+key.slice(3)];
+   if(mole&&mole.hitAt===null&&s.t<mole.until-.14){
+    mole.hitAt=s.t;s.caught++;
+    s.score+=100+Math.min(10,s.combo++)*10;s.event++;
+   }else if(!mole)s.combo=0;
+  }
   else if(s.kind==='pingpong'&&key==='fire'&&s.serve){s.serve=false;s.ball={x:.5,y:.5,vx:(s.random()-.5)*.5,vy:.42};}
  }
  function wave(s){s.wave++;s.aliens=Array.from({length:24},(_,i)=>({x:.12+i%8*.105,y:.13+Math.floor(i/8)*.085,alive:true}));s.enemyTime=0;s.shift=0;}
@@ -93,8 +102,8 @@
     const offset=(b.x-paddleX)/s.halfWidth;
     if(Math.abs(offset)<1.12){
      const strike=.62*speed+.38*s.swipe;
-     b.y=paddleY;b.vx=clamp(offset*.52+strike*.62,-1.12,1.12);
-     b.vy=-(.51+s.level*.055+Math.min(.32,Math.abs(strike)*.13));s.event++;
+     b.y=paddleY;b.vx=clamp(offset*.48+strike*.37,-.84,.84);
+     b.vy=-(.51+s.level*.045+Math.min(.13,Math.abs(strike)*.065));s.event++;
     }
    }
    for(const q of s.bricks){
@@ -150,8 +159,28 @@
    if(!s.over&&s.distance>=s.duration){s.over=true;s.won=true;}
    return;
   }
-  if(s.kind==='reflex'){s.time=Math.max(0,30-s.t);s.targetAge+=dt;if(s.targetAge>1.15){s.target=(s.target+1+Math.floor(s.random()*8))%9;s.targetAge=0;s.combo=0;}if(s.time<=0)s.over=true;return;}
-  if(isRhythm(s.kind)){for(const n of s.notes)if(!n.judged&&s.t>n.at+s.window){n.judged=true;s.health=Math.max(0,s.health-10);s.combo=0;s.judgement='MISS';s.hit=.2;}if(s.health<=0||s.t>=s.duration){s.over=true;s.won=s.health>0;}return;}
+  if(s.kind==='mole'){
+   s.time=Math.max(0,20-s.t);
+   for(let i=0;i<s.holes.length;i++){
+    const mole=s.holes[i];
+    if(!mole)continue;
+    if(mole.hitAt!==null?s.t>=mole.hitAt+.34:s.t>=mole.until){
+     if(mole.hitAt===null)s.combo=0;
+     s.holes[i]=null;
+    }
+   }
+   if(s.t>=s.nextPop&&s.time>.35){
+    const free=s.holes.flatMap((mole,i)=>mole?[]:[i]);
+    if(free.length){
+     const i=free[Math.floor(s.random()*free.length)];
+     s.holes[i]={from:s.t,until:s.t+1.33-s.level*.13,hitAt:null};
+    }
+    s.nextPop=s.t+.99-s.level*.10;
+   }
+   if(s.time<=0){s.over=true;s.won=s.caught>=s.goal;}
+   return;
+  }
+  if(isRhythm(s.kind)){for(const n of s.notes)if(!n.judged&&s.t>n.at+s.window){n.judged=true;s.health=Math.max(0,s.health-10);s.combo=0;s.judgement='MISS';s.hit=.2;s.event++;}if(s.health<=0||s.t>=s.duration){s.over=true;s.won=s.health>0;}return;}
   if(s.kind==='pingpong'){
    s.x=clamp(input.pointerX??s.x+dir*dt*.85,.08,.92);
    const b=s.ball;s.ai+=clamp(b.x-s.ai,-.43*dt,.43*dt);s.ai=clamp(s.ai,.1,.9);if(s.serve)return;

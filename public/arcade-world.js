@@ -111,7 +111,19 @@
   c.fillStyle='#080e24';c.fillRect(0,0,w,h);c.strokeStyle=g.colour;c.lineWidth=4;c.strokeRect(8,8,w-16,h-16);c.fillStyle=g.colour;c.font='bold 22px sans-serif';c.textAlign='center';c.fillText(g.subtitle.split(' · ')[0],w/2,38);
   if(kind==='blocks'){for(let i=0;i<24;i++){c.fillStyle=['#a786ff','#51e8ee','#ff75bc'][i%3];c.fillRect(40+i%6*28,185-Math.floor(i/6)*27,24,23);}}
   else if(kind==='shooter'){for(let i=0;i<15;i++){c.fillStyle=i%2?'#ff70bb':'#69f5dd';c.fillRect(40+i%5*38,65+Math.floor(i/5)*32,23,15);}c.fillStyle='#fff';c.beginPath();c.moveTo(128,168);c.lineTo(114,191);c.lineTo(142,191);c.fill();}
-  else{c.strokeStyle=g.colour;c.lineWidth=8;c.beginPath();c.arc(128,126,48,0,Math.PI*2);c.stroke();c.fillStyle='#fff';c.font='bold 46px sans-serif';c.fillText(kind==='racer'?'GO':kind==='pump'?'5 STEP':kind==='reflex'?'9':'★',128,144);}
+  else if(kind==='mole'){
+   c.fillStyle='#3e814e';c.fillRect(24,56,208,146);
+   for(let i=0;i<9;i++){
+    const x=62+i%3*66,y=88+Math.floor(i/3)*45;
+    c.fillStyle='#613d2c';c.beginPath();c.ellipse(x,y,25,12,0,0,Math.PI*2);c.fill();
+    if(i===1||i===6){
+     c.fillStyle='#ae7857';c.beginPath();c.ellipse(x,y-9,17,16,0,0,Math.PI*2);c.fill();
+     c.fillStyle='#f7c599';c.beginPath();c.ellipse(x,y-5,10,6,0,0,Math.PI*2);c.fill();
+     c.fillStyle='#32202b';for(const dx of [-6,6])c.fillRect(x+dx-1,y-15,3,4);
+    }
+   }
+  }
+  else{c.strokeStyle=g.colour;c.lineWidth=8;c.beginPath();c.arc(128,126,48,0,Math.PI*2);c.stroke();c.fillStyle='#fff';c.font='bold 46px sans-serif';c.fillText(kind==='racer'?'GO':kind==='pump'?'5 STEP':'★',128,144);}
   c.fillStyle='#fff';c.font='bold 16px sans-serif';c.fillText('PRESS PLAY',128,236);
  },1,1);}
  const screenGeo=new THREE.PlaneGeometry(.98,.98);

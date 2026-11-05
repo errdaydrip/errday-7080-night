@@ -2,7 +2,16 @@ const assert=require('assert'),A=require('../public/arcade'),C=require('../publi
 const kinds=Object.keys(A.GAMES);assert.strictEqual(kinds.indexOf('pump'),kinds.indexOf('ddr')+1);assert(!kinds.includes('hoops'));assert.strictEqual(kinds.length,10);assert.strictEqual(A.machines.length,18);assert(A.T.x1<require('../public/roller').T.x0,'arcade is beside the rink');assert(A.ENTRY.x<0,'entry across from the red car');
 for(const m of A.machines){assert(A.inside(m.spot.x,m.spot.z));assert(A.GAMES[m.game]);assert(!A.obstacles.some(b=>m.spot.x>b.x0-.25&&m.spot.x<b.x1+.25&&m.spot.z>b.z0-.25&&m.spot.z<b.z1+.25),'play spot clear: '+m.id);}
 const blocks=C.create('blocks',42);blocks.grid[19]=[1,1,1,0,0,0,0,1,1,1];blocks.shape=[[1,1,1,1]];blocks.px=3;blocks.py=0;C.action(blocks,'fire');assert.strictEqual(blocks.lines,1);assert(blocks.score>=100);C.action(blocks,'rotate');assert(!C.collide(blocks,blocks.shape,blocks.px,blocks.py));
-const reflex=C.create('reflex',1);C.action(reflex,'tap'+reflex.target);assert.strictEqual(reflex.score,10);assert.strictEqual(reflex.combo,1);
+const mole=C.create('mole',1);
+C.update(mole,.4);
+const hole=mole.holes.findIndex(Boolean);
+C.action(mole,'tap'+hole);
+assert.strictEqual(mole.score,100);
+assert.strictEqual(mole.holes[hole].hitAt,mole.t);
+C.action(mole,'tap'+hole);
+assert.strictEqual(mole.caught,1,'a mole scores once while retreating');
+C.update(mole,.35);
+assert.strictEqual(mole.holes[hole],null);
 for(const kind of ['rhythm','ddr','pump']){const s=C.create(kind,42),n=s.notes[0];s.t=n.at;C.action(s,'lane'+n.lane);assert.strictEqual(s.score,300);assert.strictEqual(s.judgement,'PERFECT');C.update(s,2);assert(s.health<100,'misses reduce energy');}
 for(const kind of ['hockey']){const s=C.create(kind,3);for(let i=0;i<7;i++){s.serve=false;s.ball={x:.5,y:.001,vx:0,vy:-.4};C.update(s,.02);}assert.strictEqual(s.score,7);assert(s.over&&s.won,'7 point victory');}
 const shooter=C.create('shooter',1);shooter.aliens=[{x:.5,y:.4,alive:true}];shooter.bullets=[{x:.5,y:.41}];C.update(shooter,.01);assert(shooter.score>=100,'shot destroys enemy');

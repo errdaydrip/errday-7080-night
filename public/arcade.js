@@ -8,7 +8,7 @@
   shooter:{name:'갤럭시 슈터',subtitle:'갤러그 스타일',colour:'#4eeaff',controls:'← → 이동 · Space / 발사 버튼'},
   breaker:{name:'네온 벽돌깨기',subtitle:'NEON BREAKER',colour:'#ff65ba',controls:'← → 패들 이동 · 공을 놓치지 마세요'},
   racer:{name:'터보 레이서',subtitle:'TURBO RUN',colour:'#ffd465',controls:'자동차를 터치해서 좌우로 끌거나 ← →로 이동하세요'},
-  reflex:{name:'라이트 터치',subtitle:'LIGHT TAP',colour:'#76ffd5',controls:'빛나는 패널을 클릭·터치 · 키보드 1~9'},
+  mole:{name:'두더지 잡기',subtitle:'MOLE GARDEN',colour:'#9cf586',controls:'올라온 두더지를 터치하거나 숫자 키 1~9를 누르세요'},
   rhythm:{name:'비트 스테이션',subtitle:'4 KEY RHYTHM',colour:'#ed8bff',controls:'D F J K 또는 방향키 · 노트가 판정선에 닿을 때 누르세요'},
   ddr:{name:'댄스 스테이지',subtitle:'DDR 스타일',colour:'#73f4ed',controls:'← ↓ ↑ → 또는 터치 발판 · 박자에 맞춰 누르세요'},
   pump:{name:'펌프',subtitle:'PUMP · 5 STEP',colour:'#ffca70',controls:'↙ ↖ ● ↗ ↘ · 하단 판정선을 터치하거나 Z Q S E C 키로 플레이'},
