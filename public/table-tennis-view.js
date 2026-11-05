@@ -1,6 +1,9 @@
 // Perspective tabletop drawn in the cabinet's existing 480 by 600 canvas.
 (function(root){
- const project=(x,y,z=0)=>[240+(x-.5)*(224+230*y),184+314*y-z*(134+44*y)];
+ function project(x,y,z=0){
+  const depth=y*(.68+.32*y);
+  return [240+(x-.5)*(224+230*depth),184+314*depth-z*(134+44*depth)];
+ }
  function polygon(ctx,points,fill){
   ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
   ctx.closePath();ctx.fillStyle=fill;ctx.fill();

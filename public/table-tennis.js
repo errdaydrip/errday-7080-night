@@ -17,6 +17,20 @@
   end.left-=dt;
   if(end.left<=0){s.rallyEnd=null;point(s,end.player);}
  }
+ function moveSideways(ball,dt){
+  const spin=ball.spin;
+  if(!spin){ball.x+=ball.vx*dt;return;}
+  spin.elapsed+=dt;
+  const progress=Math.min(1,spin.elapsed/spin.duration);
+  const outward=progress<.3;
+  const t=outward?progress/.3:(progress-.3)/.7;
+  const smooth=t*t*(3-2*t);
+  const start=outward?spin.start:spin.bend,end=outward?spin.bend:spin.end;
+  const x=start+(end-start)*smooth;
+  ball.vx=(x-ball.x)/dt;
+  ball.x=x;
+  if(progress===1)ball.spin=null;
+ }
  function update(s,dt,input={}){
   if(s.over)return;
   dt=Math.min(.04,dt);s.t+=dt;s.swing=Math.max(0,s.swing-dt);s.aiSwing=Math.max(0,s.aiSwing-dt);
@@ -25,7 +39,12 @@
   s.y=clamp(input.pointerY===undefined?s.y+(input.axisY??((input.down?1:0)-(input.up?1:0)))*dt*.5:.76+(input.pointerY-.5)*.36,.76,.94);
   // Short motion memory keeps a swipe effective between pointer events.
   const blend=1-Math.exp(-dt/.07);
-  s.strokeX+=(clamp((s.x-oldX)/Math.max(dt,.001),-3,3)-s.strokeX)*blend;
+  // Keep the direction of an outward swipe even at the paddle's travel limit.
+  const drag=input.pointerX!==undefined&&s.lastPointerX!==undefined
+   ?(input.pointerX-s.lastPointerX)/Math.max(dt,.001)
+   :input.axisX??((s.x-oldX)/Math.max(dt,.001));
+  s.lastPointerX=input.pointerX;
+  s.strokeX+=(clamp(drag,-3,3)-s.strokeX)*blend;
   s.strokeY+=(clamp((s.y-oldY)/Math.max(dt,.001),-2,2)-s.strokeY)*blend;
   if(s.rallyEnd){finishFlight(s,dt);return;}
   const progress=1-Math.exp(-Math.max(0,s.level-1)/4);
@@ -42,8 +61,11 @@
   if(s.serve){s.serveTime+=dt;if(s.serveTime>.9)serve(s);return;}
   const b=s.ball,steps=8,h=dt/steps;
   for(let i=0;i<steps&&!s.serve;i++){
-   const prevY=b.y;b.x+=b.vx*h;b.y+=b.vy*h;b.z+=b.vz*h;b.vz-=5.8*h;
-   if((prevY-.5)*(b.y-.5)<0&&b.z<.16){endRally(s,s.last===1,'NET');break;}
+   const prevY=b.y;moveSideways(b,h);b.y+=b.vy*h;b.z+=b.vz*h;b.vz-=5.8*h;
+   if((prevY-.5)*(b.y-.5)<0&&b.z<.16){
+    if(s.last===1){endRally(s,true,'NET');break;}
+    b.z=.16;
+   }
    if(b.z<.025&&b.vz<0){
     if(b.x<.04||b.x>.96||b.y<.04||b.y>.96){
      endRally(s,s.bounces>0?s.last===0:s.last===1,'OUT');break;
@@ -73,11 +95,25 @@
       aimX=aimRight?.91:.09;
       landing=s.cpuReturns%2===0?.79:.74;
      }
-     const flight=Math.abs(landing-b.y)/Math.abs(b.vy);
-     if(player)aimX=b.x+clamp(offset*.4+s.strokeX*.85,-1.15,1.15)*flight;
+     let flight=Math.abs(landing-b.y)/Math.abs(b.vy);
+     b.spin=null;
+     if(player){
+      // Lengthen low returns just enough to clear the net and land on the table.
+      const fraction=(b.y-.5)/(b.y-landing);
+      const heightAtNet=b.z*(1-fraction)+.025*fraction;
+      const clearTime=Math.sqrt(Math.max(0,.19-heightAtNet)/(2.9*fraction*(1-fraction)));
+      flight=Math.max(flight,clearTime);
+      b.vy=(landing-b.y)/flight;
+      aimX=b.x+clamp(offset*.45+s.strokeX*1.15,-1.4,1.4)*flight;
+      const side=b.x<.36?-1:b.x>.64?1:0;
+      if(side&&s.strokeX*side>.16){
+       aimX=side<0?.88:.12;
+       b.spin={start:b.x,bend:clamp(b.x+side*.11,.045,.955),end:aimX,elapsed:0,duration:flight};
+      }
+     }
      const landingX=clamp(aimX,.075,.925);
      b.vx=(landingX-b.x)/flight;
-     b.vz=clamp((2.9*flight*flight-b.z)/flight,.6,3);
+     b.vz=player?(2.9*flight*flight+.025-b.z)/flight:clamp((2.9*flight*flight-b.z)/flight,.6,3);
      s.last=player?0:1;s.bounces=0;cue(s,'hit');if(player)s.swing=.22;else s.aiSwing=.22;
     }
    }

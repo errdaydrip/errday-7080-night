@@ -1,7 +1,7 @@
 // Shared air-hockey physics. Distances and velocities use table-width units.
 (function(root){
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
- const K={aspect:1.25,left:.05,right:.95,top:.075,bottom:.925,paddle:.075,puck:.027,maxPaddle:3.2,maxPuck:2.25,goal0:.33,goal1:.67};
+ const K={aspect:1.25,left:.05,right:.95,top:.075,bottom:.925,paddle:.09,puck:.034,maxPaddle:3.2,maxPuck:2.25,goal0:.33,goal1:.67};
  function create(){return {kind:'hockey',t:0,score:0,opponent:0,over:false,won:false,event:0,hit:0,serve:true,serveSide:0,serveTime:0,paddles:[{x:.5,y:.82,vx:0,vy:0},{x:.5,y:.18,vx:0,vy:0}],ball:{x:.5,y:.68,vx:0,vy:0}};}
  function serve(s,side){if(!s.over&&s.serve&&side===s.serveSide){s.serve=false;s.ball.vx=0;s.ball.vy=side===0?-.44:.44;s.sound='serve';s.event++;}}
  function goal(s,side){if(side===0)s.score++;else s.opponent++;s.sound=side===0?'point':'lost';s.event++;s.serve=true;s.serveSide=1-side;s.serveTime=0;s.ball={x:.5,y:s.serveSide===0?.68:.32,vx:0,vy:0};if(s.score>=7||s.opponent>=7){s.over=true;s.won=s.score>=7;}}

@@ -77,3 +77,31 @@ for (const validBounce of [false, true]) {
   assert.strictEqual(rally.rallyEnd,null);
 }
 console.log('Out flight is visible before correct point award');
+
+// An outward hit on either flank bends out first, then lands crosscourt.
+for (const side of [-1,1]) {
+  const spin = tennis.create();
+  const x=.5+side*.28;
+  Object.assign(spin,{serve:false,x,y:.76,last:1,bounces:1,strokeX:side*2});
+  spin.ball={x,y:.72,z:.065,vx:0,vy:.8,vz:0};
+  tennis.update(spin,1/120,{axisX:side,axisY:-1});
+  assert(spin.ball.spin,'outward flank hit applies spin');
+  const start=spin.ball.x;
+  for(let i=0;i<8;i++)tennis.update(spin,1/120);
+  assert((spin.ball.x-start)*side>.015,'ball visibly bends toward the near sideline first');
+  let netHeight;
+  for(let i=0;i<150&&spin.bounces===0&&!spin.rallyEnd;i++){
+    const y=spin.ball.y;
+    tennis.update(spin,1/120);
+    if(y>.5&&spin.ball.y<=.5)netHeight=spin.ball.z;
+  }
+  assert(netHeight>=.16,'player spin clears the net');
+  assert.strictEqual(spin.bounces,1,'spin lands on the opposing court');
+  assert(side<0?spin.ball.x>.82:spin.ball.x<.18,'spin lands at the opposite corner');
+}
+const lowNet=tennis.create();
+Object.assign(lowNet,{serve:false,last:1});
+lowNet.ball={x:.5,y:.499,z:.1,vx:0,vy:.8,vz:0};
+tennis.update(lowNet,1/60);
+assert.strictEqual(lowNet.rallyEnd.reason,'NET','CPU still faults on the net');
+console.log('Mirrored spin curves land crosscourt and player returns clear the net');
