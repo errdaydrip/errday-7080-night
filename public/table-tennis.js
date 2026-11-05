@@ -48,7 +48,7 @@
   s.strokeY+=(clamp((s.y-oldY)/Math.max(dt,.001),-2,2)-s.strokeY)*blend;
   if(s.rallyEnd){finishFlight(s,dt);return;}
   const progress=1-Math.exp(-Math.max(0,s.level-1)/4);
-  const aiSpeed=.97+.53*progress,aiDelay=.095-.073*progress;
+  const aiSpeed=.58+.92*progress,aiDelay=.2-.178*progress;
   s.aiReaction-=dt;
   if(s.aiReaction<=0){
    const ball=s.ball;
@@ -83,7 +83,7 @@
      const force=player?clamp(Math.hypot(s.strokeX,s.strokeY*1.6)/1.6,0,1):.35;
      const speed=.65+force*.65;
      b.y=player?s.y-.045:.15;
-     b.vy=player?-speed:.98+.35*progress;
+     b.vy=player?-speed:.76+.57*progress;
      // Aim the arc at the opposing half, so harder shots still bounce on the table.
      let landing=.26;
      let aimX;
@@ -92,7 +92,8 @@
       // Usually attack the open corner, with an occasional change down the other side.
       const openRight=s.x<=.5;
       const aimRight=s.cpuReturns%4===0?!openRight:openRight;
-      aimX=aimRight?.91:.09;
+      const spread=.27+.14*progress;
+      aimX=.5+(aimRight?spread:-spread);
       landing=s.cpuReturns%2===0?.79:.74;
      }
      let flight=Math.abs(landing-b.y)/Math.abs(b.vy);

@@ -51,12 +51,10 @@
  }
  function cover(title,desc,button){$('arcadeCoverTitle').textContent=title;$('arcadeCoverText').textContent=desc;$('arcadeStart').textContent=button;$('arcadeCover').classList.remove('hidden');}
  let tennisLevel=1;
- try{const stored=Number(localStorage.getItem('table-tennis-level'));if(Number.isSafeInteger(stored)&&stored>0)tennisLevel=stored;}catch(e){}
  function finishRound(){
   const wonTennis=state.kind==='pingpong'&&state.won;
   if(wonTennis){
    tennisLevel=Math.max(tennisLevel,state.level+1);
-   try{localStorage.setItem('table-tennis-level',String(tennisLevel));}catch(e){}
   }
   save();
   const score=state.kind==='pingpong'
@@ -118,7 +116,7 @@
  function close(){if(!window.ARCADE_PLAYING)return;if(machine?.game==='hockey')socket.emit('hockeyCancelInvite');if(hockeyMatch)socket.emit('hockeyLeave',{id:hockeyMatch.id});save();hockeyMatch=null;hockeyJoining=false;window.ARCADE_HOCKEY_MATCH=null;openVersion++;startPending=false;cancelAnimationFrame(frame);frame=0;running=false;paused=false;input={};state=null;window.ARCADE_ACTIVE_STATE=null;window.ARCADE_PLAYING=false;overlay.classList.add('hidden');document.body.classList.remove('arcade-playing');scene.play();scene.renderer.setAnimationLoop(scene.render);window.ARCADE_DUCK=1;applyVolume();resetRollerMovement();if(focusBefore?.isConnected)focusBefore.focus();refreshAct(true);}
  function openGame(m,invited=false){
   if(!joined||!m||!invited&&(!A.inside(rig.object3D.position.x,rig.object3D.position.z)||Math.hypot(rig.object3D.position.x-m.spot.x,rig.object3D.position.z-m.spot.z)>2.1))return false;
-  if(window.ARCADE_PLAYING)close();hockeyMode='practice';hockeyMatch=null;netFrom=null;netTo=null;openVersion++;sessionToken=null;startPending=false;$('arcadeStart').disabled=false;gameMeta=A.GAMES[m.game];machine=m;state=createGame(m.game);window.ARCADE_ACTIVE_STATE=state;focusBefore=document.activeElement;window.ARCADE_PLAYING=true;scene.pause();scene.renderer.setAnimationLoop(null);window.ARCADE_DUCK=.3;applyVolume();resetRollerMovement();window.RUN_HOLD=false;myDance=0;myYaw=m.yaw??Math.atan2(m.x-m.spot.x,m.z-m.spot.z);socket.emit('move',{pos:rig.object3D.position.toArray(),rot:myYaw,dance:0});input={};saved=false;running=false;paused=false;try{best=+localStorage.getItem('arcade-best-'+m.game)||0;}catch(e){best=0;}
+  if(window.ARCADE_PLAYING)close();hockeyMode='practice';hockeyMatch=null;netFrom=null;netTo=null;openVersion++;sessionToken=null;startPending=false;$('arcadeStart').disabled=false;gameMeta=A.GAMES[m.game];machine=m;if(m.game==='pingpong')tennisLevel=1;state=createGame(m.game);window.ARCADE_ACTIVE_STATE=state;focusBefore=document.activeElement;window.ARCADE_PLAYING=true;scene.pause();scene.renderer.setAnimationLoop(null);window.ARCADE_DUCK=.3;applyVolume();resetRollerMovement();window.RUN_HOLD=false;myDance=0;myYaw=m.yaw??Math.atan2(m.x-m.spot.x,m.z-m.spot.z);socket.emit('move',{pos:rig.object3D.position.toArray(),rot:myYaw,dance:0});input={};saved=false;running=false;paused=false;try{best=+localStorage.getItem('arcade-best-'+m.game)||0;}catch(e){best=0;}
   $('arcadeTitle').textContent=gameMeta.name;$('arcadeHelp').textContent=IS_MOBILE?({blocks:'← → 이동 · ↻ 회전 · ↓ 빠르게 · 내리기',shooter:'화면을 드래그하거나 ← →로 이동 · 발사 버튼 누르기',breaker:'화면을 드래그하거나 ← →로 패들 이동',racer:'← →로 차선을 바꿔 자동차를 피하세요',hoops:'슛 버튼을 눌러 움직이는 골대를 맞히세요',reflex:'빛나는 패널을 터치하세요',rhythm:'노트가 판정선에 닿을 때 방향 버튼을 터치하세요 · 125 BPM',ddr:'박자에 맞춰 아래 발판을 터치하세요 · 125 BPM',pingpong:'화면을 드래그해 라켓 이동 · 서브 버튼',hockey:'패들을 드래그해 밀어보세요 · 빠르게 밀수록 강타 · 서브 버튼'}[m.game]||gameMeta.controls):gameMeta.controls;$('arcadeBest').textContent=best;overlay.classList.toggle('table-game',['hockey','pingpong'].includes(m.game));controls();overlay.classList.remove('hidden');document.body.classList.add('arcade-playing');cover(gameMeta.name,gameMeta.subtitle,m.game==='hockey'?'게임시작':'게임 시작');$('arcadeStart').focus();last=performance.now();cancelAnimationFrame(frame);frame=requestAnimationFrame(loop);return true;
  };
  window.openArcadeGame=id=>openGame(A.machines.find(q=>q.id===id));
@@ -164,8 +162,8 @@
    const arrows=['←','↓','↑','→'];for(let i=0;i<4;i++){box(30+i*107,60,98,485,i%2?'#152642':'#101f38',3);text(arrows[i],79+i*107,530,45,g.colour);}line(30,504,450,504,'#fff',3);for(const n of state.notes){const y=(.84-(n.at-state.t)*.42)*H;if(!n.judged&&y>50&&y<560){box(39+n.lane*107,y-20,80,38,colours[n.lane],8);text(arrows[n.lane],79+n.lane*107,y+13,34,'#11233b');}}text(state.judgement,240,32,19,'#a7f7e3');text(state.combo+' COMBO',240,588,18,'#d8b9ff');
   }else if(state.kind==='pingpong'){
    TABLE_TENNIS_VIEW.draw(ctx,state);
-  }else{
-   const hockey=state.kind==='hockey';box(hockey?24:20,45,hockey?432:440,hockey?510:520,hockey?'#d5e7ed':'#206291',18);ctx.setLineDash([9,9]);line(25,300,455,300,hockey?'#547493':'#caefff',2);ctx.setLineDash([]);if(hockey){ctx.strokeStyle='#7b9cba';ctx.lineWidth=3;ctx.beginPath();ctx.arc(240,300,70,0,7);ctx.stroke();box(.33*W,39,.34*W,12,'#ff87ba',2);box(.33*W,549,.34*W,12,'#73caff',2);for(let i=0;i<2;i++){const p=state.paddles[i],r=AIR_HOCKEY.K.paddle*W;ball(p.x*W+2,p.y*H+4,r+2,'#0005');ball(p.x*W,p.y*H,r,i?'#5496eb':'#ef5f9c');ball(p.x*W,p.y*H,r*.65,i?'#2466b4':'#bc2866');ball(p.x*W-4,p.y*H-5,r*.32,i?'#83bcff':'#ffaccd');}ball(state.ball.x*W,state.ball.y*H,AIR_HOCKEY.K.puck*W,'#15283b');}else{box(state.x*W-51,.84*H,102,13,'#fc8d9c');box(state.ai*W-51,.16*H-13,102,13,'#96e9ff');ball(state.ball.x*W,state.ball.y*H,8,'#fff6d0');}text(state.score+' : '+state.opponent,240,32,20,'#c0e6ff');if(state.serve)text(state.kind==='hockey'&&state.serveSide===1?'상대 서브':'SPACE / 서브',240,350,23,hockey?'#243f5d':'#d4f5ff');
+  }else if(state.kind==='hockey'){
+   AIR_HOCKEY_VIEW.draw(ctx,state);
   }
   if(state.hit>0){ctx.fillStyle='rgba(255,76,120,.12)';ctx.fillRect(0,0,W,H);}
  }
