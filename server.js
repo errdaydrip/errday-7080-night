@@ -227,7 +227,9 @@ function poolShot(id,a,p,sx,sy){sx=Math.max(-1,Math.min(1,+sx||0));sy=Math.max(-
  if(!over&&!keep&&!scratch)msg=`다음: ${pool.players[pool.turn].nick}`;
  pool.msg=msg;pool.over=over;pool.shots++;pool.t=Date.now();pool.busy=Date.now()+r.steps/240*1000+300;pool.deadline=over?0:pool.busy+POOL_TURN;
  return{ok:true,shot:{by:id,nick:pl.nick,a,p,before,sx,sy},msg,over};}
+const rollerSocial=require('./roller-social').create({io,players,dirty});
 io.on('connection',s=>{
+ rollerSocial.attach(s);
 
  [0,1,2].forEach(b=>s.emit('dartState',{b,g:DG.pub(dartGames[b]),recs:dartRecs[b],top:dartTop()}));
  const bOf=v=>Math.max(0,Math.min(2,v|0)),A=f=>typeof f==='function'?f:()=>{};
@@ -299,6 +301,7 @@ io.on('connection',s=>{
  s.on('move',m=>{
   const pl=players[s.id];
   if(!pl||!m||!Array.isArray(m.pos)||m.pos.length!==3||!m.pos.every(Number.isFinite))return;
+  if(rollerSocial.isFollowing(s.id))return;
   const admin=isAdmin(s.data.adminToken),wasRoller=ROLLER.inside(pl.pos[0],pl.pos[2]),willRoller=ROLLER.inside(m.pos[0],m.pos[2]);
   if(!clubOpen&&!admin&&m.pos[2]<12){
    if(pl.pos[2]<12)ejectClubPlayer(s.id);

@@ -1,0 +1,23 @@
+const assert=require('assert');
+const {create,behind}=require('../roller-social');
+const player=(x,z)=>({pos:[x,0,z],rot:0,rollerSkates:true,seat:null});
+const players={a:player(10,40),b:player(10,39.1),c:player(10,38.2),d:player(10,39.1)};
+const events=[];
+const social=create({players,dirty:new Set(),io:{emit:(event,data)=>events.push({event,data})}});
+social.close();
+assert(behind(players.b,players.a));
+assert(!behind(players.a,players.b),'connection requires being behind');
+assert(social.connect('b','a'));
+assert(social.connect('c','b'));
+assert(!social.connect('d','a'),'one follower per back');
+assert(!social.connect('a','c'),'cycle rejected');
+for(let i=0;i<80;i++){players.a.pos=[10+Math.max(0,i-30)*.025,0,40+Math.min(i,30)*.04];players.a.rot=i>30?Math.PI/2:0;social.tick(.05);}
+assert(players.b.pos[0]>10.2&&players.b.pos[2]>40.8,'follower negotiates turn');
+assert(players.c.pos[2]>40.5,'chained follower follows path');
+social.leave('b');assert(!social.isFollowing('b'));assert(social.isFollowing('c'),'rear section can remain joined');
+players.b.gone=Date.now();social.tick(.05);assert(!social.isFollowing('c'),'disconnect releases follower');
+const handlers={};social.attach({id:'a',emit(){},on:(name,handler)=>handlers[name]=handler});
+let reply;handlers.rollerBackwards(true,q=>reply=q);assert(reply.ok);assert(events.at(-1).data.a.backwards);
+players.a.seat='R1';social.tick(.05);handlers.rollerBackwards(true,q=>reply=q);assert(!reply.ok,'seated visitor cannot enable skate mode');
+assert(!social.connect('d','a'),'seated leader rejected');
+console.log('roller social: rear attachment, train chains, turns, cycles, manual release, disconnect and backwards OK');

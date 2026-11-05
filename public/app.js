@@ -90,7 +90,7 @@ async function buildAvatar(root,p,mine){if(root._h){HUMANS.delete(root._h);root.
  const tag=document.createElement('a-entity');tag.classList.add('tag');tag.setAttribute('position','0 1.78 0');tag.setAttribute('billboard','');
  tag.setAttribute('ktext',`value:${(p.nick||'').replace(/;/g,' ')};color:#fff;glow:#ff3cac;size:40;width:.9;top:true`);tag.dataset.nick=p.nick||'';tag.setAttribute('tag-follow','');root.appendChild(tag);
  const bub=document.createElement('a-entity');bub.classList.add('bubble');bub.setAttribute('position','0 2.12 0');bub.setAttribute('billboard','');bub.setAttribute('visible',false);root.appendChild(bub);
- const h=await makeHuman(root,humanOpts(p));if(!h||root._tok!==token){if(h)h.dispose();return;}root._h=h;HUMANS.add(h);h.after=(t,c)=>dartPose(root,mine?myId:p.id,c);}
+ const h=await makeHuman(root,humanOpts(p));if(!h||root._tok!==token){if(h)h.dispose();return;}root._h=h;HUMANS.add(h);h.after=(t,c)=>{dartPose(root,mine?myId:p.id,c);window.rollerSocial?.pose(mine?myId:p.id,c);};}
 function upsertOther(p){if(p.id===myId)return;let o=others[p.id];
  if(!o){const el=document.createElement('a-entity');$('others').appendChild(el);o=others[p.id]={el,target:new THREE.Vector3(...(p.pos||[0,0,4])),rot:p.rot||0};el.object3D.position.copy(o.target);}
  const key=[p.nick,p.gender,p.style,p.outfit,p.top,p.bottom,p.acc,p.hair,p.face,p.beard,p.skin,p.skateBoot,p.skateWheel,p.skateLace,p.rollerSkates].join('|');if(o.key!==key){o.key=key;buildAvatar(o.el,p);}if(p.drinks&&o.el._h&&!(o.el._h.drinks||[]).length)o.el._h.drinks=p.drinks.slice();if(p.pos){if(ROLLER.inside(o.target.x,o.target.z)!==ROLLER.inside(p.pos[0],p.pos[2]))o.el.object3D.position.set(...p.pos);o.target.set(...p.pos);}o.data=p;o.dance=p.dance||0;applySeatPose(o,p.seat);}
@@ -140,6 +140,7 @@ function tapAt(x,y){if(window.ARCADE_PLAYING||!joined||rollerSelectOpen||!$('ent
 // 무대 ↔ 바닥 이동은 계단을 거쳐서
 let route=[];
 function setRoute(x,z){
+ window.rollerSocial?.manual();
  const rp=rig.object3D.position;
  if(window.IN_ARCADE||ARCADE.inside(x,z)){
   route=[];const dest=ARCADE.inside(x,z);
@@ -199,7 +200,9 @@ function updateWhere(){document.body.classList.toggle('seated',!!mySeat);documen
 AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const p=rig.object3D.position;moving=false;
  if(joined&&!window.ARCADE_PLAYING&&!rollerSelectOpen&&$('entry').classList.contains('hidden')){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),r=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
   let mx=0,mz=0,ignore=null,spd=1;if(joyX||joyY){f=-joyY;r=joyX;spd=Math.min(1,Math.hypot(f,r));}
-  if(f||r){if(mySeat)stand();const fx=-Math.sin(camYaw),fz=-Math.cos(camYaw),rx=Math.cos(camYaw),rz=-Math.sin(camYaw);mx=fx*f+rx*r;mz=fz*f+rz*r;}
+  const following=window.rollerSocial?.tick(dt,!!(f||r));
+  if(following){mx=mz=0;}
+  else if(f||r){if(mySeat)stand();const fx=-Math.sin(camYaw),fz=-Math.cos(camYaw),rx=Math.cos(camYaw),rz=-Math.sin(camYaw);mx=fx*f+rx*r;mz=fz*f+rz*r;}
   else if(goal&&!mySeat){mx=goal.x-p.x;mz=goal.z-p.z;const d=Math.hypot(mx,mz);if(goalSeat&&!goalSeat.stand)ignore=tableCenter(goalSeat.table);
    if(d<.12&&route.length){goal=route.shift();}else if(d<.12||(goalSeat&&d<.8)){if(goalSeat){sit(goalSeat);}goal=null;mx=mz=0;marker.setAttribute('visible',false);}}
   const l=Math.hypot(mx,mz);
@@ -215,7 +218,7 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
  let rollerMotion='idle';
  if(moving)rollerMotion=(keys.ShiftLeft||window.RUN_HOLD)?'run':'skate';
  if(jumpV!==null)rollerMotion='jump';
- myAv.object3D.rotation.y=myYaw;
+ myAv.object3D.rotation.y=myYaw+(window.IN_ROLLER&&window.rollerSocial?.backwards()?Math.PI:0);
  if(myAv._h){
   if(me.rollerSkates&&!mySeat)myAv._h.play(SKATE_ANIMATION[rollerMotion]);
   else myAv._h.play(mySeat?'Sitting_Idle_Loop':(moving?'Walk_Loop':(myDance?'Dance_'+myDance:'Idle_Loop')));
@@ -231,7 +234,7 @@ AFRAME.registerComponent('my-sync',{tick(t,dt){dt=Math.min(dt||16,50)/1000;const
  const dir=new THREE.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
  {const bt=!mySeat&&p.x>10.45&&p.x<11.6&&p.z>-2.2&&p.z<7.5;const hit=camHit(tx,ty,tz,dir,d,bt);const want=Math.max(1.0,Math.min(d,hit-.3));if(this.cd===undefined||want<this.cd)this.cd=want;else this.cd+=(want-this.cd)*Math.min(1,dt*6);d=this.cd;}
  const cx=tx+dir.x*d,cy=ty+dir.y*d,cz=tz+dir.z*d;cam.object3D.position.set(cx,cy,cz);{const hide=cx>11.25&&cz>-2.5&&cz<8.5;if(hide!==window._shelfHid){window._shelfHid=hide;for(const e of (window.SHELF_EL||[]))e.object3D.visible=!hide;}}cam.object3D.lookAt(2*cx-tx,2*cy-ty,2*cz-tz);hideWalls(tx,ty,tz,cx,cy,cz);theaterFov(cx,cy,cz);
- if(joined&&(!this.last||t-this.last>100)){this.last=t;const k=p.x.toFixed(2)+p.z.toFixed(2)+p.y.toFixed(2)+myYaw.toFixed(2)+myDance;if(k!==this.k){this.k=k;socket.emit('move',{pos:[p.x,p.y,p.z],rot:myYaw,dance:myDance});}}}});
+ if(joined&&(!this.last||t-this.last>100)){this.last=t;const k=p.x.toFixed(2)+p.z.toFixed(2)+p.y.toFixed(2)+myAv.object3D.rotation.y.toFixed(2)+myDance;if(k!==this.k){this.k=k;socket.emit('move',{pos:[p.x,p.y,p.z],rot:myAv.object3D.rotation.y,dance:myDance});}}}});
 scene.setAttribute('my-sync','');
 // 가상 조이스틱 (모바일): 카메라 기준 방향, 거리=속도
 let joyX=0,joyY=0,joyId=null;{const J=$('mob'),K=$('joyKnob'),R=60;

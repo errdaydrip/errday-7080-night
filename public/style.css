@@ -232,3 +232,12 @@ body:has(#poolUI) #keyHint,body:has(#poolUI) #runBtn,body:has(#poolUI) #jumpBtn,
 .roller-select-actions {display:flex;gap:10px;margin-top:20px;}
 .roller-select-actions button {flex:1;margin:0;padding:12px 6px;font-size:14px;}
 @media(max-height:650px){#rollerPreview{height:95px}.roller-colour-row{margin:9px 0}#rollerSelect{padding:14px}}
+
+#where{display:none!important}
+#rollerSocialControls{position:fixed;right:14px;top:calc(50% - 140px);display:flex;flex-direction:column;gap:10px;z-index:25}
+#rollerSocialControls[hidden]{display:none}
+#rollerSocialControls button{padding:11px 15px;min-height:44px;border:1px solid #ffcf3f;border-radius:12px;background:#290d2de8;color:#fff5c6;font-weight:700;cursor:pointer;touch-action:manipulation}
+#rollerSocialControls button[aria-pressed=true]{background:#79315d;color:white;border-color:#ff8de2}
+@media(max-width:600px){#rollerSocialControls{right:8px;top:38%}#rollerSocialControls button{padding:10px;font-size:12px}}
+
+body:has(#rollerSelect:not(.hidden)) #rollerSocialControls,body:has(#entry:not(.hidden)) #rollerSocialControls,body.typing #rollerSocialControls{display:none}
