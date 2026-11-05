@@ -3,8 +3,8 @@
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  const K={aspect:1.25,left:.05,right:.95,top:.075,bottom:.925,paddle:.075,puck:.027,maxPaddle:3.2,maxPuck:2.25,goal0:.33,goal1:.67};
  function create(){return {kind:'hockey',t:0,score:0,opponent:0,over:false,won:false,event:0,hit:0,serve:true,serveSide:0,serveTime:0,paddles:[{x:.5,y:.82,vx:0,vy:0},{x:.5,y:.18,vx:0,vy:0}],ball:{x:.5,y:.68,vx:0,vy:0}};}
- function serve(s,side){if(!s.over&&s.serve&&side===s.serveSide){s.serve=false;s.ball.vx=0;s.ball.vy=side===0?-.44:.44;s.event++;}}
- function goal(s,side){if(side===0)s.score++;else s.opponent++;s.event++;s.serve=true;s.serveSide=1-side;s.serveTime=0;s.ball={x:.5,y:s.serveSide===0?.68:.32,vx:0,vy:0};if(s.score>=7||s.opponent>=7){s.over=true;s.won=s.score>=7;}}
+ function serve(s,side){if(!s.over&&s.serve&&side===s.serveSide){s.serve=false;s.ball.vx=0;s.ball.vy=side===0?-.44:.44;s.sound='serve';s.event++;}}
+ function goal(s,side){if(side===0)s.score++;else s.opponent++;s.sound=side===0?'point':'lost';s.event++;s.serve=true;s.serveSide=1-side;s.serveTime=0;s.ball={x:.5,y:s.serveSide===0?.68:.32,vx:0,vy:0};if(s.score>=7||s.opponent>=7){s.over=true;s.won=s.score>=7;}}
  function target(p,i,dt,t){const r=K.paddle;let x=clamp(Number.isFinite(t?.x)?t.x:p.x,K.left+r,K.right-r),y=clamp(Number.isFinite(t?.y)?t.y:p.y,i===0?.5+r/K.aspect:K.top+r/K.aspect,i===0?K.bottom-r/K.aspect:.5-r/K.aspect);
   const dx=x-p.x,dy=(y-p.y)*K.aspect,d=Math.hypot(dx,dy),k=d?Math.min(1,K.maxPaddle*dt/d):0;p.vx=dx*k/dt;p.vy=dy*k/dt;p.x+=dx*k;p.y+=dy*k/K.aspect;
  }
@@ -16,12 +16,12 @@
    for(const p of s.paddles){const dx=b.x-p.x,dy=(b.y-p.y)*K.aspect,d=Math.hypot(dx,dy),r=K.paddle+K.puck;if(d>=r)continue;
     const nx=d>1e-8?dx/d:0,ny=d>1e-8?dy/d:(p===s.paddles[0]?-1:1);b.x=p.x+nx*(r+.0001);b.y=p.y+ny*(r+.0001)/K.aspect;
     const closing=(b.vx-p.vx)*nx+(b.vy-p.vy)*ny;
-    if(closing<0){b.vx-=1.65*closing*nx;b.vy-=1.65*closing*ny;const speed=Math.hypot(b.vx,b.vy);if(speed>K.maxPuck){b.vx*=K.maxPuck/speed;b.vy*=K.maxPuck/speed;}s.event++;}
+    if(closing<0){b.vx-=1.65*closing*nx;b.vy-=1.65*closing*ny;const speed=Math.hypot(b.vx,b.vy);if(speed>K.maxPuck){b.vx*=K.maxPuck/speed;b.vy*=K.maxPuck/speed;}s.sound='hit';s.event++;}
    }
-   if(b.x<K.left+K.puck){b.x=K.left+K.puck;b.vx=Math.abs(b.vx)*.96;s.event++;}else if(b.x>K.right-K.puck){b.x=K.right-K.puck;b.vx=-Math.abs(b.vx)*.96;s.event++;}
+   if(b.x<K.left+K.puck){b.x=K.left+K.puck;b.vx=Math.abs(b.vx)*.96;s.sound='rail';s.event++;}else if(b.x>K.right-K.puck){b.x=K.right-K.puck;b.vx=-Math.abs(b.vx)*.96;s.sound='rail';s.event++;}
    const inGoal=b.x>K.goal0+K.puck&&b.x<K.goal1-K.puck;
-   if(b.y<K.top+K.puck/K.aspect){if(inGoal){if(b.y<K.top-K.puck/K.aspect){goal(s,0);continue;}}else{b.y=K.top+K.puck/K.aspect;b.vy=Math.abs(b.vy)*.96;s.event++;}}
-   if(b.y>K.bottom-K.puck/K.aspect){if(inGoal){if(b.y>K.bottom+K.puck/K.aspect){goal(s,1);continue;}}else{b.y=K.bottom-K.puck/K.aspect;b.vy=-Math.abs(b.vy)*.96;s.event++;}}
+   if(b.y<K.top+K.puck/K.aspect){if(inGoal){if(b.y<K.top-K.puck/K.aspect){goal(s,0);continue;}}else{b.y=K.top+K.puck/K.aspect;b.vy=Math.abs(b.vy)*.96;s.sound='rail';s.event++;}}
+   if(b.y>K.bottom-K.puck/K.aspect){if(inGoal){if(b.y>K.bottom+K.puck/K.aspect){goal(s,1);continue;}}else{b.y=K.bottom-K.puck/K.aspect;b.vy=-Math.abs(b.vy)*.96;s.sound='rail';s.event++;}}
    const radius=.13;
    for(const [cx,cy,sx,sy] of [[K.left+radius,K.top+radius/K.aspect,-1,-1],[K.right-radius,K.top+radius/K.aspect,1,-1],[K.left+radius,K.bottom-radius/K.aspect,-1,1],[K.right-radius,K.bottom-radius/K.aspect,1,1]]){
     if((b.x-cx)*sx<=0||(b.y-cy)*sy<=0)continue;
@@ -55,7 +55,7 @@
   for(let offset=.03;offset<=.3;offset+=.03){
    const x=cx+sx*offset,y=cy+sy*offset/K.aspect;
    if(s.paddles.some(p=>Math.hypot(x-p.x,(y-p.y)*K.aspect)<K.paddle+K.puck+.005))continue;
-   b.x=x;b.y=y;b.vx=sx*.45;b.vy=sy*.45;s.event++;break;
+   b.x=x;b.y=y;b.vx=sx*.45;b.vy=sy*.45;s.sound='rail';s.event++;break;
   }
   s.cornerWatch=null;
  }

@@ -58,3 +58,22 @@ for (let frame = 0; frame < 80 && changeUp.bounces === 0 && !changeUp.serve; fra
 assert.strictEqual(changeUp.bounces, 1, 'straight shot lands legally');
 assert(changeUp.ball.x > .84 && changeUp.ball.y > .76, 'straight return lands deep on the same side');
 console.log('CPU anticipates wide shots and mixes legal crosscourt and straight returns');
+
+// A side exit must remain visible before the score changes, with correct ownership.
+for (const validBounce of [false, true]) {
+  const rally = tennis.create();
+  Object.assign(rally,{serve:false,last:0,bounces:validBounce?1:0});
+  rally.ball={x:1.01,y:.35,z:.024,vx:.6,vy:-.4,vz:-.2};
+  tennis.update(rally,1/60);
+  assert.strictEqual(rally.rallyEnd.reason,'OUT');
+  assert.strictEqual(rally.score+rally.opponent,0,'score waits for the out animation');
+  const exitX=rally.ball.x;
+  for(let i=0;i<12;i++)tennis.update(rally,1/60);
+  assert(rally.ball.x>exitX,'ball continues past the table');
+  assert.strictEqual(rally.score+rally.opponent,0);
+  for(let i=0;i<20;i++)tennis.update(rally,1/60);
+  assert.strictEqual(rally.score,validBounce?1:0);
+  assert.strictEqual(rally.opponent,validBounce?0:1);
+  assert.strictEqual(rally.rallyEnd,null);
+}
+console.log('Out flight is visible before correct point award');
