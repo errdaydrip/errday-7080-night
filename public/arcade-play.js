@@ -6,6 +6,9 @@
  const $=id=>document.getElementById(id),canvas=$('arcadeCanvas'),ctx=canvas.getContext('2d'),W=480,H=600;
  let state=null,machine=null,gameMeta=null,input={},running=false,paused=false,frame=0,last=0,best=0,saved=false,focusBefore=null,repeat=0,audio=null,lastEvent=0,lastBeat=-99,sessionToken=null,startPending=false,openVersion=0;
  let hockeyMode='practice',hockeyMatch=null,hockeyJoining=false,netSeq=0,netSend=0,netServe=false,netTarget={x:.5,y:.82},netFrom=null,netTo=null,netAt=0;
+ const pumpArrows=['↙','↖','●','↗','↘'];
+ const pumpColours=['#4edbff','#8878ff','#ffd968','#ff7794','#6ce1ff'];
+ const pumpTop=70,pumpLine=495,pumpLaneWidth=88,pumpLeft=20;
  const colours=['#69ecfa','#b08cff','#ff85c4','#83edbc','#ffd16c','#8baaff','#ff9875'];
  const text=(v,x,y,size=22,c='#fff',align='center')=>{ctx.font=`bold ${size}px system-ui,sans-serif`;ctx.fillStyle=c;ctx.textAlign=align;ctx.fillText(v,x,y);};
  const box=(x,y,w,h,c,r=7)=>{ctx.fillStyle=c;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();};
@@ -33,7 +36,7 @@
    else tone(cue==='serve'?570:395,190,.065,.16);
   }catch(e){}
  }
- function rhythmBeat(beat){if(typeof muted!=='undefined'&&muted)return;try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();audio.resume();const now=audio.currentTime,osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.setValueAtTime(beat%2?120:180,now);osc.frequency.exponentialRampToValueAtTime(45,now+.12);gain.gain.setValueAtTime(.085,now);gain.gain.exponentialRampToValueAtTime(.001,now+.16);osc.connect(gain);gain.connect(audio.destination);osc.start();osc.stop(now+.17);if(beat>=0){const melody=audio.createOscillator(),g=audio.createGain(),notes=[262,330,392,523,440,392,330,294];melody.type='triangle';melody.frequency.value=notes[beat%8];g.gain.setValueAtTime(.022,now);g.gain.exponentialRampToValueAtTime(.001,now+.25);melody.connect(g);g.connect(audio.destination);melody.start();melody.stop(now+.26);}}catch(e){}}
+ function rhythmBeat(beat){if(typeof muted!=='undefined'&&muted)return;try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();audio.resume();const now=audio.currentTime,osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.setValueAtTime(beat%2?120:180,now);osc.frequency.exponentialRampToValueAtTime(45,now+.12);gain.gain.setValueAtTime(.085,now);gain.gain.exponentialRampToValueAtTime(.001,now+.16);osc.connect(gain);gain.connect(audio.destination);osc.start();osc.stop(now+.17);if(beat>=0){const melody=audio.createOscillator(),g=audio.createGain(),notes=state.kind==='pump'?[196,247,294,392,330,294,247,220]:[262,330,392,523,440,392,330,294];melody.type='triangle';melody.frequency.value=notes[beat%8];g.gain.setValueAtTime(.022,now);g.gain.exponentialRampToValueAtTime(.001,now+.25);melody.connect(g);g.connect(audio.destination);melody.start();melody.stop(now+.26);}}catch(e){}}
  function save(){
   if(saved||!state||hockeyMatch||hockeyJoining)return;
   saved=true;
@@ -89,7 +92,7 @@
   stick.onpointerup=release;stick.onpointercancel=release;stick.onlostpointercapture=release;
   container.append(stick);
  }
- function controls(){const table=['hockey','pingpong'].includes(state.kind);const rhythm=['rhythm','ddr'].includes(state.kind),bs=table?[['up','↑'],['left','←'],['down','↓'],['right','→']]:rhythm?[['lane0','←'],['lane1','↓'],['lane2','↑'],['lane3','→']]:state.kind==='blocks'?[['left','←'],['down','↓'],['rotate','↻'],['right','→'],['fire','내리기']]:state.kind==='hoops'?[['fire','슛']]:state.kind==='reflex'?[]:state.kind==='hockey'?[['left','←'],['up','↑'],['down','↓'],['right','→'],['fire','서브 / 강타']]:[['left','←'],['right','→'],...(['shooter','pingpong'].includes(state.kind)?[['fire',state.kind==='shooter'?'발사':'서브']]:[])];
+ function controls(){const table=['hockey','pingpong'].includes(state.kind);const rhythm=C.isRhythm(state.kind),bs=table?[['up','↑'],['left','←'],['down','↓'],['right','→']]:state.kind==='pump'?pumpArrows.map((arrow,i)=>['lane'+i,arrow]):rhythm?[['lane0','←'],['lane1','↓'],['lane2','↑'],['lane3','→']]:state.kind==='blocks'?[['left','←'],['down','↓'],['rotate','↻'],['right','→'],['fire','내리기']]:state.kind==='reflex'?[]:state.kind==='hockey'?[['left','←'],['up','↑'],['down','↓'],['right','→'],['fire','서브 / 강타']]:[['left','←'],['right','→'],...(['shooter','pingpong'].includes(state.kind)?[['fire',state.kind==='shooter'?'발사':'서브']]:[])];
   const el=$('arcadeControls');el.innerHTML='';if(table){joystick(el);return;}for(const [key,label] of bs){if(state.kind==='reflex')continue;const b=document.createElement('button');b.type='button';b.dataset.input=key;b.textContent=label;b.setAttribute('aria-label',label==='←'?'왼쪽':label==='→'?'오른쪽':label==='↓'?'아래':label==='↑'?'위':label);b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);delete input.pointerX;delete input.pointerY;press(key)};const release=()=>{input[key]=false;};b.onpointerup=release;b.onpointercancel=release;el.appendChild(b);}
 
  }
@@ -116,18 +119,22 @@
  function close(){if(!window.ARCADE_PLAYING)return;if(machine?.game==='hockey')socket.emit('hockeyCancelInvite');if(hockeyMatch)socket.emit('hockeyLeave',{id:hockeyMatch.id});save();hockeyMatch=null;hockeyJoining=false;window.ARCADE_HOCKEY_MATCH=null;openVersion++;startPending=false;cancelAnimationFrame(frame);frame=0;running=false;paused=false;input={};state=null;window.ARCADE_ACTIVE_STATE=null;window.ARCADE_PLAYING=false;overlay.classList.add('hidden');document.body.classList.remove('arcade-playing');scene.play();scene.renderer.setAnimationLoop(scene.render);window.ARCADE_DUCK=1;applyVolume();resetRollerMovement();if(focusBefore?.isConnected)focusBefore.focus();refreshAct(true);}
  function openGame(m,invited=false){
   if(!joined||!m||!invited&&(!A.inside(rig.object3D.position.x,rig.object3D.position.z)||Math.hypot(rig.object3D.position.x-m.spot.x,rig.object3D.position.z-m.spot.z)>2.1))return false;
-  if(window.ARCADE_PLAYING)close();hockeyMode='practice';hockeyMatch=null;netFrom=null;netTo=null;openVersion++;sessionToken=null;startPending=false;$('arcadeStart').disabled=false;gameMeta=A.GAMES[m.game];machine=m;if(m.game==='pingpong'||m.game==='hockey')tableLevel=1;state=createGame(m.game);window.ARCADE_ACTIVE_STATE=state;focusBefore=document.activeElement;window.ARCADE_PLAYING=true;scene.pause();scene.renderer.setAnimationLoop(null);window.ARCADE_DUCK=['rhythm','ddr'].includes(m.game)?0:.3;applyVolume();resetRollerMovement();window.RUN_HOLD=false;myDance=0;myYaw=m.yaw??Math.atan2(m.x-m.spot.x,m.z-m.spot.z);socket.emit('move',{pos:rig.object3D.position.toArray(),rot:myYaw,dance:0});input={};saved=false;running=false;paused=false;try{best=+localStorage.getItem('arcade-best-'+m.game)||0;}catch(e){best=0;}
-  $('arcadeTitle').textContent=gameMeta.name;$('arcadeHelp').textContent=IS_MOBILE?({blocks:'← → 이동 · ↻ 회전 · ↓ 빠르게 · 내리기',shooter:'화면을 드래그하거나 ← →로 이동 · 발사 버튼 누르기',breaker:'화면을 드래그하거나 ← →로 패들 이동',racer:'← →로 차선을 바꿔 자동차를 피하세요',hoops:'슛 버튼을 눌러 움직이는 골대를 맞히세요',reflex:'빛나는 패널을 터치하세요',rhythm:'노트가 판정선에 닿을 때 방향 버튼을 터치하세요 · 125 BPM',ddr:'박자에 맞춰 아래 발판을 터치하세요 · 125 BPM',pingpong:'화면을 드래그해 라켓 이동 · 서브 버튼',hockey:'패들을 드래그해 밀어보세요 · 빠르게 밀수록 강타 · 서브 버튼'}[m.game]||gameMeta.controls):gameMeta.controls;$('arcadeBest').textContent=best;overlay.classList.toggle('table-game',['hockey','pingpong'].includes(m.game));controls();overlay.classList.remove('hidden');document.body.classList.add('arcade-playing');cover(gameMeta.name,gameMeta.subtitle,m.game==='hockey'?'게임시작':'게임 시작');$('arcadeStart').focus();last=performance.now();cancelAnimationFrame(frame);frame=requestAnimationFrame(loop);return true;
+  if(window.ARCADE_PLAYING)close();hockeyMode='practice';hockeyMatch=null;netFrom=null;netTo=null;openVersion++;sessionToken=null;startPending=false;$('arcadeStart').disabled=false;gameMeta=A.GAMES[m.game];machine=m;if(m.game==='pingpong'||m.game==='hockey')tableLevel=1;state=createGame(m.game);window.ARCADE_ACTIVE_STATE=state;focusBefore=document.activeElement;window.ARCADE_PLAYING=true;scene.pause();scene.renderer.setAnimationLoop(null);window.ARCADE_DUCK=C.isRhythm(m.game)?0:.3;applyVolume();resetRollerMovement();window.RUN_HOLD=false;myDance=0;myYaw=m.yaw??Math.atan2(m.x-m.spot.x,m.z-m.spot.z);socket.emit('move',{pos:rig.object3D.position.toArray(),rot:myYaw,dance:0});input={};saved=false;running=false;paused=false;try{best=+localStorage.getItem('arcade-best-'+m.game)||0;}catch(e){best=0;}
+  $('arcadeTitle').textContent=gameMeta.name;$('arcadeHelp').textContent=IS_MOBILE?({blocks:'← → 이동 · ↻ 회전 · ↓ 빠르게 · 내리기',shooter:'화면을 드래그하거나 ← →로 이동 · 발사 버튼 누르기',breaker:'화면을 드래그하거나 ← →로 패들 이동',racer:'← →로 차선을 바꿔 자동차를 피하세요',pump:'화살표가 아래 판정선에 닿으면 그 칸이나 아래 버튼을 터치하세요',reflex:'빛나는 패널을 터치하세요',rhythm:'노트가 판정선에 닿을 때 방향 버튼을 터치하세요 · 125 BPM',ddr:'박자에 맞춰 아래 발판을 터치하세요 · 125 BPM',pingpong:'화면을 드래그해 라켓 이동 · 서브 버튼',hockey:'패들을 드래그해 밀어보세요 · 빠르게 밀수록 강타 · 서브 버튼'}[m.game]||gameMeta.controls):gameMeta.controls;$('arcadeBest').textContent=best;overlay.classList.toggle('table-game',['hockey','pingpong'].includes(m.game));overlay.classList.toggle('pump-game',m.game==='pump');controls();overlay.classList.remove('hidden');document.body.classList.add('arcade-playing');cover(gameMeta.name,gameMeta.subtitle,m.game==='hockey'?'게임시작':'게임 시작');$('arcadeStart').focus();last=performance.now();cancelAnimationFrame(frame);frame=requestAnimationFrame(loop);return true;
  };
  window.openArcadeGame=id=>openGame(A.machines.find(q=>q.id===id));
  window.closeArcadeGame=close;$('arcadePause').onclick=togglePause;$('arcadeClose').onclick=close;$('arcadeStart').onclick=start;
 
- function keyFor(e){if(['rhythm','ddr'].includes(state.kind))return {ArrowLeft:'lane0',ArrowDown:'lane1',ArrowUp:'lane2',ArrowRight:'lane3',KeyD:'lane0',KeyF:'lane1',KeyJ:'lane2',KeyK:'lane3'}[e.code];if(state.kind==='reflex'&&/^Digit[1-9]$/.test(e.code))return'tap'+(+e.code.slice(5)-1);return{ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowDown:'down',KeyS:'down',ArrowUp:['hockey','pingpong'].includes(state.kind)?'up':'rotate',KeyW:['hockey','pingpong'].includes(state.kind)?'up':'rotate',Space:'fire'}[e.code];}
+ function keyFor(e){if(state.kind==='pump')return {KeyZ:'lane0',KeyQ:'lane1',KeyS:'lane2',KeyE:'lane3',KeyC:'lane4'}[e.code];if(C.isRhythm(state.kind))return {ArrowLeft:'lane0',ArrowDown:'lane1',ArrowUp:'lane2',ArrowRight:'lane3',KeyD:'lane0',KeyF:'lane1',KeyJ:'lane2',KeyK:'lane3'}[e.code];if(state.kind==='reflex'&&/^Digit[1-9]$/.test(e.code))return'tap'+(+e.code.slice(5)-1);return{ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowDown:'down',KeyS:'down',ArrowUp:['hockey','pingpong'].includes(state.kind)?'up':'rotate',KeyW:['hockey','pingpong'].includes(state.kind)?'up':'rotate',Space:'fire'}[e.code];}
  window.addEventListener('keydown',e=>{if(!window.ARCADE_PLAYING)return;if(e.code==='Tab'||(document.activeElement?.tagName==='BUTTON'&&['Enter','Space'].includes(e.code)))return;e.preventDefault();e.stopImmediatePropagation();if(e.code==='Escape'){close();return;}if(e.code==='KeyP'){if(!e.repeat)togglePause();return;}if(e.code==='Enter'&&!running){start();return;}const key=keyFor(e);if(key&&!e.repeat){delete input.pointerX;delete input.pointerY;press(key)}},true);
  window.addEventListener('keyup',e=>{if(!window.ARCADE_PLAYING)return;if(e.code==='Tab'||(document.activeElement?.tagName==='BUTTON'&&['Enter','Space'].includes(e.code)))return;e.preventDefault();e.stopImmediatePropagation();const key=keyFor(e);if(key)input[key]=false;},true);
  window.addEventListener('blur',()=>{if(window.ARCADE_PLAYING&&running&&!paused)togglePause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&window.ARCADE_PLAYING&&running&&!paused)togglePause()});
  let pointerId=null,pointerBounds=null;
- function pointer(e){const r=pointerBounds||canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(state.kind==='reflex'){if(e.type==='pointerdown'&&y>=.18&&y<.84)C.action(state,'tap'+(Math.floor((y-.18)/.22)*3+Math.min(2,Math.floor(x*3))));}else if(['shooter','breaker','pingpong','hockey'].includes(state.kind)){input.pointerX=Math.max(.05,Math.min(.95,x));input.pointerY=state.kind==='hockey'?Math.max(.56,Math.min(.865,y)):Math.max(.05,Math.min(.95,y));if(state.kind==='shooter')input.fire=true;}}
+ function pointer(e){const r=pointerBounds||canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(state.kind==='pump'){
+   if(e.type==='pointerdown'&&Math.abs(y*H-pumpLine)<60&&x*W>=pumpLeft&&x*W<pumpLeft+pumpLaneWidth*5){
+    press('lane'+Math.floor((x*W-pumpLeft)/pumpLaneWidth));
+   }
+  }else if(state.kind==='reflex'){if(e.type==='pointerdown'&&y>=.18&&y<.84)C.action(state,'tap'+(Math.floor((y-.18)/.22)*3+Math.min(2,Math.floor(x*3))));}else if(['shooter','breaker','pingpong','hockey'].includes(state.kind)){input.pointerX=Math.max(.05,Math.min(.95,x));input.pointerY=state.kind==='hockey'?Math.max(.56,Math.min(.865,y)):Math.max(.05,Math.min(.95,y));if(state.kind==='shooter')input.fire=true;}}
  function tableGame(){return state&&['hockey','pingpong'].includes(state.kind);}
  function pointerStart(e){
   if(!running||paused||e.target.closest('button')||(!tableGame()&&e.target!==canvas))return;
@@ -138,10 +145,46 @@
  for(const name of ['pointerup','pointercancel','lostpointercapture'])overlay.addEventListener(name,()=>{pointerId=null;pointerBounds=null;input.fire=false;});
  function loop(now){if(!window.ARCADE_PLAYING)return;const dt=Math.min(.04,(now-last)/1000);last=now;
 
-  if(running&&!paused&&!state.over&&!hockeyMatch){repeat-=dt;if(state.kind==='blocks'&&repeat<=0){for(const k of ['left','right','down'])if(input[k])C.action(state,k);repeat=input.down?.06:.13;}if(state.kind==='hoops'&&input.fire&&state.cool<=0)C.action(state,'fire');C.update(state,dt,input);if(['rhythm','ddr'].includes(state.kind)){const beat=Math.floor((state.t-2)/.48);if(beat!==lastBeat){lastBeat=beat;rhythmBeat(beat);}}if(state.event!==lastEvent){lastEvent=state.event;if(tableGame())tableSound(state.kind,state.sound);else sound();}if(state.over)finishRound();}
+  if(running&&!paused&&!state.over&&!hockeyMatch){repeat-=dt;if(state.kind==='blocks'&&repeat<=0){for(const k of ['left','right','down'])if(input[k])C.action(state,k);repeat=input.down?.06:.13;}C.update(state,dt,input);if(C.isRhythm(state.kind)){const beat=Math.floor((state.t-C.FIRST_BEAT)/C.BEAT);if(beat!==lastBeat){lastBeat=beat;rhythmBeat(beat);}}if(state.event!==lastEvent){lastEvent=state.event;if(tableGame())tableSound(state.kind,state.sound);else sound();}if(state.over)finishRound();}
 
   draw();$('arcadeScore').textContent=state.score;$('arcadeStatus').textContent=state.health!==undefined?'ENERGY '+state.health+'%':state.time!==undefined?Math.ceil(state.time)+'초':state.opponent!==undefined?(hockeyMatch?((hockeyMatch.names[1-hockeyMatch.side]||'상대')+' '+state.opponent):(tableGame()?'CPU Lv.'+state.level+' · ':'AI ')+state.opponent)+' / 7점':state.kind==='blocks'?'LINE '+state.lines:'LIFE '+state.lives;
   frame=requestAnimationFrame(loop);
+ }
+ function pumpArrow(lane,x,y,active){
+  const color=pumpColours[lane];
+  ctx.save();ctx.shadowColor=color;ctx.shadowBlur=active?20:8;
+  box(x-31,y-29,62,58,active?color:'#0a1329',13);
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+  text(pumpArrows[lane],x,y+17,47,active?'#101627':color);
+  ctx.restore();
+ }
+ function drawPump(){
+  const background=ctx.createLinearGradient(0,0,0,H);
+  background.addColorStop(0,'#050918');background.addColorStop(.5,'#10132c');background.addColorStop(1,'#070c1e');
+  ctx.fillStyle=background;ctx.fillRect(0,0,W,H);
+  for(let i=0;i<37;i++)ball((i*179)%W,(i*119)%H,1+i%2*.5,'#a5c6ff42');
+  text('PUMP  /  5 STEP',240,24,15,'#b9edff');
+  box(20,36,440,12,'#22304d',6);
+  const energy=440*state.health/100;if(energy>0)box(20,36,energy,12,'#68f5c2',6);
+  for(let lane=0;lane<5;lane++){
+   const x=pumpLeft+lane*pumpLaneWidth;
+   box(x+4,pumpTop,pumpLaneWidth-8,pumpLine-pumpTop+36,lane%2?'#141c38':'#101731',7);
+   line(x+8,pumpTop,x+8,pumpLine+35,pumpColours[lane]+'45',1);
+  }
+  line(pumpLeft,pumpLine,460,pumpLine,'#b4f6ff',3);
+  for(let lane=0;lane<5;lane++){
+   const flash=state.flashLane===lane&&state.t<state.flashUntil;
+   pumpArrow(lane,pumpLeft+(lane+.5)*pumpLaneWidth,pumpLine,flash);
+  }
+  for(const note of state.notes){
+   if(note.judged)continue;
+   const y=pumpLine+(state.t-note.at)*240;
+   if(y>=pumpTop+29&&y<=pumpLine+49)pumpArrow(note.lane,pumpLeft+(note.lane+.5)*pumpLaneWidth,y,true);
+  }
+  box(147,244,186,74,'#071223d4',14);
+  text(state.judgement,240,274,23,state.judgement==='MISS'?'#ff8b9d':'#8ef9ff');
+  text('COMBO '+state.combo,240,302,18,'#f2f7ff');
+  text('125 BPM',240,575,16,'#b5c8ef');
  }
  function draw(){ctx.fillStyle='#080e20';ctx.fillRect(0,0,W,H);const g=gameMeta;
   ctx.strokeStyle='#1a2944';ctx.lineWidth=1;for(let x=0;x<W;x+=40)line(x,0,x,H,'#14243c',1);for(let y=0;y<H;y+=40)line(0,y,W,y,'#14243c',1);
@@ -154,11 +197,11 @@
    for(const q of state.bricks)if(q.alive)box(q.x*W-24,q.y*H-13,48,26,colours[q.row%7],5);box(state.x*W-51,.88*H,102,12,'#71e9f5',6);ball(state.ball.x*W,state.ball.y*H,7,'#fff');
   }else if(state.kind==='racer'){
    box(70,0,340,H,'#18263d',0);for(const x of [180,300])for(let y=-60;y<H;y+=100)box(x-2,(y+state.t*180)%700-50,4,48,'#7f95b4',0);const car=(x,y,c)=>{box(x-23,y-38,46,76,c,10);box(x-16,y-20,32,25,'#bce6ff',5);for(const dx of [-27,23])box(x+dx,y-22,5,44,'#070b16',2);};for(const c of state.cars)car(c.x*W,c.y*H,'#ff739f');car(state.x*W,.83*H,state.hit>0?'#ffd86a':'#73f3d4');text(Math.floor(state.distance)+' / 60s',240,40,18);
-  }else if(state.kind==='hoops'){
-   line(40,560,440,560,'#9f6f50',4);box(state.hoop*W-55,.16*H,110,60,'#273d5b');line(state.hoop*W-40,.28*H,state.hoop*W+40,.28*H,'#ff9770',7);for(let i=-2;i<=2;i++)line(state.hoop*W+i*16,.28*H,state.hoop*W+i*10,.37*H,'#e2edff',1);for(const b of state.balls){ball(b.x*W,b.y*H,16,'#ed8a48');line(b.x*W-14,b.y*H,b.x*W+14,b.y*H,'#482e25',2);}ball(240,540,19,'#f3a258');text('TIME YOUR SHOT',240,72,18,'#ffce99');
   }else if(state.kind==='reflex'){
    text('LIGHT TAP',240,65,26,'#7cf5d9');for(let i=0;i<9;i++){const x=i%3*160,y=.18*H+Math.floor(i/3)*.22*H;box(x+12,y+10,136,112,i===state.target?'#79f7dc':'#203451',14);text(i+1,x+80,y+80,40,i===state.target?'#122b39':'#6684a8');}text('COMBO '+state.combo,240,560,20,'#a3baff');
-  }else if(state.kind==='rhythm'||state.kind==='ddr'){
+  }else if(state.kind==='pump'){
+   drawPump();
+  }else if(C.isRhythm(state.kind)){
    const arrows=['←','↓','↑','→'];for(let i=0;i<4;i++){box(30+i*107,60,98,485,i%2?'#152642':'#101f38',3);text(arrows[i],79+i*107,530,45,g.colour);}line(30,504,450,504,'#fff',3);for(const n of state.notes){const y=(.84-(n.at-state.t)*.42)*H;if(!n.judged&&y>50&&y<560){box(39+n.lane*107,y-20,80,38,colours[n.lane],8);text(arrows[n.lane],79+n.lane*107,y+13,34,'#11233b');}}text(state.judgement,240,32,19,'#a7f7e3');text(state.combo+' COMBO',240,588,18,'#d8b9ff');
   }else if(state.kind==='pingpong'){
    TABLE_TENNIS_VIEW.draw(ctx,state);

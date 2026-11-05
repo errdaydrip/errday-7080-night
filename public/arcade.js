@@ -8,10 +8,10 @@
   shooter:{name:'갤럭시 슈터',subtitle:'갤러그 스타일',colour:'#4eeaff',controls:'← → 이동 · Space / 발사 버튼'},
   breaker:{name:'네온 벽돌깨기',subtitle:'NEON BREAKER',colour:'#ff65ba',controls:'← → 패들 이동 · 공을 놓치지 마세요'},
   racer:{name:'터보 레이서',subtitle:'TURBO RUN',colour:'#ffd465',controls:'← → 차선 변경 · 자동차를 피하세요'},
-  hoops:{name:'버저 비터',subtitle:'BASKET SHOT',colour:'#ff945e',controls:'Space / 슛 버튼을 눌러 움직이는 골대를 맞히세요'},
   reflex:{name:'라이트 터치',subtitle:'LIGHT TAP',colour:'#76ffd5',controls:'빛나는 패널을 클릭·터치 · 키보드 1~9'},
   rhythm:{name:'비트 스테이션',subtitle:'4 KEY RHYTHM',colour:'#ed8bff',controls:'D F J K 또는 방향키 · 노트가 판정선에 닿을 때 누르세요'},
   ddr:{name:'댄스 스테이지',subtitle:'DDR 스타일',colour:'#73f4ed',controls:'← ↓ ↑ → 또는 터치 발판 · 박자에 맞춰 누르세요'},
+  pump:{name:'펌프',subtitle:'PUMP · 5 STEP · 125 BPM',colour:'#ffca70',controls:'↙ ↖ ● ↗ ↘ · 하단 판정선을 터치하거나 Z Q S E C 키로 플레이'},
   pingpong:{name:'탁구',subtitle:'VS COMPUTER · 7점 승부',colour:'#7bafff',controls:'마우스·터치로 라켓을 움직여 바운드한 공을 치세요'},
   hockey:{name:'에어하키',subtitle:'VS COMPUTER · 7점 승부',colour:'#ff75c9',controls:'마우스·터치로 패들을 드래그하세요'}
  };

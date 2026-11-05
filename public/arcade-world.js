@@ -111,7 +111,7 @@
   c.fillStyle='#080e24';c.fillRect(0,0,w,h);c.strokeStyle=g.colour;c.lineWidth=4;c.strokeRect(8,8,w-16,h-16);c.fillStyle=g.colour;c.font='bold 22px sans-serif';c.textAlign='center';c.fillText(g.subtitle.split(' · ')[0],w/2,38);
   if(kind==='blocks'){for(let i=0;i<24;i++){c.fillStyle=['#a786ff','#51e8ee','#ff75bc'][i%3];c.fillRect(40+i%6*28,185-Math.floor(i/6)*27,24,23);}}
   else if(kind==='shooter'){for(let i=0;i<15;i++){c.fillStyle=i%2?'#ff70bb':'#69f5dd';c.fillRect(40+i%5*38,65+Math.floor(i/5)*32,23,15);}c.fillStyle='#fff';c.beginPath();c.moveTo(128,168);c.lineTo(114,191);c.lineTo(142,191);c.fill();}
-  else{c.strokeStyle=g.colour;c.lineWidth=8;c.beginPath();c.arc(128,126,48,0,Math.PI*2);c.stroke();c.fillStyle='#fff';c.font='bold 46px sans-serif';c.fillText(kind==='racer'?'GO':kind==='hoops'?'02':kind==='reflex'?'9':'★',128,144);}
+  else{c.strokeStyle=g.colour;c.lineWidth=8;c.beginPath();c.arc(128,126,48,0,Math.PI*2);c.stroke();c.fillStyle='#fff';c.font='bold 46px sans-serif';c.fillText(kind==='racer'?'GO':kind==='pump'?'5 STEP':kind==='reflex'?'9':'★',128,144);}
   c.fillStyle='#fff';c.font='bold 16px sans-serif';c.fillText('PRESS PLAY',128,236);
  },1,1);}
  const screenGeo=new THREE.PlaneGeometry(.98,.98);
@@ -134,7 +134,7 @@
   const facing=m.yaw>0?1:-1;
   box(m.x+facing*.61,1.04,m.z,.4,.12,1.35,'#29352e');box(m.x+facing*.83,1.16,m.z-.3,.07,.2,.07,g.colour,true);
   for(let k=0;k<3;k++)box(m.x+facing*.82,1.12,m.z+.05+k*.21,.1,.045,.1,k%2?'#ff7cbb':'#67f7e9',true);
-  if(m.game==='ddr'){box(m.x+facing*1.8,.06,m.z,1.7,.12,1.7,'#172844');for(const [dx,dz] of [[0,-.5],[0,.5],[-.5,0],[.5,0]])box(m.x+facing*1.8+dx,.14,m.z+dz,.43,.04,.43,g.colour,true);}
+  if(m.game==='ddr'||m.game==='pump'){box(m.x+facing*1.8,.06,m.z,1.7,.12,1.7,'#172844');for(const [dx,dz] of (m.game==='pump'?[[-.5,-.5],[-.5,.5],[0,0],[.5,-.5],[.5,.5]]:[[0,-.5],[0,.5],[-.5,0],[.5,0]]))box(m.x+facing*1.8+dx,.14,m.z+dz,.43,.04,.43,g.colour,true);}
   for(const dz of [-.68,.68])box(m.x+facing*.66,1.6,m.z+dz,.04,1.6,.04,'#ab8756',true);
   const panel=E('a-entity',{position:`${m.x+facing*.6} 1.72 ${m.z}`,rotation:`0 ${m.yaw*180/Math.PI} 0`},root);
   panel.setObject3D('mesh',new THREE.Mesh(screenGeo,new THREE.MeshBasicMaterial({map:screenTexture(m.game)})));

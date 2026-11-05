@@ -45,3 +45,14 @@
 .joystick-arrows{position:absolute;inset:4px;text-align:center;font-size:20px;line-height:35px;color:#becce3;pointer-events:none}
 .joystick-knob{position:absolute;width:46px;height:46px;left:35px;top:35px;border-radius:50%;background:radial-gradient(circle at 35% 25%,#c0defa,#557fad);box-shadow:0 3px 12px #0008;pointer-events:none}
 @media(orientation:landscape){#arcadeOverlay.table-game .arcade-controls{display:block;width:120px;height:120px}#arcadeOverlay.table-game .arcade-controls .arcade-joystick{width:120px;height:120px}}
+
+#arcadeOverlay.pump-game .arcade-shell{width:min(720px,100%)}
+#arcadeOverlay.pump-game #arcadeCanvas{height:min(57dvh,510px,calc((100vw - 48px)*1.25))}
+#arcadeOverlay.pump-game .arcade-controls{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:min(100%,410px);margin:9px auto 0}
+#arcadeOverlay.pump-game .arcade-controls button{min-width:0;font-size:24px;background:#152642;border-color:#7ec4eb}
+#arcadeOverlay.pump-game .arcade-controls button:active{background:#36708b}
+@media(orientation:landscape) and (max-height:550px){
+ #arcadeOverlay.pump-game .arcade-stage{grid-column:2;grid-row:1/6}
+ #arcadeOverlay.pump-game #arcadeCanvas{height:min(74dvh,510px)}
+ #arcadeOverlay.pump-game .arcade-controls{grid-column:2;grid-row:6}
+}

@@ -2,6 +2,9 @@
 (function(root){
  const H=typeof module!=='undefined'?require('./air-hockey'):root.AIR_HOCKEY;
  const TT=typeof module!=='undefined'?require('./table-tennis'):root.TABLE_TENNIS;
+ const BEAT=.48, FIRST_BEAT=2;
+ const PUMP_STEPS=[0,2,4,2,1,3,2,4,3,2,1,0,2,4,0,2];
+ const isRhythm=kind=>kind==='rhythm'||kind==='ddr'||kind==='pump';
  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),SHAPES=[[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[0,1,1],[1,1,0]],[[1,1,0],[0,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]]];
  function create(kind,seed=Date.now()){
   if(kind==='pingpong')return TT.create();
@@ -12,9 +15,15 @@
   else if(kind==='shooter'){s.x=.5;s.bullets=[];s.shots=[];s.wave=0;wave(s);}
   else if(kind==='breaker'){s.x=.5;s.ball={x:.5,y:.72,vx:.3,vy:-.48};s.bricks=Array.from({length:40},(_,i)=>({x:.075+i%8*.12,y:.14+Math.floor(i/8)*.065,alive:true,row:Math.floor(i/8)}));}
   else if(kind==='racer'){s.x=.5;s.cars=[];s.spawn=0;s.distance=0;}
-  else if(kind==='hoops'){s.hoop=.5;s.balls=[];s.time=45;}
   else if(kind==='reflex'){s.target=Math.floor(random()*9);s.time=30;s.targetAge=0;s.combo=0;}
-  else if(kind==='rhythm'||kind==='ddr'){s.health=100;s.combo=0;s.maxCombo=0;s.judgement='READY';s.notes=Array.from({length:84},(_,i)=>({lane:Math.floor(random()*4),at:2+i*.48,judged:false}));s.duration=44;}
+  else if(isRhythm(kind)){
+   s.health=100;s.combo=0;s.maxCombo=0;s.judgement='READY';s.lanes=kind==='pump'?5:4;
+   s.notes=Array.from({length:84},(_,i)=>({
+    lane:kind==='pump'?PUMP_STEPS[i%PUMP_STEPS.length]:Math.floor(random()*4),
+    at:FIRST_BEAT+i*BEAT,judged:false
+   }));
+   s.duration=44;
+  }
   else if(kind==='pingpong'){s.x=.5;s.y=.86;s.ai=.5;s.aiY=.14;s.opponent=0;s.ball={x:.5,y:.5,vx:0,vy:0};s.serve=true;}
   else throw Error('Unknown arcade game');
   return s;
@@ -24,7 +33,7 @@
  function collide(s,p,x,y){return p.some((r,j)=>r.some((v,i)=>v&&(x+i<0||x+i>=10||y+j>=20||(y+j>=0&&s.grid[y+j][x+i]))));}
  function lock(s){s.shape.forEach((r,j)=>r.forEach((v,i)=>{if(v&&s.py+j>=0)s.grid[s.py+j][s.px+i]=s.colour;}));let lines=0;for(let y=19;y>=0;y--)if(s.grid[y].every(Boolean)){s.grid.splice(y,1);s.grid.unshift(Array(10).fill(0));lines++;y++;}s.lines+=lines;s.score+=[0,100,300,500,800][lines]||0;if(lines)s.event++;spawn(s);}
  function action(s,key){if(s.over||s.kind==='pingpong')return;if(s.kind==='hockey'){if(key==='fire')H.serve(s,0);return;}
-  if((s.kind==='rhythm'||s.kind==='ddr')&&/^lane[0-3]$/.test(key)){const lane=+key.slice(4),note=s.notes.find(n=>!n.judged&&n.lane===lane&&Math.abs(n.at-s.t)<.18);if(note){const perfect=Math.abs(note.at-s.t)<.08;note.judged=true;note.hit=true;s.combo++;s.maxCombo=Math.max(s.maxCombo,s.combo);s.score+=perfect?300:150;s.health=Math.min(100,s.health+2);s.judgement=perfect?'PERFECT':'GOOD';s.event++;}else{s.combo=0;s.health=Math.max(0,s.health-3);s.judgement='EARLY / LATE';}return;}
+  if(isRhythm(s.kind)&&/^lane[0-4]$/.test(key)&&+key.slice(4)<s.lanes){const lane=+key.slice(4),note=s.notes.find(n=>!n.judged&&n.lane===lane&&Math.abs(n.at-s.t)<.18);if(note){const perfect=Math.abs(note.at-s.t)<.08;note.judged=true;note.hit=true;s.flashLane=lane;s.flashUntil=s.t+.16;s.combo++;s.maxCombo=Math.max(s.maxCombo,s.combo);s.score+=perfect?300:150;s.health=Math.min(100,s.health+2);s.judgement=perfect?'PERFECT':'GOOD';s.event++;}else{s.combo=0;s.health=Math.max(0,s.health-3);s.judgement='EARLY / LATE';}return;}
   if(s.kind==='blocks'){
    if(key==='left'||key==='right'){const x=s.px+(key==='left'?-1:1);if(!collide(s,s.shape,x,s.py))s.px=x;}
    if(key==='rotate'){const p=s.shape[0].map((_,i)=>s.shape.map(r=>r[i]).reverse());for(const dx of [0,-1,1,-2,2])if(!collide(s,p,s.px+dx,s.py)){s.shape=p;s.px+=dx;break;}}
@@ -33,7 +42,6 @@
   }else if(s.kind==='racer'&&(key==='left'||key==='right'))s.x=clamp(s.x+(key==='left'?-.25:.25),.25,.75);
   else if(s.kind==='reflex'&&/^tap[0-8]$/.test(key)){const k=+key.slice(3);if(k===s.target){s.score+=10+Math.min(20,s.combo++);s.target=(s.target+1+Math.floor(s.random()*8))%9;s.targetAge=0;s.event++;}else{s.combo=0;s.score=Math.max(0,s.score-5);}}
   else if(s.kind==='pingpong'&&key==='fire'&&s.serve){s.serve=false;s.ball={x:.5,y:.5,vx:(s.random()-.5)*.5,vy:.42};}
-  else if(s.kind==='hoops'&&key==='fire'&&s.cool<=0){s.balls.push({x:.5,y:.88,vy:-1.5,vx:(s.hoop-.5)*.55,checked:false});s.cool=.5;s.event++;}
  }
  function wave(s){s.wave++;s.aliens=Array.from({length:24},(_,i)=>({x:.12+i%8*.105,y:.13+Math.floor(i/8)*.085,alive:true}));s.enemyTime=0;s.shift=0;}
  function lost(s){s.lives--;s.hit=.65;if(s.lives<=0)s.over=true;}
@@ -58,11 +66,8 @@
    s.distance+=dt;s.score=Math.floor(s.distance*20);s.spawn-=dt;if(s.spawn<=0){s.cars.push({x:.25+Math.floor(s.random()*3)*.25,y:-.12});s.spawn=Math.max(.42,1.05-s.distance*.008);}
    for(const c of s.cars){c.y+=dt*(.32+Math.min(.3,s.distance*.003));if(s.hit<=0&&Math.abs(c.x-s.x)<.08&&Math.abs(c.y-.83)<.09){lost(s);c.y=2;}}s.cars=s.cars.filter(c=>c.y<1.2);if(s.distance>=60){s.over=true;s.won=true;}return;
   }
-  if(s.kind==='hoops'){
-   s.time=Math.max(0,45-s.t);s.hoop=.5+Math.sin(s.t*1.3)*.3;for(const b of s.balls){const old=b.y;b.y+=b.vy*dt;b.x+=b.vx*dt;b.vy+=1.45*dt;if(!b.checked&&old<.28&&b.y>=.28&&b.vy>0){b.checked=true;if(Math.abs(b.x-s.hoop)<.09){s.score+=2;s.event++;}}}s.balls=s.balls.filter(b=>b.y<1.1);if(s.time<=0)s.over=true;return;
-  }
   if(s.kind==='reflex'){s.time=Math.max(0,30-s.t);s.targetAge+=dt;if(s.targetAge>1.15){s.target=(s.target+1+Math.floor(s.random()*8))%9;s.targetAge=0;s.combo=0;}if(s.time<=0)s.over=true;return;}
-  if(s.kind==='rhythm'||s.kind==='ddr'){for(const n of s.notes)if(!n.judged&&s.t>n.at+.18){n.judged=true;s.health=Math.max(0,s.health-10);s.combo=0;s.judgement='MISS';s.hit=.2;}if(s.health<=0||s.t>=s.duration){s.over=true;s.won=s.health>0;}return;}
+  if(isRhythm(s.kind)){for(const n of s.notes)if(!n.judged&&s.t>n.at+.18){n.judged=true;s.health=Math.max(0,s.health-10);s.combo=0;s.judgement='MISS';s.hit=.2;}if(s.health<=0||s.t>=s.duration){s.over=true;s.won=s.health>0;}return;}
   if(s.kind==='pingpong'){
    s.x=clamp(input.pointerX??s.x+dir*dt*.85,.08,.92);
    const b=s.ball;s.ai+=clamp(b.x-s.ai,-.43*dt,.43*dt);s.ai=clamp(s.ai,.1,.9);if(s.serve)return;
@@ -73,5 +78,5 @@
    if(b.y<0||b.y>1)point(s,b.y<0);
   }
  }
- const api={create,action,update,collide,SHAPES};if(typeof module!=='undefined')module.exports=api;else root.ARCADE_CORE=api;
+ const api={create,action,update,collide,SHAPES,isRhythm,BEAT,FIRST_BEAT};if(typeof module!=='undefined')module.exports=api;else root.ARCADE_CORE=api;
 })(typeof window!=='undefined'?window:this);
