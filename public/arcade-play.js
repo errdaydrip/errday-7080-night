@@ -50,21 +50,21 @@
   });
  }
  function cover(title,desc,button){$('arcadeCoverTitle').textContent=title;$('arcadeCoverText').textContent=desc;$('arcadeStart').textContent=button;$('arcadeCover').classList.remove('hidden');}
- let tennisLevel=1;
+ let tableLevel=1;
  function finishRound(){
-  const wonTennis=state.kind==='pingpong'&&state.won;
-  if(wonTennis){
-   tennisLevel=Math.max(tennisLevel,state.level+1);
+  const wonTable=tableGame()&&state.won;
+  if(wonTable){
+   tableLevel=Math.max(tableLevel,state.level+1);
   }
   save();
   const score=state.kind==='pingpong'
    ?'내 점수 '+state.score+' · CPU '+state.opponent
    :'점수 '+state.score+(state.opponent===undefined?'':' : '+state.opponent);
-  cover(state.won?'CLEAR!':'GAME OVER',score+(wonTennis?' · 다음 CPU Lv.'+tennisLevel:''),wonTennis?'다음 단계':'다시 도전');
+  cover(state.won?'CLEAR!':'GAME OVER',score+(wonTable?' · 다음 CPU Lv.'+tableLevel:''),wonTable?'다음 단계':'다시 도전');
  }
  function createGame(kind){
   const game=C.create(kind);
-  if(kind==='pingpong')game.level=tennisLevel;
+  if(kind==='pingpong'||kind==='hockey')game.level=tableLevel;
   return game;
  }
  function joystick(container){
@@ -116,7 +116,7 @@
  function close(){if(!window.ARCADE_PLAYING)return;if(machine?.game==='hockey')socket.emit('hockeyCancelInvite');if(hockeyMatch)socket.emit('hockeyLeave',{id:hockeyMatch.id});save();hockeyMatch=null;hockeyJoining=false;window.ARCADE_HOCKEY_MATCH=null;openVersion++;startPending=false;cancelAnimationFrame(frame);frame=0;running=false;paused=false;input={};state=null;window.ARCADE_ACTIVE_STATE=null;window.ARCADE_PLAYING=false;overlay.classList.add('hidden');document.body.classList.remove('arcade-playing');scene.play();scene.renderer.setAnimationLoop(scene.render);window.ARCADE_DUCK=1;applyVolume();resetRollerMovement();if(focusBefore?.isConnected)focusBefore.focus();refreshAct(true);}
  function openGame(m,invited=false){
   if(!joined||!m||!invited&&(!A.inside(rig.object3D.position.x,rig.object3D.position.z)||Math.hypot(rig.object3D.position.x-m.spot.x,rig.object3D.position.z-m.spot.z)>2.1))return false;
-  if(window.ARCADE_PLAYING)close();hockeyMode='practice';hockeyMatch=null;netFrom=null;netTo=null;openVersion++;sessionToken=null;startPending=false;$('arcadeStart').disabled=false;gameMeta=A.GAMES[m.game];machine=m;if(m.game==='pingpong')tennisLevel=1;state=createGame(m.game);window.ARCADE_ACTIVE_STATE=state;focusBefore=document.activeElement;window.ARCADE_PLAYING=true;scene.pause();scene.renderer.setAnimationLoop(null);window.ARCADE_DUCK=.3;applyVolume();resetRollerMovement();window.RUN_HOLD=false;myDance=0;myYaw=m.yaw??Math.atan2(m.x-m.spot.x,m.z-m.spot.z);socket.emit('move',{pos:rig.object3D.position.toArray(),rot:myYaw,dance:0});input={};saved=false;running=false;paused=false;try{best=+localStorage.getItem('arcade-best-'+m.game)||0;}catch(e){best=0;}
+  if(window.ARCADE_PLAYING)close();hockeyMode='practice';hockeyMatch=null;netFrom=null;netTo=null;openVersion++;sessionToken=null;startPending=false;$('arcadeStart').disabled=false;gameMeta=A.GAMES[m.game];machine=m;if(m.game==='pingpong'||m.game==='hockey')tableLevel=1;state=createGame(m.game);window.ARCADE_ACTIVE_STATE=state;focusBefore=document.activeElement;window.ARCADE_PLAYING=true;scene.pause();scene.renderer.setAnimationLoop(null);window.ARCADE_DUCK=.3;applyVolume();resetRollerMovement();window.RUN_HOLD=false;myDance=0;myYaw=m.yaw??Math.atan2(m.x-m.spot.x,m.z-m.spot.z);socket.emit('move',{pos:rig.object3D.position.toArray(),rot:myYaw,dance:0});input={};saved=false;running=false;paused=false;try{best=+localStorage.getItem('arcade-best-'+m.game)||0;}catch(e){best=0;}
   $('arcadeTitle').textContent=gameMeta.name;$('arcadeHelp').textContent=IS_MOBILE?({blocks:'← → 이동 · ↻ 회전 · ↓ 빠르게 · 내리기',shooter:'화면을 드래그하거나 ← →로 이동 · 발사 버튼 누르기',breaker:'화면을 드래그하거나 ← →로 패들 이동',racer:'← →로 차선을 바꿔 자동차를 피하세요',hoops:'슛 버튼을 눌러 움직이는 골대를 맞히세요',reflex:'빛나는 패널을 터치하세요',rhythm:'노트가 판정선에 닿을 때 방향 버튼을 터치하세요 · 125 BPM',ddr:'박자에 맞춰 아래 발판을 터치하세요 · 125 BPM',pingpong:'화면을 드래그해 라켓 이동 · 서브 버튼',hockey:'패들을 드래그해 밀어보세요 · 빠르게 밀수록 강타 · 서브 버튼'}[m.game]||gameMeta.controls):gameMeta.controls;$('arcadeBest').textContent=best;overlay.classList.toggle('table-game',['hockey','pingpong'].includes(m.game));controls();overlay.classList.remove('hidden');document.body.classList.add('arcade-playing');cover(gameMeta.name,gameMeta.subtitle,m.game==='hockey'?'게임시작':'게임 시작');$('arcadeStart').focus();last=performance.now();cancelAnimationFrame(frame);frame=requestAnimationFrame(loop);return true;
  };
  window.openArcadeGame=id=>openGame(A.machines.find(q=>q.id===id));
@@ -140,7 +140,7 @@
 
   if(running&&!paused&&!state.over&&!hockeyMatch){repeat-=dt;if(state.kind==='blocks'&&repeat<=0){for(const k of ['left','right','down'])if(input[k])C.action(state,k);repeat=input.down?.06:.13;}if(state.kind==='hoops'&&input.fire&&state.cool<=0)C.action(state,'fire');C.update(state,dt,input);if(['rhythm','ddr'].includes(state.kind)){const beat=Math.floor((state.t-2)/.48);if(beat!==lastBeat){lastBeat=beat;rhythmBeat(beat);}}if(state.event!==lastEvent){lastEvent=state.event;if(tableGame())tableSound(state.kind,state.sound);else sound();}if(state.over)finishRound();}
 
-  draw();$('arcadeScore').textContent=state.score;$('arcadeStatus').textContent=state.health!==undefined?'ENERGY '+state.health+'%':state.time!==undefined?Math.ceil(state.time)+'초':state.opponent!==undefined?(hockeyMatch?((hockeyMatch.names[1-hockeyMatch.side]||'상대')+' '+state.opponent):(state.kind==='pingpong'?'CPU Lv.'+state.level+' · ':'AI ')+state.opponent)+' / 7점':state.kind==='blocks'?'LINE '+state.lines:'LIFE '+state.lives;
+  draw();$('arcadeScore').textContent=state.score;$('arcadeStatus').textContent=state.health!==undefined?'ENERGY '+state.health+'%':state.time!==undefined?Math.ceil(state.time)+'초':state.opponent!==undefined?(hockeyMatch?((hockeyMatch.names[1-hockeyMatch.side]||'상대')+' '+state.opponent):(tableGame()?'CPU Lv.'+state.level+' · ':'AI ')+state.opponent)+' / 7점':state.kind==='blocks'?'LINE '+state.lines:'LIFE '+state.lives;
   frame=requestAnimationFrame(loop);
  }
  function draw(){ctx.fillStyle='#080e20';ctx.fillRect(0,0,W,H);const g=gameMeta;

@@ -65,7 +65,7 @@
   metal.addColorStop(0,'#f8f4cd');metal.addColorStop(.47,'#b6a16b');metal.addColorStop(1,'#3e3151');
   disk(ctx,x,y,r-2,metal);disk(ctx,x,y,r*.42,'#533c51');disk(ctx,x-2,y-2,r*.19,'#fff2bc');
   text(ctx,'내 점수 '+state.score,151,25,17,'#ffc4e5');
-  text(ctx,'CPU '+state.opponent,329,25,17,'#b6f4ff');
+  text(ctx,'CPU Lv.'+state.level+' · '+state.opponent,329,25,17,'#b6f4ff');
   text(ctx,'NEON AIR HOCKEY',240,588,14,'#a9b8d7');
   if(state.serve){
    round(ctx,163,318,154,35,12,'#081427ce');

@@ -1,8 +1,8 @@
 // Shared air-hockey physics. Distances and velocities use table-width units.
 (function(root){
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
- const K={aspect:1.25,left:.05,right:.95,top:.075,bottom:.925,paddle:.09,puck:.034,maxPaddle:3.2,maxPuck:2.25,goal0:.33,goal1:.67};
- function create(){return {kind:'hockey',t:0,score:0,opponent:0,over:false,won:false,event:0,hit:0,serve:true,serveSide:0,serveTime:0,paddles:[{x:.5,y:.82,vx:0,vy:0},{x:.5,y:.18,vx:0,vy:0}],ball:{x:.5,y:.68,vx:0,vy:0}};}
+ const K={aspect:1.25,left:.05,right:.95,top:.075,bottom:.925,paddle:.09,puck:.043,maxPaddle:3.2,maxPuck:2.25,goal0:.33,goal1:.67};
+ function create(){return {kind:'hockey',level:1,t:0,score:0,opponent:0,over:false,won:false,event:0,hit:0,serve:true,serveSide:0,serveTime:0,paddles:[{x:.5,y:.82,vx:0,vy:0},{x:.5,y:.18,vx:0,vy:0}],ball:{x:.5,y:.68,vx:0,vy:0}};}
  function serve(s,side){if(!s.over&&s.serve&&side===s.serveSide){s.serve=false;s.ball.vx=0;s.ball.vy=side===0?-.44:.44;s.sound='serve';s.event++;}}
  function goal(s,side){if(side===0)s.score++;else s.opponent++;s.sound=side===0?'point':'lost';s.event++;s.serve=true;s.serveSide=1-side;s.serveTime=0;s.ball={x:.5,y:s.serveSide===0?.68:.32,vx:0,vy:0};if(s.score>=7||s.opponent>=7){s.over=true;s.won=s.score>=7;}}
  function target(p,i,dt,t){const r=K.paddle;let x=clamp(Number.isFinite(t?.x)?t.x:p.x,K.left+r,K.right-r),y=clamp(Number.isFinite(t?.y)?t.y:p.y,i===0?.5+r/K.aspect:K.top+r/K.aspect,i===0?K.bottom-r/K.aspect:.5-r/K.aspect);
@@ -60,8 +60,10 @@
   s.cornerWatch=null;
  }
  function ai(s,dt){const p=s.paddles[1],b=s.ball,attack=!s.serve&&b.y<.48;const tx=attack?b.x:.5+(b.x-.5)*.7,ty=attack?clamp(b.y-.055,.14,.4):.18;
-  // A modest reaction speed leaves practice playable; the same collisions determine its shots.
-  const limit=.65*dt,dx=tx-p.x,dy=(ty-p.y)*K.aspect,d=Math.hypot(dx,dy),k=d?Math.min(1,limit/d):0;return {x:p.x+dx*k,y:p.y+dy*k/K.aspect};
+  // Level 3 keeps the original opponent speed.
+  const level=s.level||1;
+  const speed=level<=3?.37+(level-1)*.14:.65+.45*(1-Math.exp(-(level-3)/5));
+  const limit=speed*dt,dx=tx-p.x,dy=(ty-p.y)*K.aspect,d=Math.hypot(dx,dy),k=d?Math.min(1,limit/d):0;return {x:p.x+dx*k,y:p.y+dy*k/K.aspect};
  }
  const api={K,create,serve,update,ai};if(typeof module!=='undefined')module.exports=api;else root.AIR_HOCKEY=api;
 })(typeof window!=='undefined'?window:this);

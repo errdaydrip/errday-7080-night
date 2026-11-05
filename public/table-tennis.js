@@ -22,13 +22,10 @@
   if(!spin){ball.x+=ball.vx*dt;return;}
   spin.elapsed+=dt;
   const progress=Math.min(1,spin.elapsed/spin.duration);
-  const outward=progress<.3;
-  const t=outward?progress/.3:(progress-.3)/.7;
-  const smooth=t*t*(3-2*t);
-  const start=outward?spin.start:spin.bend,end=outward?spin.bend:spin.end;
-  const x=start+(end-start)*smooth;
-  ball.vx=(x-ball.x)/dt;
-  ball.x=x;
+  // Increase the sideways motion continuously, without reversing the shot.
+  const span=spin.end-spin.start;
+  ball.x=spin.start+span*progress*(.45+.55*progress);
+  ball.vx=span*(.45+1.1*progress)/spin.duration;
   if(progress===1)ball.spin=null;
  }
  function update(s,dt,input={}){
@@ -108,12 +105,13 @@
       aimX=b.x+clamp(offset*.45+s.strokeX*1.15,-1.4,1.4)*flight;
       const side=b.x<.36?-1:b.x>.64?1:0;
       if(side&&s.strokeX*side>.16){
-       aimX=side<0?.88:.12;
-       b.spin={start:b.x,bend:clamp(b.x+side*.11,.045,.955),end:aimX,elapsed:0,duration:flight};
+       aimX=side<0?Math.min(b.x,.055):Math.max(b.x,.945);
+       aimX=clamp(aimX,.045,.955);
+       b.spin={start:b.x,end:aimX,elapsed:0,duration:flight};
       }
      }
-     const landingX=clamp(aimX,.075,.925);
-     b.vx=(landingX-b.x)/flight;
+     const landingX=b.spin?b.spin.end:clamp(aimX,.075,.925);
+     b.vx=(landingX-b.x)/flight*(b.spin ? .45 : 1);
      b.vz=player?(2.9*flight*flight+.025-b.z)/flight:clamp((2.9*flight*flight-b.z)/flight,.6,3);
      s.last=player?0:1;s.bounces=0;cue(s,'hit');if(player)s.swing=.22;else s.aiSwing=.22;
     }

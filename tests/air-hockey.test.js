@@ -29,3 +29,14 @@ for (const x of [.077, .923]) for (const y of [.097, .903]) {
   assert.strictEqual(state.score + state.opponent, 0, 'release does not award a point');
  }
 }
+const cpu = H.create();
+cpu.serve = false;
+cpu.ball = {x:.9,y:.35,vx:0,vy:0};
+const speeds = [1,2,3,4].map(level=>{
+ cpu.level=level;
+ const target=H.ai(cpu,1/60),p=cpu.paddles[1];
+ return Math.hypot(target.x-p.x,(target.y-p.y)*H.K.aspect)*60;
+});
+assert(speeds.every((speed,i)=>!i||speed>speeds[i-1]),'CPU accelerates with each level');
+assert(Math.abs(speeds[2]-.65)<1e-6,'level 3 matches previous CPU speed');
+console.log('Hockey CPU ladder retains the former difficulty at level 3');
