@@ -71,8 +71,11 @@
   line(ctx,netTop,netBottom,'#b6c2cc',6);line(ctx,netRight,netEnd,'#b6c2cc',6);
   racket(ctx,state.x,state.y,state.swing,true);
   if(b.y>=.5)ball(ctx,b);
-  text(ctx,state.score+' : '+state.opponent,240,45,32,'#f2f7ff');
-  text(ctx,'CPU Lv. '+state.level,240,73,15,'#9fc8f9');
+  ctx.fillStyle='#121d31';ctx.fillRect(98,12,132,68);ctx.fillRect(250,12,132,68);
+  text(ctx,'내 점수',164,34,16,'#a9e8ff');
+  text(ctx,'CPU · Lv. '+state.level,316,34,16,'#ffb9ad');
+  text(ctx,String(state.score),164,68,30,'#f2f7ff');
+  text(ctx,String(state.opponent),316,68,30,'#f2f7ff');
   if(state.rallyEnd)text(ctx,state.rallyEnd.reason,240,118,22,'#ffe2a8');
  }
  root.TABLE_TENNIS_VIEW={draw};

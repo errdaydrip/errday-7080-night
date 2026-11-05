@@ -59,8 +59,10 @@
    try{localStorage.setItem('table-tennis-level',String(tennisLevel));}catch(e){}
   }
   save();
-  const score=state.score+(state.opponent===undefined?'':' : '+state.opponent);
-  cover(state.won?'CLEAR!':'GAME OVER','점수 '+score+(wonTennis?' · 다음 CPU Lv.'+tennisLevel:''),wonTennis?'다음 단계':'다시 도전');
+  const score=state.kind==='pingpong'
+   ?'내 점수 '+state.score+' · CPU '+state.opponent
+   :'점수 '+state.score+(state.opponent===undefined?'':' : '+state.opponent);
+  cover(state.won?'CLEAR!':'GAME OVER',score+(wonTennis?' · 다음 CPU Lv.'+tennisLevel:''),wonTennis?'다음 단계':'다시 도전');
  }
  function createGame(kind){
   const game=C.create(kind);
