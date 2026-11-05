@@ -35,7 +35,7 @@
   s.x=clamp(input.pointerX??s.x+(input.axisX??((input.right?1:0)-(input.left?1:0)))*dt,.1,.9);
   s.y=clamp(input.pointerY===undefined?s.y+(input.axisY??((input.down?1:0)-(input.up?1:0)))*dt*.5:.76+(input.pointerY-.5)*.36,.76,.94);
   // Short motion memory keeps a swipe effective between pointer events.
-  const blend=1-Math.exp(-dt/.07);
+  const blend=1-Math.exp(-dt/(input.pointerX===undefined?.07:.045));
   // Keep the direction of an outward swipe even at the paddle's travel limit.
   const drag=input.pointerX!==undefined&&s.lastPointerX!==undefined
    ?(input.pointerX-s.lastPointerX)/Math.max(dt,.001)
@@ -78,7 +78,7 @@
     if(Math.abs(b.x-paddle)<.13){
      const offset=(b.x-paddle)/.13;
      const force=player?clamp(Math.hypot(s.strokeX,s.strokeY*1.6)/1.6,0,1):.35;
-     const speed=.65+force*.65;
+     const speed=.71+force*.72;
      b.y=player?s.y-.045:.15;
      b.vy=player?-speed:.76+.57*progress;
      // Aim the arc at the opposing half, so harder shots still bounce on the table.
@@ -102,7 +102,7 @@
       const clearTime=Math.sqrt(Math.max(0,.19-heightAtNet)/(2.9*fraction*(1-fraction)));
       flight=Math.max(flight,clearTime);
       b.vy=(landing-b.y)/flight;
-      aimX=b.x+clamp(offset*.45+s.strokeX*1.15,-1.4,1.4)*flight;
+      aimX=b.x+clamp(offset*.48+s.strokeX*1.29,-1.55,1.55)*flight;
       const side=b.x<.36?-1:b.x>.64?1:0;
       if(side&&s.strokeX*side>.16){
        aimX=side<0?Math.min(b.x,.055):Math.max(b.x,.945);

@@ -414,8 +414,8 @@ io.on('connection',s=>{
   }
   const elapsed = Date.now() - session.startedAt;
   const score = request.score;
-  const limits = {blocks:10000000, shooter:2000000, breaker:2000, racer:1200,
-   pump:25200, reflex:20000, rhythm:25200, ddr:25200, pingpong:7, hockey:7};
+  const limits = {blocks:10000000, shooter:2000000, breaker:14000, racer:2500,
+   pump:90000, reflex:20000, rhythm:90000, ddr:90000, pingpong:7, hockey:7};
   if (elapsed < 100 || elapsed > 3600000 || !Number.isSafeInteger(score) || score < 0 || score > limits[session.game]) {
    return ack({ok:false, error:'유효한 점수가 아니에요'});
   }
