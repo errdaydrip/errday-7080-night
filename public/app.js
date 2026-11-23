@@ -347,7 +347,7 @@ setInterval(()=>refreshAct(),200);
 let music={playlist:[],index:-1,playing:false},offset=0,userGesture=false;const audio=$('audio');
 let muted=localStorage.getItem('muted')==='1',volume=+(localStorage.getItem('vol')||80);$('vol').value=volume;
 let yt=null,ytReady=false,ytVid=null;
-window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player('yt',{width:200,height:200,playerVars:{autoplay:0,cc_load_policy:0,cc_lang_pref:'ko',hl:'ko',controls:0,disablekb:1,playsinline:1,rel:0},
+window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player('yt',{width:200,height:200,playerVars:{autoplay:0,cc_load_policy:0,cc_lang_pref:'ko',hl:'ko',controls:0,disablekb:1,playsinline:1,rel:0,origin:location.origin,widget_referrer:location.origin},
  events:{onReady:()=>{ytReady=true;applyMusic(true);},onStateChange:e=>{if(e.data===YT.PlayerState.PLAYING){applySubs();}if(e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.CUED){const d=yt.getDuration();if(d>1)reportDur(d);}if(e.data===YT.PlayerState.ENDED)socket.emit('music',{type:'ended',index:music.index});},
   onError:e=>{const code=e.data;sys('⚠ 유튜브 재생 불가('+({2:'잘못된 ID',5:'HTML5 오류',100:'삭제/비공개',101:'퍼가기 금지',150:'퍼가기 금지'}[code]||code)+') → 다음 곡');socket.emit('music',{type:'error',index:music.index});}}});};
 function setMusic(m){music=m;offset=m.serverNow-Date.now();window.SERVER_OFFSET=offset;window.MUSIC_PLAYING=!!(m.playing&&m.playlist[m.index]);renderMusic();applyMusic(true);}

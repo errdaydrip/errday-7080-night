@@ -1,5 +1,7 @@
 const express=require('express'),http=require('http'),path=require('path'),fs=require('fs'),multer=require('multer');
 const {Server}=require('socket.io');
+const {parsePlaylistHtml}=require('./yt-playlist');
+const links=require('./links');
 const ROLLER=require('./public/roller.js');const ARCADE=require('./public/arcade.js');
 const PORT=process.env.PORT||8080, UP=path.join(__dirname,'uploads');
 fs.mkdirSync(UP,{recursive:true});
@@ -15,11 +17,8 @@ app.use('/uploads',express.static(UP));
 function parseYT(u){try{const x=new URL(u);const list=x.searchParams.get('list');let v=x.searchParams.get('v');
  if(/youtu\.be$/.test(x.hostname))v=x.pathname.slice(1);if(/\/shorts\//.test(x.pathname))v=x.pathname.split('/')[2];return {list,v};}catch(e){return {};}}
 async function ytTitle(id){try{const r=await fetch('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent('https://www.youtube.com/watch?v='+id));if(r.ok)return (await r.json()).title;}catch(e){}return '유튜브 '+id;}
-async function ytPlaylist(list){const r=await fetch('https://www.youtube.com/playlist?list='+encodeURIComponent(list)+'&hl=ko',{headers:{'User-Agent':'Mozilla/5.0','Accept-Language':'ko'}});
- const html=await r.text();const out=[],seen=new Set();const re=/"playlistVideoRenderer":\{"videoId":"([\w-]{11})".*?"title":\{"runs":\[\{"text":"((?:[^"\\]|\\.)*)"/g;let m;
- while((m=re.exec(html))){if(!seen.has(m[1])){seen.add(m[1]);out.push({id:m[1],title:JSON.parse('"'+m[2]+'"')});}}
- if(!out.length){const re2=/"videoId":"([\w-]{11})"/g;while((m=re2.exec(html)))if(!seen.has(m[1])){seen.add(m[1]);out.push({id:m[1],title:null});}}
- return out.slice(0,200);}
+async function ytPlaylist(list){const r=await fetch('https://www.youtube.com/playlist?list='+encodeURIComponent(list)+'&hl=ko',{headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36','Accept-Language':'ko'}});
+ return parsePlaylistHtml(await r.text());}
 // 재생목록 전체(제목+길이): YOUTUBE_API_KEY 있으면 공식 API, 없으면 페이지 파싱(최대 ~100곡). 테스트는 YT_MOCK_FILE
 const isoDur=d=>{const m=/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(d||'');return m?(+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0):0;};
 async function ytPlaylistFull(list){
@@ -29,14 +28,10 @@ async function ytPlaylistFull(list){
    for(const it of j.items||[]){const id=it.snippet&&it.snippet.resourceId&&it.snippet.resourceId.videoId;if(id&&!/^(Deleted|Private) video$/.test(it.snippet.title))out.push({id,title:it.snippet.title});}page=j.nextPageToken;}while(page&&out.length<200);
   for(let i=0;i<out.length;i+=50){try{const r=await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${out.slice(i,i+50).map(o=>o.id).join(',')}&key=${K}`);const j=await r.json();for(const v of j.items||[]){const o=out.find(x=>x.id===v.id);if(o)o.dur=isoDur(v.contentDetails.duration);}}catch(e){}}
   return out;}
- const r=await fetch('https://www.youtube.com/playlist?list='+encodeURIComponent(list)+'&hl=ko',{headers:{'User-Agent':'Mozilla/5.0','Accept-Language':'ko'}});const html=await r.text();
- const parts=html.split('"playlistVideoRenderer":{').slice(1),out=[],seen=new Set();
- for(const c of parts){const id=(/^"videoId":"([\w-]{11})"/.exec(c)||[])[1];if(!id||seen.has(id))continue;seen.add(id);const t=/"title":\{"runs":\[\{"text":"((?:[^"\\]|\\.)*)"/.exec(c),l=/"lengthSeconds":"(\d+)"/.exec(c);
-  out.push({id,title:t?JSON.parse('"'+t[1]+'"'):null,dur:l?+l[1]:0});}
- if(!out.length)for(const o of await ytPlaylist(list))out.push(o);return out.slice(0,200);}
+ const r=await fetch('https://www.youtube.com/playlist?list='+encodeURIComponent(list)+'&hl=ko',{headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36','Accept-Language':'ko'}});
+ return parsePlaylistHtml(await r.text());}
 const PRESET_DEF=[{name:'7080mix',url:'https://www.youtube.com/playlist?list=PL1cIIyrjZ9L3YEUl8DAz_R6uTf2-80wWY'},{name:'뮤직비디오',url:'https://www.youtube.com/playlist?list=PLFHMiSLBhKxo'},{name:'탑골나이트',url:'https://www.youtube.com/playlist?list=PLak-Kzc3H_lQ'}];
 let presets=PRESET_DEF.map(p=>({...p}));
-const links=require('./links');
 async function addLink(req,res){if(!isAdmin(req.get('x-admin-token')))return res.status(403).json({error:'관리자만 추가 가능'});
  const url=String(req.body.url||'').slice(0,2000);const r=await links.resolve(url).catch(e=>({error:'링크 확인 실패: '+e.message}));
  if(r.error)return res.status(400).json({error:r.error});let items=[];const by=String(req.body.by||'관리자').slice(0,20);
