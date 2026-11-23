@@ -34,7 +34,6 @@ body:has(#entry:not(.hidden)) #ytWrap:not(.theater){opacity:0;pointer-events:non
  #ytWrap.shown:not(.theater){width:400px;height:225px}
  #ytWrap.shown:not(.theater) #yt,#ytWrap.shown:not(.theater) iframe{width:400px!important;height:225px!important}
  #music{right:calc(60px + env(safe-area-inset-right,0px))}
- #hud.ytShown #music{right:calc(424px + env(safe-area-inset-right,0px));width:min(310px,calc(100vw - 440px - env(safe-area-inset-right,0px)))}
 }
 /* 모바일 */
 @media (max-width:700px),(pointer:coarse){
