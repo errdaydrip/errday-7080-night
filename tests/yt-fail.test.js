@@ -1,5 +1,5 @@
 const a=require('assert');
-const {SKIP_DELAY_MS,nextSkipWait,applyError}=require('../yt-fail');
+const {SKIP_DELAY_MS,nextSkipWait,shouldSkipError,applyError}=require('../yt-fail');
 
 a.strictEqual(nextSkipWait(1000,0),0);
 a.strictEqual(nextSkipWait(1000,undefined),0);
@@ -8,6 +8,17 @@ a.strictEqual(nextSkipWait(2500,1000),0);
 a.strictEqual(nextSkipWait(2000,1000,800),0);
 a.strictEqual(nextSkipWait(1500,1000,800),300);
 a.ok(SKIP_DELAY_MS>=1000);
+a.strictEqual(shouldSkipError(undefined),false);
+a.strictEqual(shouldSkipError(null),false);
+a.strictEqual(shouldSkipError(''),false);
+a.strictEqual(shouldSkipError('foo'),false);
+a.strictEqual(shouldSkipError(0),false);
+a.strictEqual(shouldSkipError(150),true);
+a.strictEqual(shouldSkipError('153'),true);
+a.strictEqual(shouldSkipError(101),true);
+a.strictEqual(shouldSkipError(2),true);
+a.strictEqual(shouldSkipError(99),false);
+
 
 const pl=[{title:'A'},{title:'B'},{title:'C'}];
 const next=()=> (m.index+1)%pl.length;

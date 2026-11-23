@@ -504,8 +504,9 @@ io.on('connection',s=>{
   else if(cmd.type==='pause'&&music.playing){clearErrorSkipTimer();music.pausedAt=now-music.startedAt;music.playing=false;}
   else if(cmd.type==='skip'||cmd.type==='ended'||cmd.type==='error'){ if(cmd.type!=='skip'&&cmd.index!==music.index)return;
    if(cmd.type==='error'){
-    console.log('yt-error',cmd.code,cmd.index,(music.playlist[music.index]||{}).title||'');
+    console.log('yt-error',cmd.code,cmd.src||'',cmd.index,(music.playlist[music.index]||{}).title||'');
     if(!music.playing)return; /* 일시정지 중 오류로 다시 재생되지 않게 */
+    if(!ytFail.shouldSkipError(cmd.code))return; /* 코드 없는 오류는 건너뛰지 않음 */
     if(errorSkipTimer)return;
     const wait=ytFail.nextSkipWait(now,lastErrorSkipAt);
     if(wait>0){errorSkipTimer=setTimeout(skipAfterError,wait);return;}

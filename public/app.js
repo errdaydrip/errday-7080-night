@@ -348,10 +348,9 @@ let music={playlist:[],index:-1,playing:false},offset=0,userGesture=false;const 
 let muted=localStorage.getItem('muted')==='1',volume=+(localStorage.getItem('vol')||80);$('vol').value=volume;
 let yt=null,ytReady=false,ytVid=null;
 window.onYouTubeIframeAPIReady=()=>{
- const wrap=$('ytWrap');if(wrap){const mo=new MutationObserver(()=>{const f=wrap.querySelector('iframe');if(f&&f.getAttribute('referrerpolicy')!=='strict-origin-when-cross-origin')f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');});mo.observe(wrap,{childList:true,subtree:true});}
  yt=new YT.Player('yt',{width:200,height:200,playerVars:{autoplay:0,cc_load_policy:0,cc_lang_pref:'ko',hl:'ko',controls:0,disablekb:1,playsinline:1,rel:0,origin:location.origin,widget_referrer:location.origin},
- events:{onReady:()=>{const f=$('ytWrap')&&$('ytWrap').querySelector('iframe');if(f)f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');ytReady=true;applyMusic(true);},onStateChange:e=>{if(e.data===YT.PlayerState.PLAYING){applySubs();socket.emit('music',{type:'playing',index:music.index});}if(e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.CUED){const d=yt.getDuration();if(d>1)reportDur(d);}if(e.data===YT.PlayerState.ENDED)socket.emit('music',{type:'ended',index:music.index});},
-  onError:e=>{socket.emit('music',{type:'error',index:music.index,code:e.data});}}});};
+ events:{onReady:()=>{ytReady=true;applyMusic(true);},onStateChange:e=>{if(e.data===YT.PlayerState.PLAYING){applySubs();socket.emit('music',{type:'playing',index:music.index});}if(e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.CUED){const d=yt.getDuration();if(d>1)reportDur(d);}if(e.data===YT.PlayerState.ENDED)socket.emit('music',{type:'ended',index:music.index});},
+  onError:e=>{const code=e&&e.data;socket.emit('music',{type:'error',index:music.index,code,src:'yt'});}}});};
 function setMusic(m){music=m;offset=m.serverNow-Date.now();window.SERVER_OFFSET=offset;window.MUSIC_PLAYING=!!(m.playing&&m.playlist[m.index]);renderMusic();applyMusic(true);}
 socket.on('music',setMusic);
 function curDur(){const c=music.playlist[music.index];return c&&(c.dur||(music.durations||{})[c.type==='yt'?c.videoId:c.id]);}
@@ -365,7 +364,7 @@ const isAud=c=>c&&(c.type==='mp3'||c.type==='url');let hls=null,hlsUrl=null;
 function loadScript(src){return new Promise((ok,no)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=no;document.head.appendChild(e);});}
 function setAudioSrc(cur){if(cur.type==='url'&&cur.hls&&!audio.canPlayType('application/vnd.apple.mpegurl')){if(hlsUrl===cur.url)return;hlsUrl=cur.url;
   (window.Hls?Promise.resolve():loadScript('https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js')).then(()=>{if(hls)hls.destroy();hls=new Hls();hls.loadSource(cur.url);hls.attachMedia(audio);
-   hls.on(Hls.Events.ERROR,(e,d)=>{if(d.fatal&&hlsUrl===cur.url){socket.emit('music',{type:'error',index:music.index});}});}).catch(()=>{});return;}
+   hls.on(Hls.Events.ERROR,(e,d)=>{if(d.fatal&&hlsUrl===cur.url){socket.emit('music',{type:'error',index:music.index,src:'hls'});}});}).catch(()=>{});return;}
  if(hls){hls.destroy();hls=null;}hlsUrl=null;if(audio.src!==new URL(cur.url,location.href).href)audio.src=cur.url;}
 // 외부 플레이어 (사운드클라우드 / 비메오): 숨은 iframe
 let ext=null; // {type,key,api,ready,el}
@@ -378,12 +377,12 @@ async function extEnsure(cur){const key=cur.type+'|'+cur.url+'|'+cur.id;if(ext&&
    const w=SC.Widget(f);me_.api=w;const E=SC.Widget.Events;
    w.bind(E.READY,()=>{me_.ready=true;w.getDuration(ms=>{if(!cur.set&&ms>1000)reportDur(ms/1000);});extVol();applyMusic(true);});
    const end=()=>socket.emit('music',{type:'ended',index:music.index});w.bind(E.FINISH,()=>{if(!cur.set)return end();w.getSounds(ss=>w.getCurrentSoundIndex(i=>{if(i>=ss.length-1)end();}));});
-   w.bind(E.ERROR,()=>{socket.emit('music',{type:'error',index:music.index});});}
+   w.bind(E.ERROR,()=>{socket.emit('music',{type:'error',index:music.index,src:'sc'});});}
   else{if(!window.Vimeo)await loadScript('https://player.vimeo.com/api/player.js');
    const d=document.createElement('div');wrap.appendChild(d);me_.el=d;const pl=new Vimeo.Player(d,{id:+cur.vimeoId,width:200,autoplay:false,controls:false,playsinline:true});me_.api=pl;
-   pl.ready().then(()=>{me_.ready=true;applySubs();pl.getDuration().then(reportDur).catch(()=>{});extVol();applyMusic(true);}).catch(()=>{socket.emit('music',{type:'error',index:music.index});});
+   pl.ready().then(()=>{me_.ready=true;applySubs();pl.getDuration().then(reportDur).catch(()=>{});extVol();applyMusic(true);}).catch(()=>{socket.emit('music',{type:'error',index:music.index,src:'vimeo'});});
    pl.on('ended',()=>socket.emit('music',{type:'ended',index:music.index}));}}
- catch(e){socket.emit('music',{type:'error',index:music.index});}return me_;}
+ catch(e){socket.emit('music',{type:'error',index:music.index,src:'ext'});}return me_;}
 function extApply(cur,force,pos,wantPlay){if(!ext||!ext.ready)return;const a=ext.api,d=curDur();extVol();
  if(d>1&&pos>=d-0.5){a.pause();return;}
  const set=t=>{if(force||Math.abs(t-pos)>2.5){cur.type==='sc'?a.seekTo(pos*1000):a.setCurrentTime(pos).catch(()=>{});}
@@ -393,7 +392,7 @@ function applyMusic(force){applyVolume();const cur=music.playlist[music.index];
  if(!isAud(cur)){audio.pause();if(hls){hls.destroy();hls=null;hlsUrl=null;}}
  if(!cur||cur.type!=='yt'){if(ytReady&&ytVid){yt.stopVideo();ytVid=null;}}
  if(!cur||(cur.type!=='sc'&&cur.type!=='vimeo'))extStop();
- if(!cur)return;const pos=curPos(),wantPlay=music.playing&&!muted&&userGesture;
+ if(!cur)return;const pos=(()=>{const x=curPos();return Number.isFinite(x)&&x>0?x:0;})(),wantPlay=music.playing&&!muted&&userGesture;
  if(cur.type==='sc'||cur.type==='vimeo'){extEnsure(cur).then(()=>extApply(cur,force,pos,wantPlay));return;}
  if(isAud(cur)){setAudioSrc(cur);
   const go=()=>{if(!cur.live&&(force||Math.abs(audio.currentTime-pos)>1.5)){if(isFinite(audio.duration)){reportDur(audio.duration);if(pos>=audio.duration-0.5){audio.pause();return;}audio.currentTime=pos;}}
@@ -407,7 +406,7 @@ $('unmute').onclick=()=>{userGesture=true;muted=false;localStorage.setItem('mute
 $('muteBtn').onclick=()=>{muted=!muted;localStorage.setItem('muted',muted?'1':'0');userGesture=true;renderMusic();applyMusic(true);};
 $('vol').oninput=()=>{volume=+$('vol').value;localStorage.setItem('vol',volume);applyVolume();};
 audio.addEventListener('ended',()=>socket.emit('music',{type:'ended',index:music.index}));
-audio.addEventListener('error',()=>{if(music.playlist[music.index]&&isAud(music.playlist[music.index])&&audio.src){socket.emit('music',{type:'error',index:music.index});}});
+audio.addEventListener('error',()=>{if(music.playlist[music.index]&&isAud(music.playlist[music.index])&&audio.src){socket.emit('music',{type:'error',index:music.index,src:'audio'});}});
 setInterval(()=>{if(music.playing&&!muted&&userGesture)applyMusic(false);},5000);
 // ---------- 관리자 ----------
 function askPw(){return new Promise(ok=>{const d=document.createElement('div');d.id='pwBox';d.innerHTML='<form><div>🔑 관리자 비밀번호</div><input type="password" autocomplete="off" inputmode="numeric" maxlength="40"><div><button>확인</button> <button type="button">취소</button></div></form>';
