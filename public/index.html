@@ -1,11 +1,11 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,interactive-widget=resizes-content,viewport-fit=cover">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="7080 나이트"><meta name="theme-color" content="#12020c"><link rel="manifest" href="manifest.webmanifest?v=20261123e">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="7080 나이트"><meta name="theme-color" content="#12020c"><link rel="manifest" href="manifest.webmanifest?v=20261123f">
 <title>ERRDAY NIGHTCLUB · ERRDAY 7080 나이트</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
-<link rel="stylesheet" href="style.css?v=20261123e"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap">
+<link rel="stylesheet" href="style.css?v=20261123f"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap">
 </head><body>
 <a-scene renderer="antialias:true;colorManagement:true;maxCanvasWidth:2560;maxCanvasHeight:2560" fog="type:exponential;color:#12020c;density:0.03" vr-mode-ui="enabled:false" loading-screen="enabled:false" device-orientation-permission-ui="enabled:false">
  <a-entity id="world"></a-entity>
@@ -43,6 +43,8 @@
  <div id="topbar"><span id="where">🌐 로비</span><button id="setBtn">⚙</button><button id="adminBtn">🔑</button>
   <button id="fsBtn" title="전체화면">⛶</button><button id="muteBtn" title="내 소리 켜기/끄기">🔊</button><input id="vol" type="range" min="0" max="100" value="80" title="볼륨"></div>
  <button id="chatToggle" class="fab">💬</button><button id="musicToggle" class="fab">🎵</button>
+ <button id="ytToggle" type="button" title="유튜브 화면 보기" aria-label="유튜브 화면 보기" aria-pressed="false"><svg viewBox="0 0 24 17" aria-hidden="true"><rect width="24" height="17" rx="4" fill="#FF0000"/><polygon points="9,4 9,13 17,8.5" fill="#fff"/></svg></button>
+
  <div id="chat" class="panel"><div id="chatTitle">💬 전체 채팅<span id="onlineCnt"></span><button id="chatClear" type="button" title="채팅 기록 전체 삭제 (관리자)" style="display:none">🧹 채팅 지우기</button></div><div id="msgs"></div>
   <form id="chatForm"><input id="chatIn" maxlength="200" placeholder="메시지 입력 (Enter)" autocomplete="off"><button>전송</button></form></div>
  <div id="music" class="panel"><div>🎵 <b id="now">재생 중인 곡 없음</b> <button id="admFold" class="hidden" type="button" title="관리자 메뉴 접기/펴기">⚙ 관리자 ▲</button></div>
@@ -57,6 +59,6 @@
 </div>
 <audio id="audio" preload="auto"></audio>
 <div id="ytWrap"><div id="yt"></div></div>
-<link rel="stylesheet" href="arcade.css?v=20261123e"><script src="arcade.js?v=20261123e"></script><script src="air-hockey.js?v=20261123e"></script><script src="air-hockey-view.js?v=20261123e"></script><script src="table-tennis.js?v=20261123e"></script><script src="table-tennis-view.js?v=20261123e"></script><script src="arcade-core.js?v=20261123e"></script><script src="looks.js?v=20261123e"></script><script src="theater.js?v=20261123e"></script><script src="pool.js?v=20261123e"></script><script src="roller.js?v=20261123e"></script><script src="world.js?v=20261123e"></script><script src="roller-world.js?v=20261123e"></script><script src="arcade-world.js?v=20261123e"></script><script src="app.js?v=20261123e"></script><script src="roller-social-ui.js?v=20261123e"></script><script src="arcade-play.js?v=20261123e"></script>
+<link rel="stylesheet" href="arcade.css?v=20261123f"><script src="arcade.js?v=20261123f"></script><script src="air-hockey.js?v=20261123f"></script><script src="air-hockey-view.js?v=20261123f"></script><script src="table-tennis.js?v=20261123f"></script><script src="table-tennis-view.js?v=20261123f"></script><script src="arcade-core.js?v=20261123f"></script><script src="looks.js?v=20261123f"></script><script src="theater.js?v=20261123f"></script><script src="pool.js?v=20261123f"></script><script src="roller.js?v=20261123f"></script><script src="world.js?v=20261123f"></script><script src="roller-world.js?v=20261123f"></script><script src="arcade-world.js?v=20261123f"></script><script src="app.js?v=20261123f"></script><script src="roller-social-ui.js?v=20261123f"></script><script src="arcade-play.js?v=20261123f"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
 </body></html>
