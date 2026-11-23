@@ -9,8 +9,10 @@ fs.mkdirSync(UP,{recursive:true});
 const ADMIN_PW=String(process.env.ADMIN_PASSWORD||'6651'); // 제작자가 정한 고정 비밀번호
 const tokens=new Set();const isAdmin=t=>!!t&&tokens.has(t);
 const app=express(),server=http.createServer(app),io=new Server(server,{maxHttpBufferSize:1e6,transports:['websocket','polling']});
-app.use((req,res,next)=>{res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');next();});
-app.use(express.static(path.join(__dirname,'public')));
+app.use((req,res,next)=>{res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
+  if(req.path==='/'||/\.(html|js|css|webmanifest)$/.test(req.path)){res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0');}
+  next();});
+app.use(express.static(path.join(__dirname,'public'),{setHeaders:(res,fp)=>{if(/\.(html|js|css|webmanifest)$/.test(fp)){res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0');}}}));
 app.use(express.json());
 app.get('/health',(req,res)=>res.json({ok:true,uptime:process.uptime(),playing:music.playing,players:Object.keys(players).length,isDefault:!!music.isDefault,track:(music.playlist[music.index]||{}).title||null}));
 app.post('/admin/login',(req,res)=>{if(req.body&&req.body.password===ADMIN_PW){const t=require('crypto').randomBytes(16).toString('hex');tokens.add(t);return res.json({token:t});}res.status(401).json({error:'비밀번호가 틀렸어요'});});
@@ -502,6 +504,7 @@ io.on('connection',s=>{
   else if(cmd.type==='pause'&&music.playing){clearErrorSkipTimer();music.pausedAt=now-music.startedAt;music.playing=false;}
   else if(cmd.type==='skip'||cmd.type==='ended'||cmd.type==='error'){ if(cmd.type!=='skip'&&cmd.index!==music.index)return;
    if(cmd.type==='error'){
+    console.log('yt-error',cmd.code,cmd.index,(music.playlist[music.index]||{}).title||'');
     if(!music.playing)return; /* 일시정지 중 오류로 다시 재생되지 않게 */
     if(errorSkipTimer)return;
     const wait=ytFail.nextSkipWait(now,lastErrorSkipAt);

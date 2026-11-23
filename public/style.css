@@ -24,6 +24,10 @@ button:disabled{opacity:.5}.sel{background:#b0005a}.big{width:100%;padding:13px;
 #mob{left:18px;bottom:84px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,216,74,.55);display:none;touch-action:none;pointer-events:auto;z-index:20}#joyKnob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,216,74,.75);box-shadow:0 0 12px #ff3cac;pointer-events:none}
 .fab{display:none;width:46px;height:46px;font-size:20px;border-radius:50%}
 #ytWrap{position:fixed;right:8px;top:calc(48px + env(safe-area-inset-top,0px));left:auto;bottom:auto;width:200px;height:200px;overflow:hidden;opacity:0.01;pointer-events:none;z-index:4;background:#000;border-radius:8px;box-shadow:0 0 0 1px rgba(255,216,74,.35)}#ytWrap.on{opacity:1;pointer-events:auto}body:has(#entry:not(.hidden)) #ytWrap:not(.theater){opacity:0.01;pointer-events:none}
+/* PC: 오른쪽 위 음악 패널에 가리지 않게 오른쪽 아래 */
+@media (min-width:701px) and (pointer:fine){
+ #ytWrap:not(.theater){top:auto;right:16px;bottom:16px;left:auto}
+}
 /* 모바일 */
 @media (max-width:700px),(pointer:coarse){
  .fab{display:block}#chatToggle{left:8px;bottom:8px}#musicToggle{left:60px;bottom:8px}
