@@ -2,12 +2,14 @@ const express=require('express'),http=require('http'),path=require('path'),fs=re
 const {Server}=require('socket.io');
 const {parsePlaylistHtml}=require('./yt-playlist');
 const links=require('./links');
+const ytFail=require('./yt-fail');
 const ROLLER=require('./public/roller.js');const ARCADE=require('./public/arcade.js');
 const PORT=process.env.PORT||8080, UP=path.join(__dirname,'uploads');
 fs.mkdirSync(UP,{recursive:true});
 const ADMIN_PW=String(process.env.ADMIN_PASSWORD||'6651'); // 제작자가 정한 고정 비밀번호
 const tokens=new Set();const isAdmin=t=>!!t&&tokens.has(t);
 const app=express(),server=http.createServer(app),io=new Server(server,{maxHttpBufferSize:1e6,transports:['websocket','polling']});
+app.use((req,res,next)=>{res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');next();});
 app.use(express.static(path.join(__dirname,'public')));
 app.use(express.json());
 app.get('/health',(req,res)=>res.json({ok:true,uptime:process.uptime(),playing:music.playing,players:Object.keys(players).length,isDefault:!!music.isDefault,track:(music.playlist[music.index]||{}).title||null}));
@@ -66,6 +68,8 @@ function nextIndex(){const n=music.playlist.length;if(!n)return -1;if(!music.shu
  const cur=music.playlist[music.index];if(cur)played.add(cur.id);let left=music.playlist.map((t,i)=>i).filter(i=>!played.has(music.playlist[i].id)&&i!==music.index);
  if(!left.length){played=new Set(cur?[cur.id]:[]);left=music.playlist.map((t,i)=>i).filter(i=>i!==music.index);if(!left.length)return music.index;}
  return left[Math.floor(Math.random()*left.length)];}
+let failStreak=0;
+function resetFailStreak(){failStreak=0;}
 const upload=multer({storage:multer.diskStorage({destination:UP,filename:(r,f,cb)=>cb(null,Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.mp3')}),
  limits:{fileSize:30*1024*1024},fileFilter:(r,f,cb)=>cb(null,/audio|mpeg|mp3/i.test(f.mimetype)||/\.mp3$/i.test(f.originalname))});
 app.post('/upload',(req,res,next)=>isAdmin(req.get('x-admin-token'))?next():res.status(403).json({error:'관리자만 업로드 가능'}),(req,res)=>upload.single('file')(req,res,err=>{
@@ -485,18 +489,26 @@ io.on('connection',s=>{
  s.on('chat',text=>{const pl=players[s.id];if(!pl)return;text=String(text).slice(0,200);if(!text.trim())return;if(text.includes(ADMIN_PW)&&/^\s*(\/?(admin|관리자)\s*)?\d+\s*$/i.test(text)||text.trim()===ADMIN_PW){s.emit('chat',{sys:true,text:'🔒 비밀번호는 채팅에 보내지 않았어요. 🔑 버튼으로 로그인하세요'});return;}text=cleanText(text);
   const t=Date.now();chatHist.push({nick:pl.nick,text,t});if(chatHist.length>50)chatHist.shift();io.emit('chat',{id:s.id,nick:pl.nick,text,t});});
  s.on('duration',d=>{const t=music.playlist[d&&d.index];const sec=+(d&&d.sec);if(!t||!(sec>1&&sec<36000))return;const k=t.type==='yt'?t.videoId:t.id;if(durations[k])return;durations[k]=sec;broadcastMusic();});
- s.on('music',cmd=>{if(!cmd||!isAdmin(cmd.token)&&cmd.type!=='ended'&&cmd.type!=='error')return;const now=Date.now();
-  if(cmd.type==='play'&&!music.playing&&music.index>=0){music.startedAt=now-music.pausedAt;music.playing=true;}
+ s.on('music',cmd=>{if(!cmd||!isAdmin(cmd.token)&&cmd.type!=='ended'&&cmd.type!=='error'&&cmd.type!=='playing')return;
+  if(cmd.type==='playing'){if(cmd.index===music.index)resetFailStreak();return;}
+  const now=Date.now();
+  if(cmd.type==='play'&&!music.playing&&music.index>=0){resetFailStreak();music.startedAt=now-music.pausedAt;music.playing=true;}
   else if(cmd.type==='pause'&&music.playing){music.pausedAt=now-music.startedAt;music.playing=false;}
   else if(cmd.type==='skip'||cmd.type==='ended'||cmd.type==='error'){ if(cmd.type!=='skip'&&cmd.index!==music.index)return;
-   if(cmd.type==='error')io.emit('chat',{sys:true,text:'⚠ 재생할 수 없는 곡이라 다음 곡으로 넘어가요: '+(music.playlist[music.index]||{}).title});
-   if(cmd.type==='ended'&&(Date.now()-music.startedAt<3000||durOf(music.playlist[music.index])))return; // 길이를 알면 서버 시계가 넘김
-   if(music.playlist.length){music.index=nextIndex();music.startedAt=now;music.pausedAt=0;music.playing=true;}}
-  else if(cmd.type==='select'&&music.playlist[cmd.index]){music.index=cmd.index;music.startedAt=now;music.pausedAt=0;music.playing=true;}
+   if(cmd.type==='error'){
+    if(!music.playing)return; /* 일시정지 중 오류로 다시 재생되지 않게 */
+    const r=ytFail.applyError(music,nextIndex,now,failStreak,{code:cmd.code});failStreak=r.streak;
+    io.emit('chat',{sys:true,text:r.message});
+   }else{
+    resetFailStreak();
+    if(cmd.type==='ended'&&(Date.now()-music.startedAt<3000||durOf(music.playlist[music.index])))return; // 길이를 알면 서버 시계가 넘김
+    if(music.playlist.length){music.index=nextIndex();music.startedAt=now;music.pausedAt=0;music.playing=true;}
+   }}
+  else if(cmd.type==='select'&&music.playlist[cmd.index]){resetFailStreak();music.index=cmd.index;music.startedAt=now;music.pausedAt=0;music.playing=true;}
   else if(cmd.type==='shuffleToggle'){music.shuffle=!music.shuffle;played=new Set();}
   else if(cmd.type==='shuffleNow'&&music.playlist.length>1){const cur=music.playlist[music.index];const rest=music.playlist.filter(t=>t!==cur);
    for(let i=rest.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}music.playlist=cur?[cur,...rest]:rest;music.index=cur?0:music.index;}
-  else if(cmd.type==='clearAll'){for(const t of music.playlist)if(t.type==='mp3')fs.unlink(path.join(UP,t.id),()=>{});music.playlist=[];music.index=-1;music.playing=false;music.startedAt=0;music.pausedAt=0;music.isDefault=false;music.cleared=true;played=new Set();io.emit('chat',{sys:true,text:'🗑 관리자가 재생목록을 모두 비웠어요'});}
+  else if(cmd.type==='clearAll'){for(const t of music.playlist)if(t.type==='mp3')fs.unlink(path.join(UP,t.id),()=>{});music.playlist=[];music.index=-1;music.playing=false;music.startedAt=0;music.pausedAt=0;music.isDefault=false;music.cleared=true;played=new Set();resetFailStreak();io.emit('chat',{sys:true,text:'🗑 관리자가 재생목록을 모두 비웠어요'});}
   else if(cmd.type==='delete'&&music.playlist[cmd.index]){const [t]=music.playlist.splice(cmd.index,1);if(t.type==='mp3')fs.unlink(path.join(UP,t.id),()=>{});
    if(cmd.index<music.index)music.index--;else if(cmd.index===music.index){if(!music.playlist.length){music.index=-1;music.playing=false;}else{music.index%=music.playlist.length;music.startedAt=now;music.pausedAt=0;}}}
   broadcastMusic();});
