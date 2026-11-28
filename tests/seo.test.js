@@ -42,14 +42,18 @@ function get(p){return new Promise((ok,no)=>{
   const html=h.body.toString('utf8');
   a.match(html,/<html lang="ko">/);
   a.match(html,/name="referrer" content="strict-origin-when-cross-origin"/);
-  const T='얼데이 나이트, 온라인 나이트, 메타버스 나이트 클럽 7080';
+  const T='얼데이 나이트 · ERRDAY 7080 클럽 · ERRDAY NIGHTCLUB';
   a.ok(html.includes('<title>'+T+'</title>'),'exact <title>');
   a.ok(html.includes('property="og:title" content="'+T+'"'),'exact og:title');
-  a.ok(html.includes('property="og:site_name" content="'+T+'"'),'exact og:site_name');
+  a.ok(html.includes('property="og:site_name" content="얼데이 나이트"'),'og:site_name is 얼데이 나이트');
   a.ok(html.includes('name="twitter:title" content="'+T+'"'),'exact twitter:title');
-  a.ok(html.includes('"name":"'+T+'"'),'exact JSON-LD name');
+  a.ok(html.includes('"name":"얼데이 나이트"'),'JSON-LD name is 얼데이 나이트');
   a.ok(html.includes('<h1>'+T+'</h1>'),'exact lobby/noscript h1');
-  a.ok(!html.includes('<h1>ERRDAY NIGHTCLUB</h1>'),'old English h1 gone');
+  a.ok(!html.includes('<h1>ERRDAY NIGHTCLUB</h1>'),'old English-only h1 gone');
+  a.match(html,/"alternateName":\[[^\]]*ERRDAY 7080 클럽/);
+  a.match(html,/"alternateName":\[[^\]]*ERRDAY NIGHTCLUB/);
+  a.match(html,/"alternateName":\[[^\]]*온라인 나이트/);
+  a.match(html,/"alternateName":\[[^\]]*메타버스 나이트 클럽 7080/);
   a.match(html,/meta name="description"/);
   a.match(html,/meta name="keywords"/);
   for(const k of ['얼데이 나이트','온라인 나이트','메타버스 나이트','메타버스 클럽','7080','당구','다트']){
@@ -63,8 +67,6 @@ function get(p){return new Promise((ok,no)=>{
   a.match(html,/name="twitter:description"[^>]*온라인 나이트/);
   a.match(html,/class="seoIntro"/);
   a.match(html,/<noscript>/);
-  a.match(html,/"alternateName":\[[^\]]*ERRDAY 7080 나이트/);
-  a.match(html,/"alternateName":\[[^\]]*ERRDAY NIGHTCLUB/);
   a.match(html,/"keywords":"[^"]*얼데이 나이트[^"]*온라인 나이트[^"]*메타버스 나이트[^"]*메타버스 클럽/);
 
   a.match(html,/rel="canonical" href="https:\/\/errday-7080-night\.onrender\.com\/"/);
