@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://errday-7080-night.onrender.com/sitemap.xml

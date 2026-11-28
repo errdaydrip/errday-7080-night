@@ -4,6 +4,7 @@ input{-webkit-user-select:text;user-select:text}
 .center{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:10;width:min(420px,92vw);max-height:92dvh;overflow:auto;box-sizing:border-box}
 h1{text-align:center;color:#fff3c4;font-family:Georgia,serif;letter-spacing:2px;text-shadow:0 0 10px #ff3cac,0 0 20px #ff3cac;margin:4px 0 0;font-size:26px}
 .sub{text-align:center;color:#d4a017;margin-bottom:10px}
+#entry .seoIntro{font-size:13px;line-height:1.45;color:#fff3c4;text-align:center;margin:0 0 10px}
 input{background:#2a0020;color:#fff;border:1px solid #d4a017;border-radius:6px;padding:7px;font-size:16px}
 button{background:#5a0030;color:#fff;border:1px solid #d4a017;border-radius:8px;padding:6px 10px;margin:2px;cursor:pointer;font-size:15px;touch-action:manipulation}
 button:disabled{opacity:.5}.sel{background:#b0005a}.big{width:100%;padding:13px;font-size:18px;margin-top:10px;background:#b0005a}
